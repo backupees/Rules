@@ -51,6 +51,10 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 - `RuleConditionalTransferLightMultiToken` and `RuleConditionalTransferLightMultiTokenOwnable2Step` — multi-token conditional transfer rules with token-scoped approvals keyed by `(token, from, to, value)`.
 
+### Changed
+
+- Update contract version in `VersionModule` to `0.4.0`.
+
 ### Dependencies
 
 - Update RuleEngine to `v3.0.0-rc3`.

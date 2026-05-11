@@ -8,7 +8,7 @@ import {IERC3643Version} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol
  * @notice Exposes the contract version as required by ERC-3643.
  */
 abstract contract VersionModule is IERC3643Version {
-    string private constant VERSION = "0.3.0";
+    string private constant VERSION = "0.4.0";
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS

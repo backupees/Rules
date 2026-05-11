@@ -439,7 +439,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 - All AccessControl variants: use `onlyRole(ROLE)` in `_authorize*()` and mark internal helpers `virtual`.
 - All AccessControl variants: use `AccessControlEnumerable`, so role members can be enumerated with `getRoleMember` / `getRoleMemberCount`; default admin is treated as having all roles via `hasRole`, but may not appear in role member lists unless explicitly granted.
 - All meta-tx-enabled rules: `forwarderIrrevocable` is accepted as-is (including `address(0)`) and is not validated against ERC-165 because some forwarders do not implement it.
-- All rules: implement `IERC3643Version` via `VersionModule` and expose `version()` returning `"0.3.0"`.
+- All rules: implement `IERC3643Version` via `VersionModule` and expose `version()` returning `"0.4.0"`.
 
 ### Read-only (validation) rule
 
