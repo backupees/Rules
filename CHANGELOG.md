@@ -43,7 +43,31 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
   - Update surya doc by running the 3 scripts in [./doc/script](./doc/script)
   - Update changelog
 
-## v0.3.0 - 
+
+
+## v0.4.0
+
+### Added
+
+- `RuleConditionalTransferLightMultiToken` and `RuleConditionalTransferLightMultiTokenOwnable2Step` — multi-token conditional transfer rules with token-scoped approvals keyed by `(token, from, to, value)`.
+
+### Dependencies
+
+- Update RuleEngine to `v3.0.0-rc3`.
+
+### Documentation
+
+- Added technical documentation: `doc/technical/RuleConditionalTransferLightMultiToken.md`.
+- Updated README operation-rule sections and tables to include `RuleConditionalTransferLightMultiToken`.
+
+### Testing
+
+- Added `RuleConditionalTransferLightMultiToken` tests proving approvals are token-scoped and cannot be consumed cross-token.
+- Added explicit RuleEngine integration tests for `RuleConditionalTransferLightMultiToken` documenting caller-context behavior in shared RuleEngine topology.
+
+## v0.3.0 - 2026-04-16
+
+Commit: `91c21c1191e84ff938892267ec443b0d1bb9efb0`
 
 ### Security
 

@@ -64,6 +64,8 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
      */
     function _onlyRulesManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
 
+    function _onlyRulesLimitManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
+
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

@@ -173,4 +173,5 @@ abstract contract RuleConditionalTransferLightBase is
     function _authorizeTransferExecution() internal view override {
         require(isTokenBound(_msgSender()), RuleConditionalTransferLight_TransferExecutorUnauthorized(_msgSender()));
     }
+
 }

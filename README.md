@@ -62,7 +62,7 @@ forge test
 
 | Component        | Compatible Versions                       |
 | ---------------- | ----------------------------------------- |
-| **Rules v0.1.0** | CMTAT ≥ v3.0.0<br />RuleEngine v3.0.0-rc2 |
+| **Rules v0.1.0** | CMTAT ≥ v3.0.0<br />RuleEngine v3.0.0-rc3 |
 
 Each Rule implements the interface `IRuleEngine` defined in CMTAT.
 
@@ -306,7 +306,7 @@ Available validation rules: `RuleWhitelist`, `RuleWhitelistWrapper`, `RuleSpende
 
 Operation rules modify blockchain state during transfer execution. Their `transferred()` function is state-mutating: it consumes or updates stored data as part of the transfer flow.
 
-Available operation rules: `RuleConditionalTransferLight`. 
+Available operation rules: `RuleConditionalTransferLight`, `RuleConditionalTransferLightMultiToken`. 
 
 A full-featured variant, `RuleConditionalTransfer`, is maintained as a separate experimental repository at [CMTA/RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer).
 
@@ -362,6 +362,7 @@ Several rules are available in multiple access-control variants. Use the simples
 | RuleSpenderWhitelist                                         | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule blocks `transferFrom` when the spender is not in the whitelist. Direct transfers are always allowed. |
 | RuleERC2980                                                  | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | ERC-2980 Swiss Compliant rule combining a whitelist (recipient-only) and a frozenlist (blocks sender, recipient, and spender for `transferFrom`). Frozenlist takes priority over whitelist. |
 | RuleConditionalTransferLight                                | Read-Write                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule requires that transfers have to be approved by an operator before being executed. Each approval is consumed once and the same transfer can be approved multiple times. |
+| RuleConditionalTransferLightMultiToken                      | Read-Write                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | Multi-token variant of ConditionalTransferLight. Approvals are token-scoped with key `(token, from, to, value)` so one token cannot consume another token's approvals. |
 | [RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer) (external) | Read-Write | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #b00020;">&#x2718;</span></strong><br /> (experimental rule) | Full-featured approval-based transfer rule implementing Swiss law *Vinkulierung*. Supports automatic approval after three months, automatic transfer execution, and a conditional whitelist for address pairs that bypass approval. Maintained in a separate repository. |
 | [RuleSelf](https://github.com/rya-sge/ruleself) (community) | — | <strong><span style="color: #b00020;">&#x2718;</span></strong> | — | <strong><span style="color: #b00020;">&#x2718;</span></strong><br /> (community project) | Use [Self](https://self.xyz), a zero-knowledge identity  solution to determine which is allowed to interact with the token.<br />Community-maintained rule project. Not developed or maintained by CMTA. |
 
@@ -382,6 +383,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleSpenderWhitelist | [RuleSpenderWhitelist.md](./doc/technical/RuleSpenderWhitelist.md) |
 | RuleERC2980 | [RuleERC2980.md](./doc/technical/RuleERC2980.md) |
 | RuleConditionalTransferLight | [RuleConditionalTransferLight.md](./doc/technical/RuleConditionalTransferLight.md) |
+| RuleConditionalTransferLightMultiToken | [RuleConditionalTransferLightMultiToken.md](./doc/technical/RuleConditionalTransferLightMultiToken.md) |
 
 ### Operational Notes
 
@@ -421,6 +423,15 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 - `RuleConditionalTransferLight`: `approveAndTransferIfAllowed` approves and immediately executes `transferFrom` when this rule has allowance; it assumes token callback to `transferred()`.
 - `RuleConditionalTransferLight`: `transferred()` is restricted to the single token bound via `bindToken`; second bind reverts with `RuleConditionalTransferLight_TokenAlreadyBound` until `unbindToken`.
 - `RuleConditionalTransferLight`: mints (`from == address(0)`) and burns (`to == address(0)`) are exempt from approval checks; `created` and `destroyed` delegate to `_transferred`.
+
+#### RuleConditionalTransferLightMultiToken
+
+- `RuleConditionalTransferLightMultiToken`: approvals are keyed by `(token, from, to, value)` and are not nonce-based.
+- `RuleConditionalTransferLightMultiToken`: operator functions are token-scoped (`approveTransfer(token, ...)`, `cancelTransferApproval(token, ...)`, `approvedCount(token, ...)`, `approveAndTransferIfAllowed(token, ...)`).
+- `RuleConditionalTransferLightMultiToken`: execution is restricted to bound tokens; only the calling bound token can consume approvals for its own key space.
+- `RuleConditionalTransferLightMultiToken`: mints (`from == address(0)`) and burns (`to == address(0)`) are exempt from approval checks; `created` and `destroyed` delegate to `_transferred`.
+- `RuleConditionalTransferLightMultiToken`: with a shared `RuleEngine`, the caller seen by the rule is the engine address (not the underlying token). In that topology, token-scoped approvals are not visible unless approvals are keyed to the engine address, which is not per-token scoping.
+- **Warning**: `RuleConditionalTransferLightMultiToken` supports several tokens when integrated directly with each token contract. It must not be used for per-token approval isolation through a shared `RuleEngine`.
 
 #### General notes
 
@@ -579,7 +590,7 @@ The operator calls `setIdentityRegistry(registry)`. The issuer attempts a transf
 
 ### Read-Write (Operation) rule
 
-For the moment, there is only one operation rule available: ConditionalTransferLight.
+There are two operation rules available: `RuleConditionalTransferLight` and `RuleConditionalTransferLightMultiToken`.
 
 #### Conditional transfer (light)
 
@@ -590,6 +601,14 @@ This rule requires that transfers must be approved by an operator before being e
 **Usage scenario**
 
 An operator calls `approveTransfer(from, to, value)`. The compliance manager binds exactly one token with `bindToken(token)`; attempting to bind a second token reverts. The token calls `detectTransferRestriction` (passes) and later `transferred` to consume the approval. Without approval, `detectTransferRestriction` returns code 46 and the transfer is rejected. The operator can revoke with `cancelTransferApproval`. To migrate to a different token, the compliance manager must first call `unbindToken` before binding the new one.
+
+#### Conditional transfer (light, multi-token)
+
+This variant scopes approvals by token address. It hashes `(token, from, to, value)` and supports multiple bound tokens in a single rule instance. Each successful transfer consumes one approval in the calling token namespace. Mints (`from == address(0)`) and burns (`to == address(0)`) remain exempt.
+
+**Usage scenario**
+
+An operator calls `approveTransfer(tokenA, from, to, value)` for `tokenA`. A transfer on `tokenA` succeeds and consumes the approval. The same `(from, to, value)` transfer on `tokenB` is still rejected until separately approved with `approveTransfer(tokenB, from, to, value)`.
 
 ## Access Control
 
@@ -618,8 +637,8 @@ See also [docs.openzeppelin.com - AccessControl](https://docs.openzeppelin.com/c
 | `ADDRESS_LIST_REMOVE_ROLE` | `0x1b94c92b564251ed6b49246d9a82eb7a486b6490f3b3a3bf3b28d2e99801f3ec` | `removeAddress`, `removeAddresses` (RuleWhitelist, RuleBlacklist) |
 | `SANCTIONLIST_ROLE` | `0x30842281ac34bdc7d568c7ab276f84ba6fc1a1de1ae858b0afd35e716fb0650d` | `setSanctionListOracle`, `clearSanctionListOracle` (RuleSanctionsList) |
 | `RULES_MANAGEMENT_ROLE` | `0xea5f4eb72290e50c32abd6c23e45de3d8300b3286e1cbc2e293114b92e034e5e` | `setRules`, `clearRules`, `addRule`, `removeRule` (RuleWhitelistWrapper) |
-| `OPERATOR_ROLE` | `0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929` | `approveTransfer`, `cancelTransferApproval` (RuleConditionalTransferLight) |
-| `COMPLIANCE_MANAGER_ROLE` | `0xe5c50d0927e06141e032cb9a67e1d7092dc85c0b0825191f7e1cede600028568` | `bindToken`, `unbindToken` (RuleConditionalTransferLight) |
+| `OPERATOR_ROLE` | `0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929` | `approveTransfer`, `cancelTransferApproval` (RuleConditionalTransferLight / RuleConditionalTransferLightMultiToken) |
+| `COMPLIANCE_MANAGER_ROLE` | `0xe5c50d0927e06141e032cb9a67e1d7092dc85c0b0825191f7e1cede600028568` | `bindToken`, `unbindToken` (RuleConditionalTransferLight / RuleConditionalTransferLightMultiToken) |
 | `WHITELIST_ADD_ROLE` | `0x77c0b4c0975a0b0417d8ce295502737b95fee8923755fed0cce952907a1861ed` | `addWhitelistAddress`, `addWhitelistAddresses` (RuleERC2980) |
 | `WHITELIST_REMOVE_ROLE` | `0xf4d11a530c5b90f459c6ab1e335d3d77156b8ff3093308e4fca6d100ee87ade9` | `removeWhitelistAddress`, `removeWhitelistAddresses` (RuleERC2980) |
 | `FROZENLIST_ADD_ROLE` | `0xc52c49807a071974b9260f4b553ee09bd9fd85f687d8d4cc3232de7104ff7835` | `addFrozenlistAddress`, `addFrozenlistAddresses` (RuleERC2980) |
@@ -637,6 +656,7 @@ For simpler ownership-based control, `Ownable2Step` variants (two-step ownership
 - `RuleMaxTotalSupplyOwnable2Step`
 - `RuleERC2980Ownable2Step`
 - `RuleConditionalTransferLightOwnable2Step`
+- `RuleConditionalTransferLightMultiTokenOwnable2Step`
 
 `RuleConditionalTransferLightOwnable2Step` now grants approval and execution permissions exclusively to the owner.
 All `Ownable2Step` variants enforce access using OpenZeppelin's `onlyOwner` modifier.
@@ -678,7 +698,7 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
   - CMTAT [v3.2.0](https://github.com/CMTA/CMTAT/releases/tag/v3.2.0)
 
-  - RuleEngine [v3.0.0-rc2](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc2)
+  - RuleEngine [v3.0.0-rc3](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc3)
 
 ### Toolchain installation
 

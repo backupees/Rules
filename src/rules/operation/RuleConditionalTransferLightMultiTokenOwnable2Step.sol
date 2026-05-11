@@ -9,22 +9,10 @@ import {ERC1404ExtendInterfaceId} from "CMTAT/library/ERC1404ExtendInterfaceId.s
 import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
 import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.sol";
 import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
-import {RuleConditionalTransferLightBase} from "./abstract/RuleConditionalTransferLightBase.sol";
+import {RuleConditionalTransferLightMultiTokenBase} from "./abstract/RuleConditionalTransferLightMultiTokenBase.sol";
 
-/**
- * @title RuleConditionalTransferLightOwnable2Step
- * @notice Ownable2Step variant of RuleConditionalTransferLight.
- */
-contract RuleConditionalTransferLightOwnable2Step is RuleConditionalTransferLightBase, Ownable2Step {
-    /*//////////////////////////////////////////////////////////////
-                             CONSTRUCTOR
-    //////////////////////////////////////////////////////////////*/
-
+contract RuleConditionalTransferLightMultiTokenOwnable2Step is RuleConditionalTransferLightMultiTokenBase, Ownable2Step {
     constructor(address owner) Ownable(owner) {}
-
-    /*//////////////////////////////////////////////////////////////
-                          PUBLIC FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return interfaceId == type(IERC165).interfaceId
@@ -35,13 +23,7 @@ contract RuleConditionalTransferLightOwnable2Step is RuleConditionalTransferLigh
             || interfaceId == type(IERC3643ComplianceFull).interfaceId;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
     function _authorizeTransferApproval() internal view virtual override onlyOwner {}
 
     function _onlyComplianceManager() internal virtual override onlyOwner {}
-
-    function _authorizeComplianceBindingChange(address) internal view virtual override onlyOwner {}
 }

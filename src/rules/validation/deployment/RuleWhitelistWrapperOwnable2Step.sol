@@ -36,6 +36,8 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
      */
     function _onlyRulesManager() internal view virtual override onlyOwner {}
 
+    function _onlyRulesLimitManager() internal view virtual override onlyOwner {}
+
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

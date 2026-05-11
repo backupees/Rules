@@ -9,26 +9,13 @@ import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
 import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.sol";
 import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleStandalone.sol";
-import {RuleConditionalTransferLightBase} from "./abstract/RuleConditionalTransferLightBase.sol";
+import {RuleConditionalTransferLightMultiTokenBase} from "./abstract/RuleConditionalTransferLightMultiTokenBase.sol";
 
-/**
- * @title ConditionalTransferLight
- * @dev Requires operator approval for each transfer. Same transfer (from, to, value)
- *      can be approved multiple times to allow repeated transfers.
- */
-contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleConditionalTransferLightBase {
-    /*//////////////////////////////////////////////////////////////
-                             CONSTRUCTOR
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @param admin Address of the contract admin.
-     */
+contract RuleConditionalTransferLightMultiToken is
+    AccessControlModuleStandalone,
+    RuleConditionalTransferLightMultiTokenBase
+{
     constructor(address admin) AccessControlModuleStandalone(admin) {}
-
-    /*//////////////////////////////////////////////////////////////
-                          PUBLIC FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
 
     function supportsInterface(bytes4 interfaceId)
         public
@@ -45,14 +32,7 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
             || AccessControlEnumerable.supportsInterface(interfaceId);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
     function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
 
     function _onlyComplianceManager() internal virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
-
-    function _authorizeComplianceBindingChange(address) internal view virtual override onlyRole(COMPLIANCE_MANAGER_ROLE)
-    {}
 }
