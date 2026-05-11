@@ -6,13 +6,14 @@ pragma solidity ^0.8.20;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {Ownable2StepERC165Module} from "../../../modules/Ownable2StepERC165Module.sol";
 /* ==== Abstract contracts === */
 import {RuleWhitelistWrapperBase} from "../abstract/base/RuleWhitelistWrapperBase.sol";
 
 /**
  * @title Wrapper to call several different whitelist rules (Ownable2Step)
  */
-contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2Step {
+contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2Step, Ownable2StepERC165Module {
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -37,6 +38,17 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
     function _onlyRulesManager() internal view virtual override onlyOwner {}
 
     function _onlyRulesLimitManager() internal view virtual override onlyOwner {}
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(RuleWhitelistWrapperBase, Ownable2StepERC165Module)
+        returns (bool)
+    {
+        return Ownable2StepERC165Module.supportsInterface(interfaceId)
+            || RuleWhitelistWrapperBase.supportsInterface(interfaceId);
+    }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS

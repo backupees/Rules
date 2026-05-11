@@ -54,6 +54,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 ### Changed
 
 - Update contract version in `VersionModule` to `0.4.0`.
+- Ownable2Step rule deployments now explicitly advertise ERC-165 `IERC165` (`0x01ffc9a7`), ERC-173 (`0x7f5828d0`), and Ownable2Step (`0x9ab669ef`) interface IDs.
 
 ### Dependencies
 
@@ -68,6 +69,8 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 - Added `RuleConditionalTransferLightMultiToken` tests proving approvals are token-scoped and cannot be consumed cross-token.
 - Added explicit RuleEngine integration tests for `RuleConditionalTransferLightMultiToken` documenting caller-context behavior in shared RuleEngine topology.
+- Added `Ownable2StepERC165Support` test covering all Ownable2Step rule deployments.
+- Extended `Ownable2StepERC165Support` with negative assertions to ensure Ownable2Step rule deployments do not advertise unrelated interfaces (`IAccessControl`, `0xdeadbeef`).
 
 ## v0.3.0 - 2026-04-16
 

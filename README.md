@@ -660,6 +660,7 @@ For simpler ownership-based control, `Ownable2Step` variants (two-step ownership
 
 `RuleConditionalTransferLightOwnable2Step` now grants approval and execution permissions exclusively to the owner.
 All `Ownable2Step` variants enforce access using OpenZeppelin's `onlyOwner` modifier.
+All `Ownable2Step` variants also advertise ERC-165 support for `IERC165` (`0x01ffc9a7`), ERC-173 ownership (`0x7f5828d0`), and Ownable2Step handover (`0x9ab669ef`).
 
 ### Address List
 
