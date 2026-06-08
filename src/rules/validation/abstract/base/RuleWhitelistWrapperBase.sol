@@ -124,7 +124,9 @@ abstract contract RuleWhitelistWrapperBase is
         override
         returns (uint8)
     {
-        if (!checkSpender) {
+        // Mint (from == address(0)) and burn (to == address(0)) are exempt from the spender check:
+        // the minter/burner acts on its own authority, not as a delegated ERC-20 spender.
+        if (!checkSpender || from == address(0) || to == address(0)) {
             return _detectTransferRestriction(from, to, value);
         }
 

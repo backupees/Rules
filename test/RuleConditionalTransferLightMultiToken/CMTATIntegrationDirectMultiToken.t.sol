@@ -3,14 +3,14 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
-import {CMTATDeployment} from "RuleEngine/../test/utils/CMTATDeployment.sol";
-import {CMTATStandalone} from "CMTAT/deployment/CMTATStandalone.sol";
+import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
+import {CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleConditionalTransferLightMultiToken} from "src/rules/operation/RuleConditionalTransferLightMultiToken.sol";
 
 contract CMTATIntegrationDirectMultiToken is Test, HelperContract {
-    CMTATStandalone private tokenA;
-    CMTATStandalone private tokenB;
+    CMTATStandardStandalone private tokenA;
+    CMTATStandardStandalone private tokenB;
     RuleConditionalTransferLightMultiToken private rule;
 
     function setUp() public {

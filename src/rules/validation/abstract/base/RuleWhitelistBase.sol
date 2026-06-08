@@ -89,7 +89,9 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
         override
         returns (uint8)
     {
-        if (checkSpender && !isAddressListed(spender)) {
+        // Mint (from == address(0)) and burn (to == address(0)) are exempt from the spender check:
+        // the minter/burner acts on its own authority, not as a delegated ERC-20 spender.
+        if (checkSpender && from != address(0) && to != address(0) && !isAddressListed(spender)) {
             return CODE_ADDRESS_SPENDER_NOT_WHITELISTED;
         }
         return _detectTransferRestriction(from, to, value);

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
-import {CMTATDeployment} from "RuleEngine/../test/utils/CMTATDeployment.sol";
+import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
 
 /**
@@ -207,8 +207,9 @@ contract CMTATIntegration is Test, HelperContract {
         // Act
         vm.expectRevert(
             abi.encodeWithSelector(
-                RuleBlacklist_InvalidTransfer.selector,
+                RuleBlacklist_InvalidTransferFrom.selector,
                 address(ruleBlacklist),
+                DEFAULT_ADMIN_ADDRESS,
                 ZERO_ADDRESS,
                 ADDRESS1,
                 amount,

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
-import {ICMTATConstructor, CMTATStandalone} from "CMTAT/deployment/CMTATStandalone.sol";
+import {ICMTATConstructor, CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 import {IERC1643CMTAT} from "CMTAT/interfaces/tokenization/draft-IERC1643CMTAT.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
@@ -16,7 +16,7 @@ import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
  *         a blacklist (RuleBlacklist) and a sanctions screening (RuleSanctionsList).
  *
  *         Deployment order:
- *         1. CMTATStandalone   — token contract (deployer as temporary admin)
+ *         1. CMTATStandardStandalone   — token contract (deployer as temporary admin)
  *         2. RuleBlacklist     — blocks blacklisted senders / recipients
  *         3. RuleSanctionsList — blocks sanctioned addresses via Chainalysis oracle
  *         4. RuleEngine        — aggregates both rules; token bound at construction
@@ -27,7 +27,7 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
     function deploy(address admin, address forwarder, ISanctionsList sanctionsOracle)
         public
         returns (
-            CMTATStandalone token,
+            CMTATStandardStandalone token,
             RuleEngine ruleEngine,
             RuleBlacklist ruleBlacklist,
             RuleSanctionsList ruleSanctionsList
@@ -46,7 +46,7 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
         ICMTATConstructor.Engine memory engines = ICMTATConstructor.Engine(IRuleEngine(address(0)));
 
         // Deploy CMTAT with the deployer as temporary admin so we can configure it.
-        token = new CMTATStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
+        token = new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
 
         // Deploy rules; each rule is owned directly by the intended admin.
         ruleBlacklist = new RuleBlacklist(admin, address(0));
@@ -75,7 +75,7 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
     function run()
         external
         returns (
-            CMTATStandalone token,
+            CMTATStandardStandalone token,
             RuleEngine ruleEngine,
             RuleBlacklist ruleBlacklist,
             RuleSanctionsList ruleSanctionsList

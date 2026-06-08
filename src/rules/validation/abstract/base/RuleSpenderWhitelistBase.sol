@@ -61,14 +61,16 @@ abstract contract RuleSpenderWhitelistBase is RuleAddressSet, RuleNFTAdapter, Ru
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
-    function _detectTransferRestrictionFrom(address spender, address, address, uint256)
+    function _detectTransferRestrictionFrom(address spender, address from, address to, uint256)
         internal
         view
         virtual
         override
         returns (uint8)
     {
-        if (spender != address(0) && !_isAddressListed(spender)) {
+        // Mint (from == address(0)) and burn (to == address(0)) are exempt from the spender check:
+        // the minter/burner acts on its own authority, not as a delegated ERC-20 spender.
+        if (from != address(0) && to != address(0) && !_isAddressListed(spender)) {
             return CODE_ADDRESS_SPENDER_NOT_WHITELISTED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);

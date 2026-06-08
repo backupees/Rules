@@ -40,6 +40,20 @@ contract RuleSpenderWhitelistTest is Test, HelperContract {
         rule.transferred(ADDRESS3, ADDRESS1, ADDRESS2, 10);
     }
 
+    function testMintExemptFromSpenderCheck() public {
+        // Minter (spender) not whitelisted — mint must still succeed because from == address(0).
+        assertEq(rule.detectTransferRestrictionFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS2, 10), TRANSFER_OK);
+        assertTrue(rule.canTransferFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS2, 10));
+        rule.transferred(ADDRESS3, ZERO_ADDRESS, ADDRESS2, 10);
+    }
+
+    function testBurnExemptFromSpenderCheck() public {
+        // Burner (spender) not whitelisted — burn must still succeed because to == address(0).
+        assertEq(rule.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ZERO_ADDRESS, 10), TRANSFER_OK);
+        assertTrue(rule.canTransferFrom(ADDRESS3, ADDRESS1, ZERO_ADDRESS, 10));
+        rule.transferred(ADDRESS3, ADDRESS1, ZERO_ADDRESS, 10);
+    }
+
     function testTransferFromAllowedWhenSpenderWhitelisted() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         rule.addAddress(ADDRESS3);

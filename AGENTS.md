@@ -76,3 +76,4 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 - `AGENTS.md` and `CLAUDE.md` are identical — always update both together.
 - Always update README.md with the latest change
 - New rule or features implemented: create/update technical documentation in `doc/technical`, update README, create/update test (target: 100% of code coverage), update CHANGELOG.md. Code coverage, run `forge coverage --report summary`
+- After each implemented feature or fix, provide a one-line GitHub commit message for all changes since the last commit.
