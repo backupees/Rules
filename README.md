@@ -163,7 +163,8 @@ Here is the list of codes used by the different rules
 |                         | CODE_ADDRESS_TO_NOT_WHITELISTED      | 63   |
 |                         | Reserved slot                        | 64-65 |
 | RuleSpenderWhitelist    | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 66   |
-|                         | Reserved slot                        | 67-70 |
+|                         | Reserved slot                        | 67-69 |
+| RuleMintAllowance       | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70   |
 
 Note: 
 
@@ -384,6 +385,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleERC2980 | [RuleERC2980.md](./doc/technical/RuleERC2980.md) |
 | RuleConditionalTransferLight | [RuleConditionalTransferLight.md](./doc/technical/RuleConditionalTransferLight.md) |
 | RuleConditionalTransferLightMultiToken | [RuleConditionalTransferLightMultiToken.md](./doc/technical/RuleConditionalTransferLightMultiToken.md) |
+| RuleMintAllowance | [RuleMintAllowance.md](./doc/technical/RuleMintAllowance.md) |
 
 ### Operational Notes
 
@@ -602,6 +604,16 @@ This rule requires that transfers must be approved by an operator before being e
 
 An operator calls `approveTransfer(from, to, value)`. The compliance manager binds exactly one token with `bindToken(token)`; attempting to bind a second token reverts. The token calls `detectTransferRestriction` (passes) and later `transferred` to consume the approval. Without approval, `detectTransferRestriction` returns code 46 and the transfer is rejected. The operator can revoke with `cancelTransferApproval`. To migrate to a different token, the compliance manager must first call `unbindToken` before binding the new one.
 
+#### Mint allowance
+
+This rule enforces a per-minter mint quota for one bound RuleEngine/token at a time. An operator sets the number of tokens each minter address is allowed to mint via `setMintAllowance(minter, amount)`. Every successful mint reduces the minter's remaining quota. The operator can adjust quotas at any time with `increaseMintAllowance` / `decreaseMintAllowance`. Regular transfers and burns are not restricted.
+
+Compatibility warning: `RuleMintAllowance` does not enforce quotas for a token that only calls the standard ERC-3643 3-arg compliance functions. It requires the CMTAT/RuleEngine spender-aware path so the minter address is passed as `spender`.
+
+**Usage scenario**
+
+The compliance manager binds the rule to the RuleEngine with `bindToken(ruleEngine)`. Attempting to bind a second RuleEngine/token reverts until the current binding is removed with `unbindToken`. The operator assigns `setMintAllowance(alice, 100_000e18)`. Alice's mints deduct from her quota through `transferred(alice, address(0), recipient, amount)`; once exhausted, further mints revert with code 70 until the operator increases the quota.
+
 #### Conditional transfer (light, multi-token)
 
 This variant scopes approvals by token address. It hashes `(token, from, to, value)` and supports multiple bound tokens in a single rule instance. Each successful transfer consumes one approval in the calling token namespace. Mints (`from == address(0)`) and burns (`to == address(0)`) remain exempt.
@@ -638,7 +650,8 @@ See also [docs.openzeppelin.com - AccessControl](https://docs.openzeppelin.com/c
 | `SANCTIONLIST_ROLE` | `0x30842281ac34bdc7d568c7ab276f84ba6fc1a1de1ae858b0afd35e716fb0650d` | `setSanctionListOracle`, `clearSanctionListOracle` (RuleSanctionsList) |
 | `RULES_MANAGEMENT_ROLE` | `0xea5f4eb72290e50c32abd6c23e45de3d8300b3286e1cbc2e293114b92e034e5e` | `setRules`, `clearRules`, `addRule`, `removeRule` (RuleWhitelistWrapper) |
 | `OPERATOR_ROLE` | `0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929` | `approveTransfer`, `cancelTransferApproval` (RuleConditionalTransferLight / RuleConditionalTransferLightMultiToken) |
-| `COMPLIANCE_MANAGER_ROLE` | `0xe5c50d0927e06141e032cb9a67e1d7092dc85c0b0825191f7e1cede600028568` | `bindToken`, `unbindToken` (RuleConditionalTransferLight / RuleConditionalTransferLightMultiToken) |
+| `COMPLIANCE_MANAGER_ROLE` | `0xe5c50d0927e06141e032cb9a67e1d7092dc85c0b0825191f7e1cede600028568` | `bindToken`, `unbindToken` (RuleConditionalTransferLight / RuleConditionalTransferLightMultiToken / RuleMintAllowance) |
+| `ALLOWANCE_OPERATOR_ROLE` | `0x86a2482724302deea267bc1ca14032806c318aeaf8d1e0d445a6fb7e7c997beb` | `setMintAllowance`, `increaseMintAllowance`, `decreaseMintAllowance` (RuleMintAllowance) |
 | `WHITELIST_ADD_ROLE` | `0x77c0b4c0975a0b0417d8ce295502737b95fee8923755fed0cce952907a1861ed` | `addWhitelistAddress`, `addWhitelistAddresses` (RuleERC2980) |
 | `WHITELIST_REMOVE_ROLE` | `0xf4d11a530c5b90f459c6ab1e335d3d77156b8ff3093308e4fca6d100ee87ade9` | `removeWhitelistAddress`, `removeWhitelistAddresses` (RuleERC2980) |
 | `FROZENLIST_ADD_ROLE` | `0xc52c49807a071974b9260f4b553ee09bd9fd85f687d8d4cc3232de7104ff7835` | `addFrozenlistAddress`, `addFrozenlistAddresses` (RuleERC2980) |
@@ -657,6 +670,7 @@ For simpler ownership-based control, `Ownable2Step` variants (two-step ownership
 - `RuleERC2980Ownable2Step`
 - `RuleConditionalTransferLightOwnable2Step`
 - `RuleConditionalTransferLightMultiTokenOwnable2Step`
+- `RuleMintAllowanceOwnable2Step`
 
 `RuleConditionalTransferLightOwnable2Step` now grants approval and execution permissions exclusively to the owner.
 All `Ownable2Step` variants enforce access using OpenZeppelin's `onlyOwner` modifier.

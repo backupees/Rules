@@ -19,6 +19,7 @@ docOut/
 node_modules/
 /history
 /ERCSpecification
+FEEDBACK.md
 *.dbg.json
 
 # Codex
@@ -27,3 +28,5 @@ node_modules/
 #drawio
 *.bkp
 *.dtmp
+
+

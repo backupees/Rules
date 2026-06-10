@@ -45,6 +45,26 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 
 
+## Unreleased
+
+### Added
+
+- `RuleMintAllowance` and `RuleMintAllowanceOwnable2Step` — operation rule enforcing a per-minter mint quota managed by an operator. Each mint reduces the minter's allowance; the operator can set an absolute quota or increment/decrement it. Regular transfers and burns are not restricted. Restriction code 70 (`CODE_MINTER_ALLOWANCE_EXCEEDED`).
+
+### Changed
+
+- `RuleMintAllowance` now enforces single-target binding like `RuleConditionalTransferLight`: a second `bindToken` call reverts with `RuleMintAllowance_TokenAlreadyBound` until the current RuleEngine/token is unbound.
+
+### Documentation
+
+- Added technical documentation: `doc/technical/RuleMintAllowance.md`.
+- Updated restriction code table, rule index, role summary, and Ownable2Step list in README.
+- Documented that `RuleMintAllowance` does not work with pure ERC-3643 3-arg mint callbacks; it requires the spender-aware CMTAT/RuleEngine path.
+
+### Testing
+
+- Added unit tests (`test/RuleMintAllowance/RuleMintAllowance.t.sol`, `test/RuleMintAllowance/RuleMintAllowanceOwnable2Step.t.sol`) and CMTAT integration test (`test/RuleMintAllowance/CMTATIntegration.t.sol`) — 51 tests, >98% line coverage on `RuleMintAllowanceBase`.
+
 ## v0.4.0
 
 ### Added

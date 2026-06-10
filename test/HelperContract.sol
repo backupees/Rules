@@ -21,6 +21,10 @@ import {RuleConditionalTransferLight} from "src/rules/operation/RuleConditionalT
 import {
     RuleConditionalTransferLightInvariantStorage
 } from "src/rules/operation/abstract/RuleConditionalTransferLightInvariantStorage.sol";
+// RuleMintAllowance
+import {
+    RuleMintAllowanceInvariantStorage
+} from "src/rules/operation/abstract/RuleMintAllowanceInvariantStorage.sol";
 import {
     RuleWhitelistInvariantStorage
 } from "src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleWhitelistInvariantStorage.sol";
@@ -52,6 +56,7 @@ abstract contract HelperContract is
     RuleMaxTotalSupplyInvariantStorage,
     RuleIdentityRegistryInvariantStorage,
     RuleConditionalTransferLightInvariantStorage,
+    RuleMintAllowanceInvariantStorage,
     RuleEngineInvariantStorage
 {
     // Test result

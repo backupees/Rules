@@ -28,6 +28,8 @@ Modular compliance-rule library for CMTAT / ERC-3643 security tokens. Each rule 
 | `RuleERC2980Ownable2Step` | Ownable2Step variant of RuleERC2980 |
 | `RuleConditionalTransferLight` | Require operator approval before each transfer; bound to exactly one token at a time (`bindToken` reverts if a token is already bound; use `unbindToken` first to migrate) |
 | `RuleConditionalTransferLightOwnable2Step` | Owner-only approval and execution for conditional transfers |
+| `RuleMintAllowance` | Enforce a per-minter mint quota; each mint reduces the minter's allowance; operator can set/increase/decrease allowances; bind to RuleEngine address before use |
+| `RuleMintAllowanceOwnable2Step` | Ownable2Step variant of RuleMintAllowance |
 | `AccessControlModuleStandalone` | Base RBAC module; admin implicitly holds all roles |
 | `MetaTxModuleStandalone` | ERC-2771 meta-transaction support |
 | `VersionModule` | Implements `IERC3643Version`; returns the contract version string |
@@ -60,6 +62,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 | RuleIdentityRegistry | 55–57 |
 | RuleERC2980 | 60–63 |
 | RuleSpenderWhitelist | 66 |
+| RuleMintAllowance | 70 |
 
 ## Conventions
 - Each rule has an `InvariantStorage` abstract contract holding its constants, custom errors, and events.
