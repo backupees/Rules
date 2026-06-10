@@ -8,7 +8,6 @@ import {RuleInterfaceId} from "RuleEngine/modules/library/RuleInterfaceId.sol";
 import {ERC1404ExtendInterfaceId} from "CMTAT/library/ERC1404ExtendInterfaceId.sol";
 import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
 import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.sol";
-import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {RuleMintAllowanceBase} from "./abstract/RuleMintAllowanceBase.sol";
 import {Ownable2StepERC165Module} from "../../modules/Ownable2StepERC165Module.sol";
 
@@ -37,12 +36,12 @@ contract RuleMintAllowanceOwnable2Step is RuleMintAllowanceBase, Ownable2Step, O
         override(Ownable2StepERC165Module, IERC165)
         returns (bool)
     {
+        // Do not advertise full ERC-3643 ICompliance: its 3-arg mint callback
+        // cannot identify the minter, so quota enforcement needs the spender-aware path.
         return Ownable2StepERC165Module.supportsInterface(interfaceId)
             || interfaceId == RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID
             || interfaceId == ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID
-            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID
-            || interfaceId == type(IERC7551Compliance).interfaceId
-            || interfaceId == type(IERC3643ComplianceFull).interfaceId;
+            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID || interfaceId == type(IERC7551Compliance).interfaceId;
     }
 
     /*//////////////////////////////////////////////////////////////

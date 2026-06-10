@@ -320,7 +320,7 @@ contract RuleMintAllowanceTest is Test, HelperContract {
         assertTrue(rule.supportsInterface(ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID));
         assertTrue(rule.supportsInterface(RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID));
         assertTrue(rule.supportsInterface(type(IERC7551Compliance).interfaceId));
-        assertTrue(rule.supportsInterface(type(IERC3643ComplianceFull).interfaceId));
+        assertFalse(rule.supportsInterface(type(IERC3643ComplianceFull).interfaceId));
         assertFalse(rule.supportsInterface(bytes4(0xdeadbeef)));
     }
 

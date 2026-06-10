@@ -611,6 +611,8 @@ This rule enforces a per-minter mint quota for one bound RuleEngine/token at a t
 
 Compatibility warning: `RuleMintAllowance` does not enforce quotas for a token that only calls the standard ERC-3643 3-arg compliance functions. It requires the CMTAT/RuleEngine spender-aware path so the minter address is passed as `spender`.
 
+For the same reason, it does not advertise the full ERC-3643 `ICompliance` interface through ERC-165; the 3-arg callbacks alone cannot enforce the mint quota.
+
 **Usage scenario**
 
 The compliance manager binds the rule to the RuleEngine with `bindToken(ruleEngine)`. Attempting to bind a second RuleEngine/token reverts until the current binding is removed with `unbindToken`. The operator assigns `setMintAllowance(alice, 100_000e18)`. Alice's mints deduct from her quota through `transferred(alice, address(0), recipient, amount)`; once exhausted, further mints revert with code 70 until the operator increases the quota.

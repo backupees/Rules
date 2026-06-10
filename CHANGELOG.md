@@ -54,6 +54,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 ### Changed
 
 - `RuleMintAllowance` now enforces single-target binding like `RuleConditionalTransferLight`: a second `bindToken` call reverts with `RuleMintAllowance_TokenAlreadyBound` until the current RuleEngine/token is unbound.
+- `RuleMintAllowance` no longer advertises the full ERC-3643 `ICompliance` interface through ERC-165 because its mint quota requires spender-aware callbacks.
 
 ### Documentation
 

@@ -12,6 +12,8 @@ Regular transfers and burns are **not restricted** by this rule — it only acts
 
 > Compatibility warning: this rule does **not** enforce mint allowances for a token that only calls the standard ERC-3643 3-arg compliance functions. It requires the spender-aware RuleEngine/CMTAT v3.3+ path (`detectTransferRestrictionFrom` and `transferred(spender, from, to, value)`) so the minter address is available.
 
+For that reason, `RuleMintAllowance` does not advertise the full ERC-3643 `ICompliance` interface through ERC-165. It still implements the inherited 3-arg callbacks required by the rule interface, but they are not sufficient to enforce mint quotas.
+
 ## Restriction codes
 
 | Constant | Code | Meaning |
