@@ -61,11 +61,7 @@ contract CMTATIntegration is Test, HelperContract {
         vm.prank(MINTER);
         vm.expectRevert(
             abi.encodeWithSelector(
-                RuleMintAllowance_AllowanceExceeded.selector,
-                address(mintAllowanceRule),
-                MINTER,
-                100,
-                101
+                RuleMintAllowance_AllowanceExceeded.selector, address(mintAllowanceRule), MINTER, 100, 101
             )
         );
         cmtatContract.mint(ADDRESS1, 101);
@@ -76,6 +72,51 @@ contract CMTATIntegration is Test, HelperContract {
         vm.prank(MINTER);
         vm.expectRevert();
         cmtatContract.mint(ADDRESS1, 1);
+    }
+
+    function testBatchMintSucceedsWithinCumulativeAllowance() public {
+        address[] memory accounts = new address[](2);
+        accounts[0] = ADDRESS1;
+        accounts[1] = ADDRESS2;
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = 300;
+        values[1] = 200;
+
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        mintAllowanceRule.setMintAllowance(MINTER, 500);
+
+        vm.prank(MINTER);
+        cmtatContract.batchMint(accounts, values);
+
+        assertEq(cmtatContract.balanceOf(ADDRESS1), 300);
+        assertEq(cmtatContract.balanceOf(ADDRESS2), 200);
+        assertEq(mintAllowanceRule.mintAllowance(MINTER), 0);
+    }
+
+    function testBatchMintRevertsAndRollsBackWhenCumulativeAllowanceExceeded() public {
+        address[] memory accounts = new address[](2);
+        accounts[0] = ADDRESS1;
+        accounts[1] = ADDRESS2;
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = 300;
+        values[1] = 201;
+
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        mintAllowanceRule.setMintAllowance(MINTER, 500);
+
+        vm.prank(MINTER);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RuleMintAllowance_AllowanceExceeded.selector, address(mintAllowanceRule), MINTER, 200, 201
+            )
+        );
+        cmtatContract.batchMint(accounts, values);
+
+        assertEq(cmtatContract.balanceOf(ADDRESS1), 0);
+        assertEq(cmtatContract.balanceOf(ADDRESS2), 0);
+        assertEq(mintAllowanceRule.mintAllowance(MINTER), 500);
     }
 
     function testMultipleMintersSeparateAllowances() public {

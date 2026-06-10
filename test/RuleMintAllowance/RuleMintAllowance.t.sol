@@ -9,6 +9,8 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {RuleInterfaceId} from "RuleEngine/modules/library/RuleInterfaceId.sol";
 import {ERC1404ExtendInterfaceId} from "CMTAT/library/ERC1404ExtendInterfaceId.sol";
 import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
+import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.sol";
+import {IERC3643ComplianceFull} from "src/mocks/IERC3643ComplianceFull.sol";
 
 contract RuleMintAllowanceTest is Test, HelperContract {
     uint8 internal constant CODE_ALLOWANCE_EXCEEDED = 70;
@@ -317,6 +319,8 @@ contract RuleMintAllowanceTest is Test, HelperContract {
         assertTrue(rule.supportsInterface(RuleInterfaceId.IRULE_INTERFACE_ID));
         assertTrue(rule.supportsInterface(ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID));
         assertTrue(rule.supportsInterface(RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID));
+        assertTrue(rule.supportsInterface(type(IERC7551Compliance).interfaceId));
+        assertTrue(rule.supportsInterface(type(IERC3643ComplianceFull).interfaceId));
         assertFalse(rule.supportsInterface(bytes4(0xdeadbeef)));
     }
 

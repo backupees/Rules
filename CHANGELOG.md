@@ -63,7 +63,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ### Testing
 
-- Added unit tests (`test/RuleMintAllowance/RuleMintAllowance.t.sol`, `test/RuleMintAllowance/RuleMintAllowanceOwnable2Step.t.sol`) and CMTAT integration test (`test/RuleMintAllowance/CMTATIntegration.t.sol`) — 51 tests, >98% line coverage on `RuleMintAllowanceBase`.
+- Added unit tests (`test/RuleMintAllowance/RuleMintAllowance.t.sol`, `test/RuleMintAllowance/RuleMintAllowanceOwnable2Step.t.sol`) and CMTAT integration test (`test/RuleMintAllowance/CMTATIntegration.t.sol`) — 54 tests, including batch mint rollback and ERC-165 advertised-interface coverage, >98% line coverage on `RuleMintAllowanceBase`.
 
 ## v0.4.0
 

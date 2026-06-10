@@ -165,6 +165,7 @@ Here is the list of codes used by the different rules
 | RuleSpenderWhitelist    | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 66   |
 |                         | Reserved slot                        | 67-69 |
 | RuleMintAllowance       | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70   |
+|  | Reserved slot | 71-74 |
 
 Note: 
 
@@ -782,6 +783,7 @@ forge test --match-contract <contract name> --match-test <function name>
 ```
 
 - For `RuleConditionalTransferLight` fuzz/integration tests, note that mint and burn paths (`from == address(0)` or `to == address(0)`) are intentionally exempt from approval consumption.
+- `RuleMintAllowance` integration tests cover single mints, cumulative `batchMint` allowance consumption, rollback on over-allowance batch mint, and advertised ERC-165 interface IDs.
 - Ownable2Step variants also include dedicated tests for ownership transfer and manager-only functions (IdentityRegistry, MaxTotalSupply, SanctionsList).
 - Coverage-focused tests also target deployment wrappers and operation-rule overloads (`created`, `destroyed`, spender-aware `transferred`) to improve line/function coverage in `src/rules/operation` and `src/rules/validation/deployment`.
 
