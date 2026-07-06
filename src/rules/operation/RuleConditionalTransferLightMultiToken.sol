@@ -10,10 +10,12 @@ import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.s
 import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleStandalone.sol";
 import {RuleConditionalTransferLightMultiTokenBase} from "./abstract/RuleConditionalTransferLightMultiTokenBase.sol";
+import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643ComplianceRolesStorage.sol";
 
 contract RuleConditionalTransferLightMultiToken is
     AccessControlModuleStandalone,
-    RuleConditionalTransferLightMultiTokenBase
+    RuleConditionalTransferLightMultiTokenBase,
+    ERC3643ComplianceRolesStorage
 {
     constructor(address admin) AccessControlModuleStandalone(admin) {}
 

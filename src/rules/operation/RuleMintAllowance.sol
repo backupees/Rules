@@ -9,6 +9,7 @@ import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
 import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.sol";
 import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleStandalone.sol";
 import {RuleMintAllowanceBase} from "./abstract/RuleMintAllowanceBase.sol";
+import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643ComplianceRolesStorage.sol";
 
 /**
  * @title RuleMintAllowance
@@ -17,7 +18,7 @@ import {RuleMintAllowanceBase} from "./abstract/RuleMintAllowanceBase.sol";
  *         `ALLOWANCE_OPERATOR_ROLE` can set, increase, and decrease per-minter allowances.
  *         `COMPLIANCE_MANAGER_ROLE` can bind/unbind the rule to a RuleEngine.
  */
-contract RuleMintAllowance is AccessControlModuleStandalone, RuleMintAllowanceBase {
+contract RuleMintAllowance is AccessControlModuleStandalone, RuleMintAllowanceBase, ERC3643ComplianceRolesStorage {
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/

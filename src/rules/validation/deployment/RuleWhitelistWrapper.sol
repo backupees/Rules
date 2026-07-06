@@ -8,11 +8,13 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 /* ==== Abstract contracts === */
 import {AccessControlModuleStandalone} from "../../../modules/AccessControlModuleStandalone.sol";
 import {RuleWhitelistWrapperBase} from "../abstract/base/RuleWhitelistWrapperBase.sol";
+/* ==== RuleEngine === */
+import {RulesManagementModuleRolesStorage} from "RuleEngine/modules/library/RulesManagementModuleRolesStorage.sol";
 
 /**
  * @title Wrapper to call several different whitelist rules
  */
-contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleStandalone {
+contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleStandalone, RulesManagementModuleRolesStorage {
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/

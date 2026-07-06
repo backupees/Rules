@@ -62,7 +62,7 @@ forge test
 
 | Component        | Compatible Versions                       |
 | ---------------- | ----------------------------------------- |
-| **Rules v0.1.0** | CMTAT ≥ v3.0.0<br />RuleEngine v3.0.0-rc3 |
+| **Rules v0.1.0** | CMTAT ≥ v3.0.0<br />RuleEngine v3.0.0-rc4 |
 
 Each Rule implements the interface `IRuleEngine` defined in CMTAT.
 
@@ -716,7 +716,7 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
   - CMTAT [v3.2.0](https://github.com/CMTA/CMTAT/releases/tag/v3.2.0)
 
-  - RuleEngine [v3.0.0-rc3](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc3)
+  - RuleEngine [v3.0.0-rc4](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc4)
 
 ### Toolchain installation
 

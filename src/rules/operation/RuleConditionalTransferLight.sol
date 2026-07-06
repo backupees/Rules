@@ -10,13 +10,14 @@ import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.s
 import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleStandalone.sol";
 import {RuleConditionalTransferLightBase} from "./abstract/RuleConditionalTransferLightBase.sol";
+import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643ComplianceRolesStorage.sol";
 
 /**
  * @title ConditionalTransferLight
  * @dev Requires operator approval for each transfer. Same transfer (from, to, value)
  *      can be approved multiple times to allow repeated transfers.
  */
-contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleConditionalTransferLightBase {
+contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleConditionalTransferLightBase, ERC3643ComplianceRolesStorage {
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/

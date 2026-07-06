@@ -79,7 +79,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ### Dependencies
 
-- Update RuleEngine to `v3.0.0-rc3`.
+- Update RuleEngine to `v3.0.0-rc4`. Role constants were isolated into dedicated storage contracts (`RulesManagementModuleRolesStorage`, `ERC3643ComplianceRolesStorage`); concrete rules that reference `RULES_MANAGEMENT_ROLE` / `COMPLIANCE_MANAGER_ROLE` now inherit the corresponding storage contract.
 
 ### Documentation
 
