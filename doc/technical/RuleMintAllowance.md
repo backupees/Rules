@@ -24,6 +24,14 @@ For that reason, `RuleMintAllowance` does not advertise the full ERC-3643 `IComp
 
 ![surya_inheritance_RuleMintAllowance](../surya/surya_inheritance/surya_inheritance_RuleMintAllowance.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a mint. As an operation rule, it decrements the minter's allowance in the `transferred` callback after balances are updated.
+
+![RuleMintAllowance flow with a CMTAT token](../img/rule-mint-allowance-flow.png)
+
+_Diagram source: doc/img/rule-mint-allowance-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

@@ -18,6 +18,14 @@ Mints (`from == address(0)`) and burns (`to == address(0)`) are **exempt**: they
 
 ![surya_inheritance_RuleConditionalTransferLight](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLight.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows the two-phase flow: an operator first approves a `(from, to, value)` transfer, then the CMTAT token (with this rule configured in its RuleEngine) validates and consumes that approval during the transfer.
+
+![RuleConditionalTransferLight flow with a CMTAT token](../img/rule-conditional-transfer-light-flow.png)
+
+_Diagram source: doc/img/rule-conditional-transfer-light-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

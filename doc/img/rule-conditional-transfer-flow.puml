@@ -1,0 +1,49 @@
+@startuml
+title RuleConditionalTransfer (Vinkulierung) — request/approve/transfer flow with a CMTAT token
+
+actor "Token holder" as holder
+actor "Rule operator" as op
+participant "CMTAT token\n(bound to the rule)" as cmtat
+participant "RuleEngine" as engine
+participant "RuleConditionalTransfer\nrequests[key(from,to,value)]" as rule
+
+== 1. Request (holder or operator) ==
+holder -> rule : createTransferRequest(to, value)
+rule -> rule : status = WAIT (request created)
+
+== 2. Approval (operator) ==
+op -> rule : approveTransferRequest(from, to, value)
+rule -> rule : status = APPROVED
+note right of rule
+  Options (set by operator):
+  - AUTOMATIC_APPROVAL: WAIT is treated as
+    approved after timeLimitBeforeAutomaticApproval
+  - TIME_LIMIT: request/transfer deadlines
+  - Conditional whitelist: from & to whitelisted
+    are auto-authorized without a request
+end note
+
+alt AUTOMATIC_TRANSFER enabled (and rule has ERC-20 allowance)
+  rule -> cmtat : transferFrom(from, to, value)
+  note right of rule : rule performs the transfer itself on approval
+end
+
+== 3. Transfer via CMTAT (manual case) ==
+holder -> cmtat : transfer(to, value)
+
+group Validation + operation
+  cmtat -> engine : detectTransferRestriction(from, to, value)
+  engine -> rule : detectTransferRestriction(from, to, value)
+  alt no APPROVED request (or deadline passed)
+    rule --> cmtat : 46 (request not approved)
+    cmtat --> holder : revert CMTAT_InvalidTransfer(46)
+  else request APPROVED and within time limit
+    rule --> cmtat : 0 (TRANSFER_OK)
+    cmtat -> cmtat : _update: move balances
+    cmtat -> engine : transferred(from, to, value)
+    engine -> rule : transferred(...)
+    rule -> rule : status = EXECUTED (state change)
+    cmtat --> holder : Transfer(from, to, value)
+  end
+end
+@enduml

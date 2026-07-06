@@ -1,0 +1,41 @@
+@startuml
+title RuleSanctionsList — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleSanctionsList" as rule
+participant "Chainalysis oracle\n(SanctionsList)" as oracle
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> rule : detectTransferRestrictionFrom(spender, from, to, value)
+  alt oracle == address(0)
+    note right of rule : no oracle configured -> rule passes
+    rule --> cmtat : 0 (TRANSFER_OK)
+  else oracle configured
+    rule -> oracle : isSanctioned(from) / isSanctioned(to) / isSanctioned(spender)
+    oracle --> rule : true / false
+    alt from sanctioned
+      rule --> cmtat : 30 (CODE_ADDRESS_FROM_IS_SANCTIONED)
+    else to sanctioned
+      rule --> cmtat : 31 (CODE_ADDRESS_TO_IS_SANCTIONED)
+    else spender sanctioned
+      rule --> cmtat : 32 (CODE_ADDRESS_SPENDER_IS_SANCTIONED)
+    else none sanctioned
+      rule --> cmtat : 0 (TRANSFER_OK)
+    end
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

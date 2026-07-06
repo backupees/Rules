@@ -23,6 +23,14 @@ This rule restricts only spender-initiated transfers (`transferFrom`): the spend
 
 ![surya_inheritance_RuleSpenderWhitelist](../surya/surya_inheritance/surya_inheritance_RuleSpenderWhitelist.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer. Direct `transfer` calls always pass; only `transferFrom` spenders are gated.
+
+![RuleSpenderWhitelist flow with a CMTAT token](../img/rule-spender-whitelist-flow.png)
+
+_Diagram source: doc/img/rule-spender-whitelist-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

@@ -1,0 +1,44 @@
+@startuml
+title RuleWhitelistWrapper — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleWhitelistWrapper\n(OR over child rules,\noptional checkSpender)" as wrap
+participant "Child whitelist rules\n(IAddressList)" as child
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> wrap : detectTransferRestrictionFrom(spender, from, to, value)
+  note right of wrap
+    An address is whitelisted if ANY
+    child rule lists it (OR logic).
+    Iteration stops early once all
+    required addresses are resolved.
+  end note
+  loop over registered child rules until resolved
+    wrap -> child : isWhitelisted(from) / isWhitelisted(to) [/ spender]
+    child --> wrap : true / false
+  end
+  alt from listed in no child
+    wrap --> cmtat : 21 (CODE_ADDRESS_FROM_NOT_WHITELISTED)
+  else to listed in no child
+    wrap --> cmtat : 22 (CODE_ADDRESS_TO_NOT_WHITELISTED)
+  else spender listed in no child (checkSpender on)
+    wrap --> cmtat : 23 (CODE_ADDRESS_SPENDER_NOT_WHITELISTED)
+  else all resolved in some child
+    wrap --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> wrap : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

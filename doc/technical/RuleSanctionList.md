@@ -22,6 +22,14 @@ The oracle can be updated with `setSanctionListOracle` or disabled with `clearSa
 
 ![surya_inheritance_RuleSanctionsList](../surya/surya_inheritance/surya_inheritance_RuleSanctionsList.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer, including the Chainalysis oracle lookup and the no-oracle pass-through case.
+
+![RuleSanctionsList flow with a CMTAT token](../img/rule-sanctionslist-flow.png)
+
+_Diagram source: doc/img/rule-sanctionslist-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

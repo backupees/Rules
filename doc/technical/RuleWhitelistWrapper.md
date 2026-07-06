@@ -20,6 +20,14 @@ Each child rule must implement `IAddressList`. The wrapper iterates through all 
 
 ![surya_inheritance_RuleWhitelistWrapper](../surya/surya_inheritance/surya_inheritance_RuleWhitelistWrapper.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows how the wrapper aggregates its child whitelist rules when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer.
+
+![RuleWhitelistWrapper flow with a CMTAT token](../img/rule-whitelist-wrapper-flow.png)
+
+_Diagram source: doc/img/rule-whitelist-wrapper-flow.puml._
+
 ## Configuration
 
 ### Constructor parameters

@@ -29,6 +29,14 @@ When `checkSpender` is `true`, the spender in a `transferFrom` call must also be
 
 ![surya_inheritance_RuleWhitelist](../surya/surya_inheritance/surya_inheritance_RuleWhitelist.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer.
+
+![RuleWhitelist flow with a CMTAT token](../img/rule-whitelist-flow.png)
+
+_Diagram source: doc/img/rule-whitelist-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

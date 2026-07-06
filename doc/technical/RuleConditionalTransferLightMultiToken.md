@@ -20,6 +20,14 @@ This prevents approval reuse across tokens when the rule receives token-specific
 
 ![surya_inheritance_RuleConditionalTransferLightMultiToken](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLightMultiToken.sol.png)
 
+### Flow with a CMTAT token
+
+The sequence below shows the two-phase flow with token-scoped approvals: an operator approves a `(token, from, to, value)` transfer, then the CMTAT token (with this rule configured in its RuleEngine) validates and consumes that approval. Approvals of one token cannot be spent by another.
+
+![RuleConditionalTransferLightMultiToken flow with a CMTAT token](../img/rule-conditional-transfer-light-multitoken-flow.png)
+
+_Diagram source: doc/img/rule-conditional-transfer-light-multitoken-flow.puml._
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

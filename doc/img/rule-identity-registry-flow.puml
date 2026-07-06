@@ -1,0 +1,41 @@
+@startuml
+title RuleIdentityRegistry — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleIdentityRegistry" as rule
+participant "ERC-3643\nIdentity Registry" as reg
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> rule : detectTransferRestrictionFrom(spender, from, to, value)
+  alt registry == address(0)
+    note right of rule : no registry configured -> rule passes
+    rule --> cmtat : 0 (TRANSFER_OK)
+  else registry configured
+    rule -> reg : isVerified(from) / isVerified(to) / isVerified(spender)
+    reg --> rule : true / false
+    alt from not verified
+      rule --> cmtat : 55 (CODE_ADDRESS_FROM_NOT_VERIFIED)
+    else to not verified
+      rule --> cmtat : 56 (CODE_ADDRESS_TO_NOT_VERIFIED)
+    else spender not verified
+      rule --> cmtat : 57 (CODE_ADDRESS_SPENDER_NOT_VERIFIED)
+    else all verified
+      rule --> cmtat : 0 (TRANSFER_OK)
+    end
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

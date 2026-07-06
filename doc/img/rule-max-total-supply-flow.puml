@@ -1,0 +1,34 @@
+@startuml
+title RuleMaxTotalSupply — mint flow with a CMTAT token
+
+actor "Minter" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleMaxTotalSupply\n(max cap on totalSupply)" as rule
+
+caller -> cmtat : mint(to, value)   <i>(from == address(0))</i>
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestriction(address(0), to, value)
+  engine -> rule : detectTransferRestriction(address(0), to, value)
+  note right of rule
+    Only mints (from == 0) are checked.
+    Transfers between holders and burns pass.
+    Reads token.totalSupply().
+  end note
+  alt totalSupply() + value > maxTotalSupply
+    rule --> cmtat : 50 (CODE_MAX_TOTAL_SUPPLY_EXCEEDED)
+  else within cap
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(50)
+else code == 0
+  cmtat -> cmtat : _update: mint value to `to`
+  cmtat -> engine : transferred(operator, address(0), to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(address(0), to, value)
+end
+@enduml
