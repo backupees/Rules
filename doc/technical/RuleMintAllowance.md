@@ -14,6 +14,16 @@ Regular transfers and burns are **not restricted** by this rule — it only acts
 
 For that reason, `RuleMintAllowance` does not advertise the full ERC-3643 `ICompliance` interface through ERC-165. It still implements the inherited 3-arg callbacks required by the rule interface, but they are not sufficient to enforce mint quotas.
 
+## Schema
+
+### Graph
+
+![surya_graph_RuleMintAllowance](../surya/surya_graph/surya_graph_RuleMintAllowance.sol.png)
+
+### Inheritance
+
+![surya_inheritance_RuleMintAllowance](../surya/surya_inheritance/surya_inheritance_RuleMintAllowance.sol.png)
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

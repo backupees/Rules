@@ -10,6 +10,16 @@ Approval key:
 
 This prevents approval reuse across tokens when the rule receives token-specific caller context (for example, direct token callbacks to the rule).
 
+## Schema
+
+### Graph
+
+![surya_graph_RuleConditionalTransferLightMultiToken](../surya/surya_graph/surya_graph_RuleConditionalTransferLightMultiToken.sol.png)
+
+### Inheritance
+
+![surya_inheritance_RuleConditionalTransferLightMultiToken](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLightMultiToken.sol.png)
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

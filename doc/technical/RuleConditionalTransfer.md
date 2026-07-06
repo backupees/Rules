@@ -69,11 +69,11 @@ To perform the transfer, the token holder has to `approve` the rule to spend tok
 
 ### Graph
 
-![surya_graph_Blacklist](../surya/surya_graph/surya_graph_RuleConditionalTransfer.sol.png)
+![surya_graph_RuleConditionalTransferLight](../surya/surya_graph/surya_graph_RuleConditionalTransferLight.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleWhitelistWrapper.sol](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransfer.sol.png)
+![surya_inheritance_RuleConditionalTransferLight](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLight.sol.png)
 
 ### Workflow
 
@@ -167,7 +167,7 @@ The default admin is the address put in argument(`admin`) inside the constructor
 
 ### Graph
 
-![surya_graph_Whitelist](../surya/surya_graph/surya_graph_RuleConditionalTransfer.sol.png)
+![surya_graph_RuleConditionalTransferLight](../surya/surya_graph/surya_graph_RuleConditionalTransferLight.sol.png)
 
 
 

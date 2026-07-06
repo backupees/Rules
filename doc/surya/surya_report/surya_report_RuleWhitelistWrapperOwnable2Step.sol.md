@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleWhitelistWrapperOwnable2Step.sol | 5ec7ee305486a7edfdc2dc045d717fc8ecb2b577 |
+| ./rules/validation/deployment/RuleWhitelistWrapperOwnable2Step.sol | daca724ea3684221c6205d7c4784c48e5ed73074 |
 
 
 ### Contracts Description Table
@@ -15,10 +15,12 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleWhitelistWrapperOwnable2Step** | Implementation | RuleWhitelistWrapperBase, Ownable2Step |||
+| **RuleWhitelistWrapperOwnable2Step** | Implementation | RuleWhitelistWrapperBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleWhitelistWrapperBase Ownable |
 | └ | _authorizeCheckSpenderManager | Internal 🔒 |   | onlyOwner |
 | └ | _onlyRulesManager | Internal 🔒 |   | onlyOwner |
+| └ | _onlyRulesLimitManager | Internal 🔒 |   | onlyOwner |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

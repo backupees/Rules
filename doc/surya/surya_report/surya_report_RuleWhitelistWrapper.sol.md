@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleWhitelistWrapper.sol | 3294eb2b561b5055686ff1eb82b1f88494d1d9c6 |
+| ./rules/validation/deployment/RuleWhitelistWrapper.sol | a2aa47367533733b60d7aca73921f7e3546424b7 |
 
 
 ### Contracts Description Table
@@ -15,12 +15,13 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleWhitelistWrapper** | Implementation | RuleWhitelistWrapperBase, AccessControlModuleStandalone |||
+| **RuleWhitelistWrapper** | Implementation | RuleWhitelistWrapperBase, AccessControlModuleStandalone, RulesManagementModuleRolesStorage |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleWhitelistWrapperBase AccessControlModuleStandalone |
 | └ | hasRole | Public ❗️ |   |NO❗️ |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _authorizeCheckSpenderManager | Internal 🔒 | 🛑  | onlyRole |
 | └ | _onlyRulesManager | Internal 🔒 | 🛑  | onlyRole |
+| └ | _onlyRulesLimitManager | Internal 🔒 | 🛑  | onlyRole |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |
