@@ -45,37 +45,19 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 
 
-## Unreleased
-
-### Added
-
-- `RuleMintAllowance` and `RuleMintAllowanceOwnable2Step` — operation rule enforcing a per-minter mint quota managed by an operator. Each mint reduces the minter's allowance; the operator can set an absolute quota or increment/decrement it. Regular transfers and burns are not restricted. Restriction code 70 (`CODE_MINTER_ALLOWANCE_EXCEEDED`).
-
-### Changed
-
-- `RuleMintAllowance` now enforces single-target binding like `RuleConditionalTransferLight`: a second `bindToken` call reverts with `RuleMintAllowance_TokenAlreadyBound` until the current RuleEngine/token is unbound.
-- `RuleMintAllowance` no longer advertises the full ERC-3643 `ICompliance` interface through ERC-165 because its mint quota requires spender-aware callbacks.
-
-### Documentation
-
-- Added technical documentation: `doc/technical/RuleMintAllowance.md`.
-- Updated restriction code table, rule index, role summary, and Ownable2Step list in README.
-- Documented that `RuleMintAllowance` does not work with pure ERC-3643 3-arg mint callbacks; it requires the spender-aware CMTAT/RuleEngine path.
-
-### Testing
-
-- Added unit tests (`test/RuleMintAllowance/RuleMintAllowance.t.sol`, `test/RuleMintAllowance/RuleMintAllowanceOwnable2Step.t.sol`) and CMTAT integration test (`test/RuleMintAllowance/CMTATIntegration.t.sol`) — 54 tests, including batch mint rollback and ERC-165 advertised-interface coverage, >98% line coverage on `RuleMintAllowanceBase`.
-
 ## v0.4.0
 
 ### Added
 
 - `RuleConditionalTransferLightMultiToken` and `RuleConditionalTransferLightMultiTokenOwnable2Step` — multi-token conditional transfer rules with token-scoped approvals keyed by `(token, from, to, value)`.
+- `RuleMintAllowance` and `RuleMintAllowanceOwnable2Step` — operation rule enforcing a per-minter mint quota managed by an operator. Each mint reduces the minter's allowance; the operator can set an absolute quota or increment/decrement it. Regular transfers and burns are not restricted. Restriction code 70 (`CODE_MINTER_ALLOWANCE_EXCEEDED`).
 
 ### Changed
 
 - Update contract version in `VersionModule` to `0.4.0`.
 - Ownable2Step rule deployments now explicitly advertise ERC-165 `IERC165` (`0x01ffc9a7`), ERC-173 (`0x7f5828d0`), and Ownable2Step (`0x9ab669ef`) interface IDs.
+- `RuleMintAllowance` now enforces single-target binding like `RuleConditionalTransferLight`: a second `bindToken` call reverts with `RuleMintAllowance_TokenAlreadyBound` until the current RuleEngine/token is unbound.
+- `RuleMintAllowance` no longer advertises the full ERC-3643 `ICompliance` interface through ERC-165 because its mint quota requires spender-aware callbacks.
 
 ### Dependencies
 
@@ -85,6 +67,9 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 - Added technical documentation: `doc/technical/RuleConditionalTransferLightMultiToken.md`.
 - Updated README operation-rule sections and tables to include `RuleConditionalTransferLightMultiToken`.
+- Added technical documentation: `doc/technical/RuleMintAllowance.md`.
+- Updated restriction code table, rule index, role summary, and Ownable2Step list in README.
+- Documented that `RuleMintAllowance` does not work with pure ERC-3643 3-arg mint callbacks; it requires the spender-aware CMTAT/RuleEngine path.
 
 ### Testing
 
@@ -92,6 +77,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 - Added explicit RuleEngine integration tests for `RuleConditionalTransferLightMultiToken` documenting caller-context behavior in shared RuleEngine topology.
 - Added `Ownable2StepERC165Support` test covering all Ownable2Step rule deployments.
 - Extended `Ownable2StepERC165Support` with negative assertions to ensure Ownable2Step rule deployments do not advertise unrelated interfaces (`IAccessControl`, `0xdeadbeef`).
+- Added unit tests (`test/RuleMintAllowance/RuleMintAllowance.t.sol`, `test/RuleMintAllowance/RuleMintAllowanceOwnable2Step.t.sol`) and CMTAT integration test (`test/RuleMintAllowance/CMTATIntegration.t.sol`) — 54 tests, including batch mint rollback and ERC-165 advertised-interface coverage, >98% line coverage on `RuleMintAllowanceBase`.
 
 ## v0.3.0 - 2026-04-16
 
