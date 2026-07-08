@@ -4,19 +4,12 @@
 
 Each rule can be used **standalone**, directly plugged into a CMTAT token, **or** managed collectively via a RuleEngine.
 
+The **RuleEngine** is an external smart contract that applies transfer restrictions to security tokens such as **CMTAT** or [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643)-compatible tokens through a RuleEngine.
+Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatible token can call on every transfer to ensure regulatory and business-logic compliance.
+
 **Current package version:** `v0.4.0` (contracts report `version()` → `"0.4.0"`). Built against CMTAT `v3.3.0-rc1` and RuleEngine `v3.0.0-rc4`; see [Compatibility](#compatibility) for the supported range.
 
 > This project has not undergone an audit and is provided as-is without any warranties.
-
-## Schema
-
-- Using rules with CMTAT and ERC-3643 tokens through a [RuleEngine](https://github.com/CMTA/RuleEngine)
-
-![Rule-RuleEngine.drawio](./doc/schema/Rule-RuleEngine.drawio.png)
-
-- Using a rule directly with CMTAT and ERC-3643 tokens
-
-![Rule-Rule.drawio](./doc/schema/Rule-Rule.drawio.png)
 
 ## Table of Contents
 
@@ -35,10 +28,17 @@ Each rule can be used **standalone**, directly plugged into a CMTAT token, **or*
 - [Security](#security)
 - [Intellectual property](#intellectual-property)
 
-## Overview
+## Schema
 
-The **RuleEngine** is an external smart contract that applies transfer restrictions to security tokens such as **CMTAT** or [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643)-compatible tokens through a RuleEngine.
-Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatible token can call on every transfer to ensure regulatory and business-logic compliance.
+- Using rules with CMTAT and ERC-3643 tokens through a [RuleEngine](https://github.com/CMTA/RuleEngine)
+
+![Rule-RuleEngine.drawio](./doc/schema/Rule-RuleEngine.drawio.png)
+
+- Using a rule directly with CMTAT and ERC-3643 tokens
+
+![Rule-Rule.drawio](./doc/schema/Rule-Rule.drawio.png)
+
+## Overview
 
 ### Key Concepts
 
@@ -712,222 +712,30 @@ Common access control between the blacklist rule and whitelist rule.
 
 These roles are listed above in the Role Summary table.
 
-
 ## Toolchains and Usage
 
-### Configuration
-
-Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://getfoundry.sh).
-
-- `hardhat.config.js`
-
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
-  - EVM version: Prague (Pectra upgrade)
-  - Optimizer: true, 200 runs
-
-- `foundry.toml`
-
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
-  - EVM version: Prague (Pectra upgrade)
-  - Optimizer: true, 200 runs
-
-- Library
-
-  - Foundry [v1.5.0](https://github.com/foundry-rs/foundry)
-
-  - Forge std [v1.12.0](https://github.com/foundry-rs/forge-std/releases/tag/v1.12.0  )  
-
-  - OpenZeppelin Contracts (submodule) [v5.6.1](https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v5.6.1)
-
-  - OpenZeppelin Contracts Upgradeable (submodule) [v5.6.1](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/releases/tag/v5.6.1)
-
-  - CMTAT [v3.3.0-rc1](https://github.com/CMTA/CMTAT/releases/tag/v3.3.0-rc1)
-
-  - RuleEngine [v3.0.0-rc4](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc4)
-
-### Toolchain installation
-
-This repository is primarily developed and tested with [Foundry](https://book.getfoundry.sh), a smart contract development toolchain.
-
-Hardhat configuration is also present to support contract compilation and a small smoke test with Hardhat.
-
-To install the Foundry suite, please refer to the official instructions in the [Foundry book](https://book.getfoundry.sh/getting-started/installation).
-
-### Initialization
-
-You must first initialize the submodules, with
-
-```
-forge install
-```
-
-See also the command's [documentation](https://book.getfoundry.sh/reference/forge/forge-install).
-
-Later you can update all the submodules with:
-
-```
-forge update
-```
-
-See also the command's [documentation](https://book.getfoundry.sh/reference/forge/forge-update).
-
-### Compilation
-
-The official documentation is available in the Foundry [website](https://book.getfoundry.sh/reference/forge/build-commands) 
-
-```
- forge build
-```
-
-Hardhat compilation (optional):
-
-```bash
-npm run hardhat:compile
-```
-
-### Contract size
-
-```bash
- forge compile --sizes
-```
-
-### Testing
-
-You can run the tests with
-
-```bash
-forge test
-```
-
-Hardhat smoke test (optional):
-
-```bash
-npm run hardhat:test:smoke
-```
-
-To run a specific test, use
-
-```bash
-forge test --match-contract <contract name> --match-test <function name>
-```
-
-- For `RuleConditionalTransferLight` fuzz/integration tests, note that mint and burn paths (`from == address(0)` or `to == address(0)`) are intentionally exempt from approval consumption.
-- `RuleMintAllowance` integration tests cover single mints, cumulative `batchMint` allowance consumption, rollback on over-allowance batch mint, and advertised ERC-165 interface IDs.
-- Ownable2Step variants also include dedicated tests for ownership transfer and manager-only functions (IdentityRegistry, MaxTotalSupply, SanctionsList).
-- Coverage-focused tests also target deployment wrappers and operation-rule overloads (`created`, `destroyed`, spender-aware `transferred`) to improve line/function coverage in `src/rules/operation` and `src/rules/validation/deployment`.
-
-Generate gas report
-
-```bash
-forge test --gas-report
-```
-
-See also the test framework's [official documentation](https://book.getfoundry.sh/forge/tests), and that of the [test commands](https://book.getfoundry.sh/reference/forge/test-commands).
-
-### Gas Benchmarks
-
-Gas usage is tracked in two complementary files:
-
-- **`.gas-snapshot`** — machine-generated file produced by `forge snapshot`. It records the gas cost of every test function and is checked into the repository so that gas regressions are visible in diffs. Regenerate it with:
-
-  ```bash
-  forge snapshot
-  ```
-
-  To check for regressions against the committed snapshot without overwriting it:
-
-  ```bash
-  forge snapshot --check
-  ```
-
-- **`doc/GAS.md`** — human-readable summary of key operation costs (e.g. `addAddress`, `detectTransferRestriction`) with the date of the last measurement. Update it manually after running `forge snapshot` when behaviour or gas costs change.
-
-### Coverage
-
-![coverage](./doc/coverage/coverage.png)
-
-A code coverage is available in [index.html](./doc/coverage/coverage/index.html).
-
-* Perform a code coverage
-
-```
-forge coverage
-```
-
-* Generate LCOV report
-
-```
-forge coverage --report lcov
-```
-
-- Generate `index.html`
-
-```bash
-forge coverage --no-match-coverage "(script|mocks|test)" --report lcov && genhtml lcov.info --branch-coverage --prefix "$PWD/" --output-dir coverage
-```
-
-See [Solidity Coverage in VS Code with Foundry](https://mirror.xyz/devanon.eth/RrDvKPnlD-pmpuW7hQeR5wWdVjklrpOgPCOA-PJkWFU) & [Foundry forge coverage](https://www.rareskills.io/post/foundry-forge-coverage)
-
-### Other
-
-Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-#### Documentation
-
-https://book.getfoundry.sh/
-
-
-#### Format
-
-```shell
-$ forge fmt
-```
-
-#### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-#### Anvil
-
-```shell
-$ anvil
-```
-
-#### Deploy
-
-> **Warning — private key security**
-> Passing `--private-key` directly on the command line is **not recommended** in production: the key is visible in your shell history and to any process that can read `/proc`. Prefer hardware wallets (`--ledger`, `--trezor`), encrypted keystores (`--account <keystore>`), or environment-variable signers. See [Foundry best practices](https://www.getfoundry.sh/best-practices) for details.
-
-```shell
-$ forge script script/DeployCMTATWithWhitelist.s.sol --rpc-url <your_rpc_url> --private-key <your_private_key>
-$ forge script script/DeployCMTATWithBlacklist.s.sol --rpc-url <your_rpc_url> --private-key <your_private_key>
-$ forge script script/DeployCMTATWithBlacklistAndSanctionsList.s.sol --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-#### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-#### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
-
-
+This repository is developed and tested with [Foundry](https://book.getfoundry.sh); a Hardhat config is also present for compilation and a small smoke test. Build settings (`foundry.toml` / `hardhat.config.js`): solc `v0.8.34`, EVM `Prague`, optimizer on (200 runs).
+
+### Main commands
+
+| Task | Command |
+| --- | --- |
+| Install / update submodules | `forge install` · `forge update` |
+| Build | `forge build` |
+| Contract sizes | `forge compile --sizes` |
+| Run all tests | `forge test` |
+| Run one test | `forge test --match-contract <name> --match-test <fn>` |
+| Gas report | `forge test --gas-report` |
+| Gas snapshot | `forge snapshot` (check only: `forge snapshot --check`) |
+| Coverage | `forge coverage` |
+| Format | `forge fmt` |
+| Deploy a script | `forge script script/<Deploy...>.s.sol --rpc-url <url> --account <keystore>` |
+
+Deployment scripts: `script/DeployCMTATWithWhitelist.s.sol`, `script/DeployCMTATWithBlacklist.s.sol`, `script/DeployCMTATWithBlacklistAndSanctionsList.s.sol`.
+
+> **Deployment key security:** avoid passing `--private-key` on the command line (visible in shell history and to any process that can read `/proc`). Prefer hardware wallets (`--ledger`, `--trezor`) or encrypted keystores (`--account <keystore>`). See [Foundry best practices](https://www.getfoundry.sh/best-practices).
+
+For the full toolchain guide — dependency versions, Hardhat commands, HTML coverage generation, the gas-benchmark workflow, and the generic Forge / Cast / Anvil / Chisel reference — see **[doc/FOUNDRY.md](./doc/FOUNDRY.md)** and the [Foundry book](https://book.getfoundry.sh/).
 
 ## API
 
