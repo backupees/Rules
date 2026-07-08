@@ -4,11 +4,13 @@
 
 Each rule can be used **standalone**, directly plugged into a CMTAT token, **or** managed collectively via a RuleEngine.
 
+**Current package version:** `v0.4.0` (contracts report `version()` → `"0.4.0"`). Built against CMTAT `v3.3.0-rc1` and RuleEngine `v3.0.0-rc4`; see [Compatibility](#compatibility) for the supported range.
+
 > This project has not undergone an audit and is provided as-is without any warranties.
 
 ## Schema
 
-- Using rules with CMTAT and ERC-3643 tokens through a [RuleEngine](ttps://github.com/CMTA/RuleEngine)
+- Using rules with CMTAT and ERC-3643 tokens through a [RuleEngine](https://github.com/CMTA/RuleEngine)
 
 ![Rule-RuleEngine.drawio](./doc/schema/Rule-RuleEngine.drawio.png)
 
@@ -60,9 +62,11 @@ forge test
 
 ## Compatibility
 
-| Component        | Compatible Versions                       |
-| ---------------- | ----------------------------------------- |
-| **Rules v0.1.0** | CMTAT ≥ v3.0.0<br />RuleEngine v3.0.0-rc4 |
+| Component        | Compatible Versions                                        |
+| ---------------- | ---------------------------------------------------------- |
+| **Rules v0.4.0** | CMTAT ≥ v3.0.0 (tested against v3.3.0-rc1)<br />RuleEngine v3.0.0-rc4 |
+
+Spender-aware paths (e.g. `RuleMintAllowance`) rely on the 4-argument `canTransferFrom` / `transferred(spender, from, to, value)` callbacks, which require a CMTAT / RuleEngine that forwards the spender to the rule; this repository is validated against CMTAT `v3.3.0-rc1`. The other rules only use the 3-argument path and work across the full CMTAT ≥ v3.0.0 range.
 
 Each Rule implements the interface `IRuleEngine` defined in CMTAT.
 
@@ -82,6 +86,12 @@ function transferred(address _from, address _to, uint256 _amount) external;
 However, contrary to the RuleEngine, the whole interface is currently not implemented (e.g. `created`and `destroyed`) and as a result, the rule can not directly support ERC-3643 token.
 
 The alternative to use a Rule with an ERC-3643 token is through the RuleEngine, which implements the whole `ICompliance` interface.
+
+The diagram below shows the recommended integration: the ERC-3643 token drives transfer, mint (`created`) and burn (`destroyed`) compliance hooks on the RuleEngine, which forwards them to the rules. A rule used on its own only implements `canTransfer` + `transferred`, so it cannot back an ERC-3643 token directly.
+
+![Using a rule with an ERC-3643 token through a RuleEngine](./doc/img/readme-erc3643-integration.png)
+
+_Diagram source: doc/img/readme-erc3643-integration.puml._
 
 ### ERC-721/ERC-1155
 
@@ -104,6 +114,12 @@ function canTransferFrom(address spender, address from, address to, uint256 toke
 function transferred(address from, address to, uint256 tokenId, uint256 value) external;
 function transferred(address spender, address from, address to, uint256 tokenId, uint256 value) external;
 ```
+
+The diagram below shows a non-fungible transfer flowing through the `tokenId`-aware compliance signatures. For validation rules a single `transferred(...)` call both validates and reverts — it internally runs `detectTransferRestrictionFrom` and requires `TRANSFER_OK` — so no separate pre-check is required in the transfer path; the read-only `detectTransferRestriction*` / `canTransfer*` overloads remain available for off-chain queries. The `RuleNFTAdapter` carries the `tokenId` argument but currently delegates to the address-based checks (`from` / `to` / `spender`), so no rule restricts on the token id yet.
+
+![ERC-721 / ERC-1155 compliance interface flow](./doc/img/readme-erc721-erc1155-compliance.png)
+
+_Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 
 
 
@@ -714,7 +730,7 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
   - OpenZeppelin Contracts Upgradeable (submodule) [v5.6.1](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/releases/tag/v5.6.1)
 
-  - CMTAT [v3.2.0](https://github.com/CMTA/CMTAT/releases/tag/v3.2.0)
+  - CMTAT [v3.3.0-rc1](https://github.com/CMTA/CMTAT/releases/tag/v3.3.0-rc1)
 
   - RuleEngine [v3.0.0-rc4](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc4)
 
