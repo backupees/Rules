@@ -26,11 +26,11 @@ contract SanctionListOracle is ISanctionsList {
     }
 
     /**
-     * @notice Intended to remove an address from the sanctions list.
-     * @param removeSanction The address passed to the call.
+     * @notice Removes an address from the sanctions list.
+     * @param removeSanction The address to un-sanction.
      */
     function removeFromSanctionsList(address removeSanction) public {
-        sanctionedAddresses[removeSanction] = true;
+        sanctionedAddresses[removeSanction] = false;
     }
 
     /**
