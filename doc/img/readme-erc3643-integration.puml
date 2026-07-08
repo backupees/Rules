@@ -1,0 +1,32 @@
+@startuml
+title Using a rule with an ERC-3643 token (through a RuleEngine)
+
+participant "ERC-3643 token" as token
+participant "RuleEngine\n(full ICompliance)" as engine
+participant "Rule(s)" as rule
+
+== Transfer ==
+token -> engine : canTransfer(from, to, amount)   <i>read-only pre-check</i>
+engine -> rule : detectTransferRestriction(from, to, amount)
+rule --> engine : code (0 = TRANSFER_OK)
+engine --> token : allowed / blocked
+token -> engine : transferred(from, to, amount)
+engine -> rule : transferred(from, to, amount)
+
+== Mint ==
+token -> engine : created(to, amount)
+engine -> engine : _transferred(address(0), to, amount)
+engine -> rule : transferred(address(0), to, amount)
+
+== Burn ==
+token -> engine : destroyed(from, amount)
+engine -> engine : _transferred(from, address(0), amount)
+engine -> rule : transferred(from, address(0), amount)
+
+note over token, rule
+  A rule alone implements only <b>canTransfer</b> + <b>transferred</b> from ICompliance.
+  It does NOT implement <b>created</b> / <b>destroyed</b>, so it cannot back an
+  ERC-3643 token directly — mint/burn compliance would be missed.
+  Use the RuleEngine, which implements the whole ICompliance interface.
+end note
+@enduml
