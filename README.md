@@ -20,7 +20,20 @@ Each rule can be used **standalone**, directly plugged into a CMTAT token, **or*
 
 ## Table of Contents
 
-[TOC]
+- [Schema](#schema)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Compatibility](#compatibility)
+- [Specifications](#specifications)
+- [Architecture](#architecture)
+- [Types of Rules](#types-of-rules)
+- [Deployment Guide](#deployment-guide)
+- [Rules details](#rules-details)
+- [Access Control](#access-control)
+- [Toolchains and Usage](#toolchains-and-usage)
+- [API](#api)
+- [Security](#security)
+- [Intellectual property](#intellectual-property)
 
 ## Overview
 
@@ -39,6 +52,18 @@ Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatibl
   - Multi-party operator-managed lists
   - Conditional approvals
   - Arbitrary compliance logic
+
+### Integration modes
+
+A rule can be consumed in three ways. All three call the same rule contract; they differ only in who calls it and how much of the compliance interface is required.
+
+| Mode | Caller | What the rule must implement | When to use |
+| --- | --- | --- | --- |
+| **Direct CMTAT rule** | A CMTAT token calls the rule directly (no RuleEngine) | `IRuleEngine` (`canTransfer` + `transferred`, including the spender-aware overload) | A single rule is enough; no multi-rule orchestration needed |
+| **RuleEngine-managed rule** | A `RuleEngine` aggregates one or more rules and calls each on every transfer | `IRule` (`IRuleEngine` + `canReturnTransferRestrictionCode`) | Several rules must be combined, ordered, or share restriction codes |
+| **ERC-3643 through RuleEngine** | An ERC-3643 token drives `created` / `destroyed` / transfer hooks on a RuleEngine, which forwards them to the rules | Rules as above; the **RuleEngine** implements the full ERC-3643 `ICompliance` | The token is ERC-3643 and needs full `ICompliance` — a standalone rule cannot back an ERC-3643 token directly |
+
+Interface details for each mode are documented under [Architecture](#architecture); full signatures live in the [API](#api) reference.
 
 ## Quick Start
 
@@ -253,58 +278,7 @@ The RuleEngine can then:
 - Return restriction codes
 - Mutate rule state (operation rules)
 
-#### CMTAT
-
-Each rule can be directly plugged to a CMTAT token similar to a RuleEngine.
-
-Indeed, each rule implements the required interface (`IRuleEngine`) with notably the following function as entrypoint.
-
-```solidity
-function transferred(address from,address to,uint256 value)
-function transferred(address spender,address from,address to,uint256 value)
-```
-
-```solidity
-/*
-* @title Minimum interface to define a RuleEngine
-*/
-interface IRuleEngine is IERC1404Extend, IERC7551Compliance,  IERC3643IComplianceContract {
-    /**
-     *  @notice
-     *  Function called whenever tokens are transferred from one wallet to another
-     *  @dev 
-     *  Must revert if the transfer is invalid
-     *  Same name as ERC-3643 but with one supplementary argument `spender`
-     *  This function can be used to update state variables of the RuleEngine contract
-     *  This function can be called ONLY by the token contract bound to the RuleEngine
-     *  @param spender spender address (sender)
-     *  @param from token holder address
-     *  @param to receiver address
-     *  @param value value of tokens involved in the transfer
-     */
-    function transferred(address spender, address from, address to, uint256 value) external;
-}
-```
-
-
-
-#### RuleEngine
-
-For a RuleEngine, each rule implements also the required entry point similar to CMTAT, and as well some specific interface for the RuleEngine through the implementation of `IRule` interface defined in the RuleEngine repository.
-
-```solidity
-interface IRule is IRuleEngine {
-    /**
-     * @dev Returns true if the restriction code exists, and false otherwise.
-     */
-    function canReturnTransferRestrictionCode(
-        uint8 restrictionCode
-    ) external view returns (bool);
-}
-
-```
-
-
+The same rule can also be plugged **directly** into a CMTAT token (see [Rules as Standalone Compliance Contracts](#rules-as-standalone-compliance-contracts) above): the direct-CMTAT path only requires `IRuleEngine`, while the RuleEngine-managed path additionally requires `IRule`. Full signatures for both interfaces are documented in the [API](#api) reference (`IRuleEngine`, `IERC1404Extend`, `IERC7551Compliance`, `IERC3643IComplianceContract`).
 
 ## Types of Rules
 
@@ -324,7 +298,7 @@ Available validation rules: `RuleWhitelist`, `RuleWhitelistWrapper`, `RuleSpende
 
 Operation rules modify blockchain state during transfer execution. Their `transferred()` function is state-mutating: it consumes or updates stored data as part of the transfer flow.
 
-Available operation rules: `RuleConditionalTransferLight`, `RuleConditionalTransferLightMultiToken`. 
+Available operation rules: `RuleConditionalTransferLight`, `RuleConditionalTransferLightMultiToken`, `RuleMintAllowance`.
 
 A full-featured variant, `RuleConditionalTransfer`, is maintained as a separate experimental repository at [CMTA/RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer).
 
@@ -609,7 +583,7 @@ The operator calls `setIdentityRegistry(registry)`. The issuer attempts a transf
 
 ### Read-Write (Operation) rule
 
-There are two operation rules available: `RuleConditionalTransferLight` and `RuleConditionalTransferLightMultiToken`.
+There are three operation rules available: `RuleConditionalTransferLight`, `RuleConditionalTransferLightMultiToken`, and `RuleMintAllowance`.
 
 #### Conditional transfer (light)
 
