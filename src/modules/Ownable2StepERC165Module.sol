@@ -10,6 +10,10 @@ import {Ownable2StepInterfaceId} from "RuleEngine/modules/library/Ownable2StepIn
  * @notice Shared ERC-165 advertisement for Ownable2Step deployments.
  */
 abstract contract Ownable2StepERC165Module is ERC165 {
+    /**
+     * @inheritdoc ERC165
+     * @dev Also advertises support for the IERC173 and IOwnable2Step interfaces.
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == OwnableInterfaceId.IERC173_INTERFACE_ID
             || interfaceId == Ownable2StepInterfaceId.IOWNABLE2STEP_INTERFACE_ID

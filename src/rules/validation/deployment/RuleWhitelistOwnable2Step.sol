@@ -29,15 +29,14 @@ contract RuleWhitelistOwnable2Step is RuleWhitelistBase, Ownable2Step, Ownable2S
     {}
 
     /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
+                          PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeAddressListAdd() internal view virtual override onlyOwner {}
-
-    function _authorizeAddressListRemove() internal view virtual override onlyOwner {}
-
-    function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
-
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -50,17 +49,48 @@ contract RuleWhitelistOwnable2Step is RuleWhitelistBase, Ownable2Step, Ownable2S
     }
 
     /*//////////////////////////////////////////////////////////////
+                            ACCESS CONTROL
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Restricts adding addresses to the whitelist to the contract owner.
+     */
+    function _authorizeAddressListAdd() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Restricts removing addresses from the whitelist to the contract owner.
+     */
+    function _authorizeAddressListRemove() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Restricts toggling the spender-check setting to the contract owner.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
+
+    /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(Context, RuleAddressSet) returns (address sender) {
         return super._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(Context, RuleAddressSet) returns (bytes calldata) {
         return super._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength() internal view virtual override(Context, RuleAddressSet) returns (uint256) {
         return super._contextSuffixLength();
     }

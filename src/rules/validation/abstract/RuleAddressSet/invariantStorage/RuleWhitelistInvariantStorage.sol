@@ -4,20 +4,44 @@ pragma solidity ^0.8.20;
 
 import {RuleSharedInvariantStorage} from "../../invariant/RuleSharedInvariantStorage.sol";
 
+/**
+ * @title RuleWhitelistInvariantStorage — constants and events for the whitelist rule.
+ */
 abstract contract RuleWhitelistInvariantStorage is RuleSharedInvariantStorage {
     /* ============ String message ============ */
+    /**
+     * @notice Restriction message returned when the sender is not whitelisted.
+     */
     string constant TEXT_ADDRESS_FROM_NOT_WHITELISTED = "The sender is not in the whitelist";
+    /**
+     * @notice Restriction message returned when the recipient is not whitelisted.
+     */
     string constant TEXT_ADDRESS_TO_NOT_WHITELISTED = "The recipient is not in the whitelist";
+    /**
+     * @notice Restriction message returned when the spender is not whitelisted.
+     */
     string constant TEXT_ADDRESS_SPENDER_NOT_WHITELISTED = "The spender is not in the whitelist";
 
     /* ============ Code ============ */
     // It is very important that each rule uses an unique code
+    /**
+     * @notice Restriction code returned when the sender is not whitelisted.
+     */
     uint8 public constant CODE_ADDRESS_FROM_NOT_WHITELISTED = 21;
+    /**
+     * @notice Restriction code returned when the recipient is not whitelisted.
+     */
     uint8 public constant CODE_ADDRESS_TO_NOT_WHITELISTED = 22;
+    /**
+     * @notice Restriction code returned when the spender is not whitelisted.
+     */
     uint8 public constant CODE_ADDRESS_SPENDER_NOT_WHITELISTED = 23;
 
     /* ============ Events ============ */
-    /// @dev Emitted when the `checkSpender` flag is updated.
+    /**
+     * @notice Emitted when the `checkSpender` flag is updated.
+     * @param newValue New value of the `checkSpender` flag.
+     */
     event CheckSpenderUpdated(bool newValue);
 
     error RuleWhitelist_InvalidTransfer(address rule, address from, address to, uint256 value, uint8 code);

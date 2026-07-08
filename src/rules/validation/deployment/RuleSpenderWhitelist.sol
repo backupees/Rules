@@ -17,6 +17,11 @@ contract RuleSpenderWhitelist is RuleSpenderWhitelistBase, AccessControlModuleSt
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Deploys the rule, sets the admin and the meta-transaction forwarder.
+     * @param admin Address that receives the default admin role.
+     * @param forwarderIrrevocable Address of the ERC-2771 forwarder for meta-transactions.
+     */
     constructor(address admin, address forwarderIrrevocable)
         RuleSpenderWhitelistBase(forwarderIrrevocable)
         AccessControlModuleStandalone(admin)
@@ -26,6 +31,11 @@ contract RuleSpenderWhitelist is RuleSpenderWhitelistBase, AccessControlModuleSt
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -41,22 +51,40 @@ contract RuleSpenderWhitelist is RuleSpenderWhitelistBase, AccessControlModuleSt
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts adding addresses to the spender whitelist to holders of ADDRESS_LIST_ADD_ROLE.
+     */
     function _authorizeAddressListAdd() internal view virtual override onlyRole(ADDRESS_LIST_ADD_ROLE) {}
 
+    /**
+     * @notice Restricts removing addresses from the spender whitelist to holders of ADDRESS_LIST_REMOVE_ROLE.
+     */
     function _authorizeAddressListRemove() internal view virtual override onlyRole(ADDRESS_LIST_REMOVE_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(Context, RuleAddressSet) returns (address sender) {
         return super._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(Context, RuleAddressSet) returns (bytes calldata) {
         return super._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength() internal view virtual override(Context, RuleAddressSet) returns (uint256) {
         return super._contextSuffixLength();
     }

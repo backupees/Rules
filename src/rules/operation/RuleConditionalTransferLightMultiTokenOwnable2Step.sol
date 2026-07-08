@@ -12,13 +12,24 @@ import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {RuleConditionalTransferLightMultiTokenBase} from "./abstract/RuleConditionalTransferLightMultiTokenBase.sol";
 import {Ownable2StepERC165Module} from "../../modules/Ownable2StepERC165Module.sol";
 
+/**
+ * @title RuleConditionalTransferLightMultiTokenOwnable2Step
+ * @notice Ownable2Step variant of the multi-token conditional transfer rule.
+ *         The owner approves transfers and manages compliance bindings.
+ */
 contract RuleConditionalTransferLightMultiTokenOwnable2Step is
     RuleConditionalTransferLightMultiTokenBase,
     Ownable2Step,
     Ownable2StepERC165Module
 {
+    /**
+     * @param owner Address of the contract owner.
+     */
     constructor(address owner) Ownable(owner) {}
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -33,7 +44,13 @@ contract RuleConditionalTransferLightMultiTokenOwnable2Step is
             || interfaceId == type(IERC3643ComplianceFull).interfaceId;
     }
 
-    function _authorizeTransferApproval() internal view virtual override onlyOwner {}
-
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
     function _onlyComplianceManager() internal virtual override onlyOwner {}
+
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
+    function _authorizeTransferApproval() internal view virtual override onlyOwner {}
 }

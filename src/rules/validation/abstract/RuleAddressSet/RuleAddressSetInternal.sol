@@ -19,7 +19,9 @@ abstract contract RuleAddressSetInternal {
                              STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Storage for all listed addresses.
+    /**
+     * @dev Storage for all listed addresses.
+     */
     EnumerableSet.AddressSet private _listedAddresses;
 
     /*//////////////////////////////////////////////////////////////

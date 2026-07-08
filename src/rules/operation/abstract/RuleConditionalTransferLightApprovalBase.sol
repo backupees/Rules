@@ -10,7 +10,9 @@ import {RuleConditionalTransferLightInvariantStorage} from "./RuleConditionalTra
  *      No knowledge of token binding or compliance interfaces.
  */
 abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTransferLightInvariantStorage {
-    // Mapping from transfer hash to approval count
+    /**
+     * @notice Number of outstanding approvals for each transfer hash (mapping from transfer hash to approval count)
+     */
     mapping(bytes32 => uint256) public approvalCounts;
 
     /*//////////////////////////////////////////////////////////////
@@ -27,14 +29,14 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
         _;
     }
 
-    function _authorizeTransferApproval() internal view virtual;
-
-    function _authorizeTransferExecution() internal view virtual;
-
     /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Consumes one approval for the transfer described by `ctx`.
+     * @param ctx The fungible transfer context (from, to, value).
+     */
     function transferred(ITransferContext.FungibleTransferContext calldata ctx) external onlyTransferExecutor {
         _transferredFromContext(ctx);
     }
@@ -43,12 +45,24 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Records a new approval for the given transfer, incrementing its approval count.
+     * @param from The sender of the transfer to approve.
+     * @param to The recipient of the transfer to approve.
+     * @param value The amount of the transfer to approve.
+     */
     function approveTransfer(address from, address to, uint256 value) public onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
         approvalCounts[transferHash] += 1;
         emit TransferApproved(from, to, value, approvalCounts[transferHash]);
     }
 
+    /**
+     * @notice Cancels one outstanding approval for the given transfer; reverts if none exists.
+     * @param from The sender of the transfer whose approval is cancelled.
+     * @param to The recipient of the transfer whose approval is cancelled.
+     * @param value The amount of the transfer whose approval is cancelled.
+     */
     function cancelTransferApproval(address from, address to, uint256 value) public onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
         uint256 count = approvalCounts[transferHash];
@@ -57,6 +71,13 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
         emit TransferApprovalCancelled(from, to, value, approvalCounts[transferHash]);
     }
 
+    /**
+     * @notice Returns the number of outstanding approvals for the given transfer.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return The current approval count for the transfer.
+     */
     function approvedCount(address from, address to, uint256 value) public view returns (uint256) {
         bytes32 transferHash = _transferHash(from, to, value);
         return approvalCounts[transferHash];
@@ -66,10 +87,21 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Consumes one approval for the transfer described by `ctx`.
+     * @param ctx The fungible transfer context (from, to, value).
+     */
     function _transferredFromContext(ITransferContext.FungibleTransferContext calldata ctx) internal virtual {
         _transferred(ctx.from, ctx.to, ctx.value);
     }
 
+    /**
+     * @notice Consumes one approval for the given transfer; reverts if none exists.
+     * @dev No-op when either endpoint is the zero address (mint/burn).
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     */
     function _transferred(address from, address to, uint256 value) internal virtual {
         if (from == address(0) || to == address(0)) {
             return;
@@ -83,6 +115,13 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
         emit TransferExecuted(from, to, value, approvalCounts[transferHash]);
     }
 
+    /**
+     * @notice Computes the storage key identifying a (from, to, value) transfer.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return hash The keccak256 hash uniquely identifying the transfer.
+     */
     function _transferHash(address from, address to, uint256 value) internal pure virtual returns (bytes32 hash) {
         // Linter suggestion (`asm-keccak256`): hash packed values in assembly to avoid abi.encodePacked overhead.
         assembly ("memory-safe") {
@@ -93,4 +132,14 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
             hash := keccak256(ptr, 0x60)
         }
     }
+
+    /**
+     * @notice Authorizes the caller to approve or cancel transfers; reverts if unauthorized.
+     */
+    function _authorizeTransferApproval() internal view virtual;
+
+    /**
+     * @notice Authorizes the caller to execute (consume) approved transfers; reverts if unauthorized.
+     */
+    function _authorizeTransferExecution() internal view virtual;
 }

@@ -32,6 +32,9 @@ contract RuleMintAllowance is AccessControlModuleStandalone, RuleMintAllowanceBa
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -51,10 +54,19 @@ contract RuleMintAllowance is AccessControlModuleStandalone, RuleMintAllowanceBa
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeSetMintAllowance() internal view virtual override onlyRole(ALLOWANCE_OPERATOR_ROLE) {}
-
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
     function _onlyComplianceManager() internal virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
 
+    /**
+     * @notice Reverts unless the caller holds `ALLOWANCE_OPERATOR_ROLE`.
+     */
+    function _authorizeSetMintAllowance() internal view virtual override onlyRole(ALLOWANCE_OPERATOR_ROLE) {}
+
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
     function _authorizeComplianceBindingChange(address)
         internal
         view

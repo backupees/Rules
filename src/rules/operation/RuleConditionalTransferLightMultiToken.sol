@@ -12,13 +12,24 @@ import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleSt
 import {RuleConditionalTransferLightMultiTokenBase} from "./abstract/RuleConditionalTransferLightMultiTokenBase.sol";
 import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643ComplianceRolesStorage.sol";
 
+/**
+ * @title RuleConditionalTransferLightMultiToken
+ * @notice AccessControl variant of the multi-token conditional transfer rule.
+ *         `OPERATOR_ROLE` approves transfers; `COMPLIANCE_MANAGER_ROLE` manages compliance bindings.
+ */
 contract RuleConditionalTransferLightMultiToken is
     AccessControlModuleStandalone,
     RuleConditionalTransferLightMultiTokenBase,
     ERC3643ComplianceRolesStorage
 {
+    /**
+     * @param admin Address of the contract admin.
+     */
     constructor(address admin) AccessControlModuleStandalone(admin) {}
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -34,7 +45,13 @@ contract RuleConditionalTransferLightMultiToken is
             || AccessControlEnumerable.supportsInterface(interfaceId);
     }
 
-    function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
-
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
     function _onlyComplianceManager() internal virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
+
+    /**
+     * @notice Reverts unless the caller holds `OPERATOR_ROLE`.
+     */
+    function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
 }

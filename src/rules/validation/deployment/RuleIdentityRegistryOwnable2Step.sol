@@ -16,14 +16,22 @@ contract RuleIdentityRegistryOwnable2Step is RuleIdentityRegistryBase, Ownable2S
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Deploys the rule, sets the owner and the ERC-3643 identity registry.
+     * @param owner Contract owner.
+     * @param identityRegistry_ Address of the ERC-3643 identity registry to query.
+     */
     constructor(address owner, address identityRegistry_) RuleIdentityRegistryBase(identityRegistry_) Ownable(owner) {}
 
     /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
+                          PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeIdentityRegistryManager() internal view virtual override onlyOwner {}
-
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -34,4 +42,13 @@ contract RuleIdentityRegistryOwnable2Step is RuleIdentityRegistryBase, Ownable2S
         return Ownable2StepERC165Module.supportsInterface(interfaceId)
             || RuleTransferValidation.supportsInterface(interfaceId);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            ACCESS CONTROL
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Restricts identity registry management to the contract owner.
+     */
+    function _authorizeIdentityRegistryManager() internal view virtual override onlyOwner {}
 }

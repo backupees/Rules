@@ -15,6 +15,12 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Deploys the whitelist rule base.
+     * @param forwarderIrrevocable Trusted ERC-2771 forwarder address for meta-transactions.
+     * @param checkSpender_ Whether to also verify the spender on delegated transfers.
+     * @param allowMintBurn When true, whitelists the zero address so mint/burn is permitted.
+     */
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleAddressSet(forwarderIrrevocable)
     {
@@ -29,11 +35,19 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Enables or disables spender verification on delegated transfers.
+     * @dev Restricted to the check-spender manager; emits {CheckSpenderUpdated}.
+     * @param value The new state of the `checkSpender` flag.
+     */
     function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
         _setCheckSpender(value);
         emit CheckSpenderUpdated(value);
     }
 
+    /**
+     * @inheritdoc IIdentityRegistryVerified
+     */
     function isVerified(address targetAddress)
         public
         view
@@ -44,6 +58,9 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
         isListed = _isAddressListed(targetAddress);
     }
 
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
         return RuleTransferValidation.supportsInterface(interfaceId);
     }
@@ -57,12 +74,30 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
         _;
     }
 
-    function _authorizeCheckSpenderManager() internal view virtual;
-
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Internal helper to update the `checkSpender` flag.
+     * @param value New flag value.
+     */
+    function _setCheckSpender(bool value) internal virtual {
+        checkSpender = value;
+    }
+
+    /**
+     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual;
+
+    /**
+     * @notice Detects whether a direct transfer is restricted by the whitelist.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @return The restriction code, or TRANSFER_OK when both parties are whitelisted.
+     */
     function _detectTransferRestriction(
         address from,
         address to,
@@ -82,6 +117,14 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
         return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @notice Detects whether a delegated transfer is restricted by the whitelist.
+     * @param spender The delegated spender address.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     * @return The restriction code, or TRANSFER_OK when allowed.
+     */
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
@@ -95,9 +138,5 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
             return CODE_ADDRESS_SPENDER_NOT_WHITELISTED;
         }
         return _detectTransferRestriction(from, to, value);
-    }
-
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
     }
 }

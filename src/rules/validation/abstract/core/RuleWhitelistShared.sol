@@ -101,6 +101,9 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc RuleNFTAdapter
+     */
     function _transferred(address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestriction(from, to, value);
         require(
@@ -109,6 +112,9 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
         );
     }
 
+    /**
+     * @inheritdoc RuleNFTAdapter
+     */
     function _transferredFrom(address spender, address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestrictionFrom(spender, from, to, value);
         require(

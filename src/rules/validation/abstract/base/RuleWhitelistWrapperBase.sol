@@ -26,7 +26,9 @@ abstract contract RuleWhitelistWrapperBase is
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /**
+     * @notice Deploys the whitelist wrapper base.
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
+     * @param checkSpender_ Whether to also verify the spender on delegated transfers.
      */
     constructor(address forwarderIrrevocable, bool checkSpender_) MetaTxModuleStandalone(forwarderIrrevocable) {
         checkSpender = checkSpender_;
@@ -40,8 +42,6 @@ abstract contract RuleWhitelistWrapperBase is
         _authorizeCheckSpenderManager();
         _;
     }
-
-    function _authorizeCheckSpenderManager() internal virtual;
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
@@ -60,6 +60,9 @@ abstract contract RuleWhitelistWrapperBase is
         emit CheckSpenderUpdated(value);
     }
 
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -73,6 +76,8 @@ abstract contract RuleWhitelistWrapperBase is
     /**
      * @notice Returns true if the address is listed in at least one child whitelist rule.
      * @dev Delegates to the same child-rule scan used by transfer restriction checks.
+     * @param targetAddress The address to check across all child whitelist rules.
+     * @return True if the address is listed in at least one child rule.
      */
     function isVerified(address targetAddress) public view virtual override(IIdentityRegistryVerified) returns (bool) {
         address[] memory targets = new address[](1);
@@ -84,6 +89,20 @@ abstract contract RuleWhitelistWrapperBase is
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     */
+    function _authorizeCheckSpenderManager() internal virtual;
+
+    /**
+     * @notice Internal helper to update the `checkSpender` flag.
+     * @param value New flag value.
+     */
+    function _setCheckSpender(bool value) internal virtual {
+        checkSpender = value;
+    }
 
     /**
      * @notice Go through all the whitelist rules to know if a restriction exists on the transfer
@@ -117,6 +136,14 @@ abstract contract RuleWhitelistWrapperBase is
         }
     }
 
+    /**
+     * @notice Go through all the whitelist rules to know if a delegated transfer is restricted.
+     * @param spender The delegated spender address.
+     * @param from The origin address.
+     * @param to The destination address.
+     * @param value The amount transferred.
+     * @return The restriction code or REJECTED_CODE_BASE.TRANSFER_OK.
+     */
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
@@ -150,6 +177,12 @@ abstract contract RuleWhitelistWrapperBase is
 
     // ERC-7943 tokenId overloads are provided by {RuleNFTAdapter} via RuleWhitelistShared.
 
+    /**
+     * @notice Reverts if a direct transfer is blocked by any child whitelist rule.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferred(address from, address to, uint256 value)
         internal
         view
@@ -159,6 +192,13 @@ abstract contract RuleWhitelistWrapperBase is
         RuleWhitelistShared._transferred(from, to, value);
     }
 
+    /**
+     * @notice Reverts if a delegated transfer is blocked by any child whitelist rule.
+     * @param spender The delegated spender address.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferred(address spender, address from, address to, uint256 value)
         internal
         view
@@ -206,20 +246,13 @@ abstract contract RuleWhitelistWrapperBase is
         return result;
     }
 
-    /**
-     * @notice Internal helper to update the `checkSpender` flag.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-    }
-
     /*//////////////////////////////////////////////////////////////
                            ERC-2771
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return sender The effective message sender, unwrapped from the meta-transaction if present.
      */
     function _msgSender() internal view virtual override(ERC2771Context) returns (address sender) {
         return ERC2771Context._msgSender();
@@ -227,6 +260,7 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return The effective calldata, unwrapped from the meta-transaction if present.
      */
     function _msgData() internal view virtual override(ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
@@ -234,6 +268,7 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return The length of the ERC-2771 context suffix appended to calldata.
      */
     function _contextSuffixLength() internal view virtual override(ERC2771Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();

@@ -30,6 +30,9 @@ contract RuleMintAllowanceOwnable2Step is RuleMintAllowanceBase, Ownable2Step, O
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -48,9 +51,18 @@ contract RuleMintAllowanceOwnable2Step is RuleMintAllowanceBase, Ownable2Step, O
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeSetMintAllowance() internal view virtual override onlyOwner {}
-
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
     function _onlyComplianceManager() internal virtual override onlyOwner {}
 
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
+    function _authorizeSetMintAllowance() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
     function _authorizeComplianceBindingChange(address) internal view virtual override onlyOwner {}
 }

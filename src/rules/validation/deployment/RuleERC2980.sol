@@ -48,6 +48,11 @@ contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
                            PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -62,26 +67,50 @@ contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts adding addresses to the whitelist to holders of WHITELIST_ADD_ROLE.
+     */
     function _authorizeWhitelistAdd() internal view virtual override onlyRole(WHITELIST_ADD_ROLE) {}
 
+    /**
+     * @notice Restricts removing addresses from the whitelist to holders of WHITELIST_REMOVE_ROLE.
+     */
     function _authorizeWhitelistRemove() internal view virtual override onlyRole(WHITELIST_REMOVE_ROLE) {}
 
+    /**
+     * @notice Restricts adding addresses to the frozenlist to holders of FROZENLIST_ADD_ROLE.
+     */
     function _authorizeFrozenlistAdd() internal view virtual override onlyRole(FROZENLIST_ADD_ROLE) {}
 
+    /**
+     * @notice Restricts removing addresses from the frozenlist to holders of FROZENLIST_REMOVE_ROLE.
+     */
     function _authorizeFrozenlistRemove() internal view virtual override onlyRole(FROZENLIST_REMOVE_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(Context, RuleERC2980Base) returns (address sender) {
         return super._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(Context, RuleERC2980Base) returns (bytes calldata) {
         return super._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength() internal view virtual override(Context, RuleERC2980Base) returns (uint256) {
         return super._contextSuffixLength();
     }

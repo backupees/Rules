@@ -19,6 +19,10 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Deploys the blacklist rule base.
+     * @param forwarderIrrevocable Trusted ERC-2771 forwarder address for meta-transactions.
+     */
     constructor(address forwarderIrrevocable) RuleAddressSet(forwarderIrrevocable) {}
 
     /*//////////////////////////////////////////////////////////////
@@ -51,6 +55,9 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
         _transferredFrom(spender, from, to, value);
     }
 
+    /**
+     * @inheritdoc IRule
+     */
     function canReturnTransferRestrictionCode(uint8 restrictionCode)
         public
         pure
@@ -62,6 +69,9 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
             || restrictionCode == CODE_ADDRESS_SPENDER_IS_BLACKLISTED;
     }
 
+    /**
+     * @inheritdoc IERC1404
+     */
     function messageForTransferRestriction(uint8 restrictionCode)
         public
         pure
@@ -80,6 +90,9 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
         }
     }
 
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
         return RuleTransferValidation.supportsInterface(interfaceId);
     }
@@ -88,6 +101,12 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Detects whether a direct transfer is restricted by the blacklist.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @return The restriction code, or TRANSFER_OK if neither party is blacklisted.
+     */
     function _detectTransferRestriction(
         address from,
         address to,
@@ -106,6 +125,14 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @notice Detects whether a delegated transfer is restricted by the blacklist.
+     * @param spender The delegated spender address.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     * @return The restriction code, or TRANSFER_OK if no party is blacklisted.
+     */
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
@@ -118,6 +145,12 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
         return _detectTransferRestriction(from, to, value);
     }
 
+    /**
+     * @notice Reverts if a direct transfer is blocked by the blacklist.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferred(address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestriction(from, to, value);
         require(
@@ -126,6 +159,13 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
         );
     }
 
+    /**
+     * @notice Reverts if a delegated transfer is blocked by the blacklist.
+     * @param spender The delegated spender address.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferredFrom(address spender, address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestrictionFrom(spender, from, to, value);
         require(

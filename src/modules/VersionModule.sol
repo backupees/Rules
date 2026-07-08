@@ -8,13 +8,18 @@ import {IERC3643Version} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol
  * @notice Exposes the contract version as required by ERC-3643.
  */
 abstract contract VersionModule is IERC3643Version {
+    /**
+     * @notice The contract version string returned by {version}.
+     */
     string private constant VERSION = "0.4.0";
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IERC3643Version
+    /**
+     * @inheritdoc IERC3643Version
+     */
     function version() public view virtual override returns (string memory version_) {
         return VERSION;
     }

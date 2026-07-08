@@ -20,6 +20,7 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
     /**
      * @param owner Address of the contract owner
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
+     * @param checkSpender_ Enables spender checks for transferFrom when true.
      */
     constructor(address owner, address forwarderIrrevocable, bool checkSpender_)
         RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_)
@@ -27,18 +28,14 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
     {}
 
     /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
+                          PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
-
     /**
-     * @dev Restrict rules management to the owner.
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
      */
-    function _onlyRulesManager() internal view virtual override onlyOwner {}
-
-    function _onlyRulesLimitManager() internal view virtual override onlyOwner {}
-
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -51,17 +48,49 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
     }
 
     /*//////////////////////////////////////////////////////////////
+                            ACCESS CONTROL
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Restricts toggling the spender-check setting to the contract owner.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Restricts rules management to the contract owner.
+     * @dev Restrict rules management to the owner.
+     */
+    function _onlyRulesManager() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Restricts rules-limit management to the contract owner.
+     */
+    function _onlyRulesLimitManager() internal view virtual override onlyOwner {}
+
+    /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (address sender) {
         return RuleWhitelistWrapperBase._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (bytes calldata) {
         return RuleWhitelistWrapperBase._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength()
         internal
         view

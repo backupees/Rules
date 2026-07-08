@@ -47,10 +47,6 @@ abstract contract RuleAddressSet is
         _;
     }
 
-    function _authorizeAddressListAdd() internal view virtual;
-
-    function _authorizeAddressListRemove() internal view virtual;
-
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -147,17 +143,33 @@ abstract contract RuleAddressSet is
                              INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc ERC2771Context
+    /**
+     * @notice Authorizes the caller to add addresses to the set; reverts if unauthorized.
+     */
+    function _authorizeAddressListAdd() internal view virtual;
+
+    /**
+     * @notice Authorizes the caller to remove addresses from the set; reverts if unauthorized.
+     */
+    function _authorizeAddressListRemove() internal view virtual;
+
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _msgSender() internal view virtual override(ERC2771Context) returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
-    /// @inheritdoc ERC2771Context
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _msgData() internal view virtual override(ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
-    /// @inheritdoc ERC2771Context
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _contextSuffixLength() internal view virtual override(ERC2771Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();
     }

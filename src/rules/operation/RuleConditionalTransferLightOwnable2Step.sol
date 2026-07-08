@@ -21,12 +21,18 @@ contract RuleConditionalTransferLightOwnable2Step is RuleConditionalTransferLigh
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @param owner Address of the contract owner.
+     */
     constructor(address owner) Ownable(owner) {}
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -45,9 +51,18 @@ contract RuleConditionalTransferLightOwnable2Step is RuleConditionalTransferLigh
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeTransferApproval() internal view virtual override onlyOwner {}
-
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
     function _onlyComplianceManager() internal virtual override onlyOwner {}
 
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
+    function _authorizeTransferApproval() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Reverts unless the caller is the owner.
+     */
     function _authorizeComplianceBindingChange(address) internal view virtual override onlyOwner {}
 }

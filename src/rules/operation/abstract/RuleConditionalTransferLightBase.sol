@@ -29,10 +29,34 @@ abstract contract RuleConditionalTransferLightBase is
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Compliance hook invoked when tokens are created (minted); consumes an approval if applicable.
+     * @param to The recipient of the created tokens.
+     * @param value The amount of tokens created.
+     */
+    function created(address to, uint256 value) external onlyBoundToken {
+        _transferred(address(0), to, value);
+    }
+
+    /**
+     * @notice Compliance hook invoked when tokens are destroyed (burned); consumes an approval if applicable.
+     * @param from The holder whose tokens are destroyed.
+     * @param value The amount of tokens destroyed.
+     */
+    function destroyed(address from, uint256 value) external onlyBoundToken {
+        _transferred(from, address(0), value);
+    }
+
+    /**
+     * @inheritdoc IRule
+     */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override(IRule) returns (bool) {
         return restrictionCode == CODE_TRANSFER_REQUEST_NOT_APPROVED;
     }
 
+    /**
+     * @inheritdoc IERC1404
+     */
     function messageForTransferRestriction(uint8 restrictionCode)
         external
         pure
@@ -45,14 +69,6 @@ abstract contract RuleConditionalTransferLightBase is
         return TEXT_CODE_NOT_FOUND;
     }
 
-    function created(address to, uint256 value) external onlyBoundToken {
-        _transferred(address(0), to, value);
-    }
-
-    function destroyed(address from, uint256 value) external onlyBoundToken {
-        _transferred(from, address(0), value);
-    }
-
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -62,6 +78,10 @@ abstract contract RuleConditionalTransferLightBase is
      * @dev Requires `from` to have approved this contract on the token.
      * @dev This function is only safe for tokens that call back `transferred()` during transfer.
      * @dev CEI is intentionally inverted so the approval exists for the callback.
+     * @param from The holder to transfer tokens from.
+     * @param to The recipient of the transfer.
+     * @param value The amount to transfer.
+     * @return True when the transfer succeeds.
      */
     function approveAndTransferIfAllowed(address from, address to, uint256 value)
         public
@@ -80,6 +100,9 @@ abstract contract RuleConditionalTransferLightBase is
         return true;
     }
 
+    /**
+     * @inheritdoc IERC3643IComplianceContract
+     */
     function transferred(address from, address to, uint256 value)
         public
         override(IERC3643IComplianceContract)
@@ -88,6 +111,9 @@ abstract contract RuleConditionalTransferLightBase is
         _transferred(from, to, value);
     }
 
+    /**
+     * @inheritdoc IRuleEngine
+     */
     function transferred(
         address,
         /* spender */
@@ -110,12 +136,16 @@ abstract contract RuleConditionalTransferLightBase is
      *      from the previous token remain in storage and can be consumed after rebinding.
      *      The operator who controls rebinding also controls approvals, so the trust
      *      model is preserved, but integrators should be aware of this behavior.
+     * @param token The token to bind to this rule.
      */
     function bindToken(address token) public override onlyComplianceManager {
         require(getTokenBound() == address(0), RuleConditionalTransferLight_TokenAlreadyBound());
         _bindToken(token);
     }
 
+    /**
+     * @inheritdoc IERC1404
+     */
     function detectTransferRestriction(address from, address to, uint256 value)
         public
         view
@@ -132,6 +162,9 @@ abstract contract RuleConditionalTransferLightBase is
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @inheritdoc IERC1404Extend
+     */
     function detectTransferRestrictionFrom(
         address,
         /* spender */
@@ -147,6 +180,9 @@ abstract contract RuleConditionalTransferLightBase is
         return detectTransferRestriction(from, to, value);
     }
 
+    /**
+     * @inheritdoc IERC3643ComplianceRead
+     */
     function canTransfer(address from, address to, uint256 value)
         public
         view
@@ -156,6 +192,9 @@ abstract contract RuleConditionalTransferLightBase is
         return detectTransferRestriction(from, to, value) == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @inheritdoc IERC7551Compliance
+     */
     function canTransferFrom(address spender, address from, address to, uint256 value)
         public
         view
@@ -170,8 +209,10 @@ abstract contract RuleConditionalTransferLightBase is
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Authorizes transfer execution: only the bound token may call the execution hooks.
+     */
     function _authorizeTransferExecution() internal view override {
         require(isTokenBound(_msgSender()), RuleConditionalTransferLight_TransferExecutorUnauthorized(_msgSender()));
     }
-
 }

@@ -31,6 +31,9 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -50,10 +53,19 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
-
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
     function _onlyComplianceManager() internal virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
 
+    /**
+     * @notice Reverts unless the caller holds `OPERATOR_ROLE`.
+     */
+    function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
+
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
     function _authorizeComplianceBindingChange(address) internal view virtual override onlyRole(COMPLIANCE_MANAGER_ROLE)
     {}
 }

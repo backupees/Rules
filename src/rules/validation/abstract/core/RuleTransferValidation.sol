@@ -15,6 +15,10 @@ import {RuleEngineInterfaceId} from "CMTAT/library/RuleEngineInterfaceId.sol";
 /* ==== Modules === */
 import {VersionModule} from "../../../../modules/VersionModule.sol";
 
+/**
+ * @title RuleTransferValidation — base transfer-restriction checks and interface support for rules.
+ * @notice Exposes ERC-1404 / ERC-3643 / ERC-7551 read views delegating to internal restriction hooks.
+ */
 abstract contract RuleTransferValidation is
     VersionModule,
     IERC1404Extend,
@@ -83,6 +87,11 @@ abstract contract RuleTransferValidation is
             == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @notice Returns whether this contract implements the given interface.
+     * @param interfaceId The ERC-165 interface identifier to query.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
         return interfaceId == RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID
             || interfaceId == ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID

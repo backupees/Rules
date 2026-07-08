@@ -16,6 +16,11 @@ contract RuleIdentityRegistry is AccessControlModuleStandalone, RuleIdentityRegi
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Deploys the rule, sets the admin and the ERC-3643 identity registry.
+     * @param admin Address that receives the default admin role.
+     * @param identityRegistry_ Address of the ERC-3643 identity registry to query.
+     */
     constructor(address admin, address identityRegistry_)
         AccessControlModuleStandalone(admin)
         RuleIdentityRegistryBase(identityRegistry_)
@@ -25,6 +30,11 @@ contract RuleIdentityRegistry is AccessControlModuleStandalone, RuleIdentityRegi
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -40,5 +50,8 @@ contract RuleIdentityRegistry is AccessControlModuleStandalone, RuleIdentityRegi
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts identity registry management to holders of DEFAULT_ADMIN_ROLE.
+     */
     function _authorizeIdentityRegistryManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

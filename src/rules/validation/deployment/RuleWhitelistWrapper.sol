@@ -21,6 +21,7 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
     /**
      * @param admin Address of the contract (Access Control)
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
+     * @param checkSpender_ Enables spender checks for transferFrom when true.
      */
     constructor(address admin, address forwarderIrrevocable, bool checkSpender_)
         RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_)
@@ -32,7 +33,11 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Returns whether `account` has been granted `role`.
      * @dev Returns `true` if `account` has been granted `role`.
+     * @param role Role identifier being queried.
+     * @param account Address being checked for the role.
+     * @return True if `account` holds `role`.
      */
     function hasRole(bytes32 role, address account)
         public
@@ -44,6 +49,11 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
         return AccessControlModuleStandalone.hasRole(role, account);
     }
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -59,37 +69,32 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts toggling the spender-check setting to holders of DEFAULT_ADMIN_ROLE.
+     */
     function _authorizeCheckSpenderManager() internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
+     * @notice Restricts rules management to holders of RULES_MANAGEMENT_ROLE.
      * @dev Restrict rules management to the dedicated role.
      */
     function _onlyRulesManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
 
+    /**
+     * @notice Restricts rules-limit management to holders of RULES_MANAGEMENT_ROLE.
+     */
     function _onlyRulesLimitManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _msgSender() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (address sender) {
-        return RuleWhitelistWrapperBase._msgSender();
-    }
-
-    function _msgData() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (bytes calldata) {
-        return RuleWhitelistWrapperBase._msgData();
-    }
-
-    function _contextSuffixLength()
-        internal
-        view
-        virtual
-        override(RuleWhitelistWrapperBase, Context)
-        returns (uint256)
-    {
-        return RuleWhitelistWrapperBase._contextSuffixLength();
-    }
-
+    /**
+     * @notice Grants `role` to `account`, keeping role enumeration in sync.
+     * @param role Role identifier to grant.
+     * @param account Address receiving the role.
+     * @return True if the role was newly granted.
+     */
     function _grantRole(bytes32 role, address account)
         internal
         virtual
@@ -99,6 +104,12 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
         return AccessControlEnumerable._grantRole(role, account);
     }
 
+    /**
+     * @notice Revokes `role` from `account`, keeping role enumeration in sync.
+     * @param role Role identifier to revoke.
+     * @param account Address losing the role.
+     * @return True if the role was previously held and is now revoked.
+     */
     function _revokeRole(bytes32 role, address account)
         internal
         virtual
@@ -106,5 +117,35 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
         returns (bool)
     {
         return AccessControlEnumerable._revokeRole(role, account);
+    }
+
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
+    function _msgSender() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (address sender) {
+        return RuleWhitelistWrapperBase._msgSender();
+    }
+
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
+    function _msgData() internal view virtual override(RuleWhitelistWrapperBase, Context) returns (bytes calldata) {
+        return RuleWhitelistWrapperBase._msgData();
+    }
+
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
+    function _contextSuffixLength()
+        internal
+        view
+        virtual
+        override(RuleWhitelistWrapperBase, Context)
+        returns (uint256)
+    {
+        return RuleWhitelistWrapperBase._contextSuffixLength();
     }
 }
