@@ -15,11 +15,11 @@ Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatibl
 
 - [Schema](#schema)
 - [Overview](#overview)
-- [Quick Start](#quick-start)
 - [Compatibility](#compatibility)
 - [Specifications](#specifications)
 - [Architecture](#architecture)
 - [Types of Rules](#types-of-rules)
+- [Quick Start](#quick-start)
 - [Deployment Guide](#deployment-guide)
 - [Rules details](#rules-details)
 - [Access Control](#access-control)
@@ -64,26 +64,6 @@ A rule can be consumed in three ways. All three call the same rule contract; the
 | **ERC-3643 through RuleEngine** | An ERC-3643 token drives `created` / `destroyed` / transfer hooks on a RuleEngine, which forwards them to the rules | Rules as above; the **RuleEngine** implements the full ERC-3643 `ICompliance` | The token is ERC-3643 and needs full `ICompliance` — a standalone rule cannot back an ERC-3643 token directly |
 
 Interface details for each mode are documented under [Architecture](#architecture); full signatures live in the [API](#api) reference.
-
-## Quick Start
-
-```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd Rules
-
-# 2. Install Foundry (if not already installed)
-# https://book.getfoundry.sh/getting-started/installation
-
-# 3. Install submodule dependencies
-forge install
-
-# 4. Compile
-forge build
-
-# 5. Run tests
-forge test
-```
 
 ## Compatibility
 
@@ -319,6 +299,26 @@ Operation rules modify blockchain state during transfer execution. Their `transf
 Available operation rules: `RuleConditionalTransferLight`, `RuleConditionalTransferLightMultiToken`, `RuleMintAllowance`.
 
 A full-featured variant, `RuleConditionalTransfer`, is maintained as a separate experimental repository at [CMTA/RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer).
+
+## Quick Start
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd Rules
+
+# 2. Install Foundry (if not already installed)
+# https://book.getfoundry.sh/getting-started/installation
+
+# 3. Install submodule dependencies
+forge install
+
+# 4. Compile
+forge build
+
+# 5. Run tests
+forge test
+```
 
 ## Deployment Guide
 
