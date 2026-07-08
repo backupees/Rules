@@ -95,20 +95,20 @@ Spender-aware paths (e.g. `RuleMintAllowance`) rely on the 4-argument `canTransf
 
 Each Rule implements the interface `IRuleEngine` defined in CMTAT.
 
-This interface declares the ERC-3643 functions `transferred`(read-write) and `canTransfer`(read-only) with several other functions related to [ERC-1404](https://github.com/ethereum/eips/issues/1404), [ERC-7551](https://ethereum-magicians.org/t/erc-7551-crypto-security-token-smart-contract-interface-ewpg-reworked/25477) and [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643).
+This interface declares the ERC-3643 functions `transferred` (read-write) and `canTransfer` (read-only) with several other functions related to [ERC-1404](https://github.com/ethereum/eips/issues/1404), [ERC-7551](https://ethereum-magicians.org/t/erc-7551-crypto-security-token-smart-contract-interface-ewpg-reworked/25477) and [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643).
 
 ## Specifications
 
 ### ERC-3643
 
-Each rule implements the following functions from the ERC-3643 `ICompliance`interface
+Each rule implements the following functions from the ERC-3643 `ICompliance` interface
 
 ```solidity
 function canTransfer(address _from, address _to, uint256 _amount) external view returns (bool);
 function transferred(address _from, address _to, uint256 _amount) external;
 ```
 
-However, contrary to the RuleEngine, the whole interface is currently not implemented (e.g. `created`and `destroyed`) and as a result, the rule can not directly support ERC-3643 token.
+However, contrary to the RuleEngine, the whole interface is currently not implemented (e.g. `created` and `destroyed`) and as a result, the rule cannot directly support ERC-3643 token.
 
 The alternative to use a Rule with an ERC-3643 token is through the RuleEngine, which implements the whole `ICompliance` interface.
 
@@ -127,13 +127,13 @@ While no rules currently apply restriction on the token id, the validation inter
 ```solidity
 // IERC7943NonFungibleCompliance interface
 // Read-only functions
-function canTransfer(address from, address to, uint256 tokenId, uint256 amount)external view returns (bool allowed)
+function canTransfer(address from, address to, uint256 tokenId, uint256 amount) external view returns (bool allowed)
 
 // IERC7943NonFungibleComplianceExtend interface
 // Read-only functions
-function detectTransferRestriction(address from, address to, uint256 tokenId, uint256 amount)external view returns (uint8 code);
-function detectTransferRestrictionFrom(address spender, address from, address to, uint256 tokenId, uint256 value)external view returns (uint8 code);
-function canTransferFrom(address spender, address from, address to, uint256 tokenId, uint256 value)external returns (bool allowed);
+function detectTransferRestriction(address from, address to, uint256 tokenId, uint256 amount) external view returns (uint8 code);
+function detectTransferRestrictionFrom(address spender, address from, address to, uint256 tokenId, uint256 value) external view returns (uint8 code);
+function canTransferFrom(address spender, address from, address to, uint256 tokenId, uint256 value) external returns (bool allowed);
 
 // State modifying functions (write)
 function transferred(address from, address to, uint256 tokenId, uint256 value) external;
@@ -175,38 +175,38 @@ _Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 
 Here is the list of codes used by the different rules
 
-| Contract                | Constant name                        | Value |
-| ----------------------- | ------------------------------------ | ----- |
-| All                     | TRANSFER_OK (from CMTAT)             | 0     |
-| RuleWhitelist           | CODE_ADDRESS_FROM_NOT_WHITELISTED    | 21    |
-|                         | CODE_ADDRESS_TO_NOT_WHITELISTED      | 22    |
-|                         | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 23    |
-|                         | Reserved slot                        | 24-29 |
-| RuleSanctionList        | CODE_ADDRESS_FROM_IS_SANCTIONED      | 30    |
-|                         | CODE_ADDRESS_TO_IS_SANCTIONED        | 31    |
-|                         | CODE_ADDRESS_SPENDER_IS_SANCTIONED   | 32    |
-|                         | Reserved slot                        | 33-35 |
-| RuleBlacklist           | CODE_ADDRESS_FROM_IS_BLACKLISTED     | 36    |
-|                         | CODE_ADDRESS_TO_IS_BLACKLISTED       | 37    |
-|                         | CODE_ADDRESS_SPENDER_IS_BLACKLISTED  | 38    |
-|                         | Reserved slot                        | 39-45 |
-| RuleConditionalTransferLight | CODE_TRANSFER_REQUEST_NOT_APPROVED   | 46   |
-|                         | Reserved slot                        | 47-49 |
-| RuleMaxTotalSupply      | CODE_MAX_TOTAL_SUPPLY_EXCEEDED       | 50   |
-|                         | Reserved slot                        | 51-54 |
-| RuleIdentityRegistry    | CODE_ADDRESS_FROM_NOT_VERIFIED       | 55   |
-|                         | CODE_ADDRESS_TO_NOT_VERIFIED         | 56   |
-|                         | CODE_ADDRESS_SPENDER_NOT_VERIFIED    | 57   |
-|                         | Reserved slot                        | 58-59 |
-| RuleERC2980             | CODE_ADDRESS_FROM_IS_FROZEN          | 60   |
-|                         | CODE_ADDRESS_TO_IS_FROZEN            | 61   |
-|                         | CODE_ADDRESS_SPENDER_IS_FROZEN       | 62   |
-|                         | CODE_ADDRESS_TO_NOT_WHITELISTED      | 63   |
-|                         | Reserved slot                        | 64-65 |
-| RuleSpenderWhitelist    | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 66   |
-|                         | Reserved slot                        | 67-69 |
-| RuleMintAllowance       | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70   |
-|  | Reserved slot | 71-74 |
+| Contract                     | Constant name                        | Value |
+| ---------------------------- | ------------------------------------ | ----- |
+| All                          | TRANSFER_OK (from CMTAT)             | 0     |
+| RuleWhitelist                | CODE_ADDRESS_FROM_NOT_WHITELISTED    | 21    |
+|                              | CODE_ADDRESS_TO_NOT_WHITELISTED      | 22    |
+|                              | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 23    |
+|                              | Reserved slot                        | 24-29 |
+| RuleSanctionList             | CODE_ADDRESS_FROM_IS_SANCTIONED      | 30    |
+|                              | CODE_ADDRESS_TO_IS_SANCTIONED        | 31    |
+|                              | CODE_ADDRESS_SPENDER_IS_SANCTIONED   | 32    |
+|                              | Reserved slot                        | 33-35 |
+| RuleBlacklist                | CODE_ADDRESS_FROM_IS_BLACKLISTED     | 36    |
+|                              | CODE_ADDRESS_TO_IS_BLACKLISTED       | 37    |
+|                              | CODE_ADDRESS_SPENDER_IS_BLACKLISTED  | 38    |
+|                              | Reserved slot                        | 39-45 |
+| RuleConditionalTransferLight | CODE_TRANSFER_REQUEST_NOT_APPROVED   | 46    |
+|                              | Reserved slot                        | 47-49 |
+| RuleMaxTotalSupply           | CODE_MAX_TOTAL_SUPPLY_EXCEEDED       | 50    |
+|                              | Reserved slot                        | 51-54 |
+| RuleIdentityRegistry         | CODE_ADDRESS_FROM_NOT_VERIFIED       | 55    |
+|                              | CODE_ADDRESS_TO_NOT_VERIFIED         | 56    |
+|                              | CODE_ADDRESS_SPENDER_NOT_VERIFIED    | 57    |
+|                              | Reserved slot                        | 58-59 |
+| RuleERC2980                  | CODE_ADDRESS_FROM_IS_FROZEN          | 60    |
+|                              | CODE_ADDRESS_TO_IS_FROZEN            | 61    |
+|                              | CODE_ADDRESS_SPENDER_IS_FROZEN       | 62    |
+|                              | CODE_ADDRESS_TO_NOT_WHITELISTED      | 63    |
+|                              | Reserved slot                        | 64-65 |
+| RuleSpenderWhitelist         | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 66    |
+|                              | Reserved slot                        | 67-69 |
+| RuleMintAllowance            | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70    |
+|                              | Reserved slot                        | 71-74 |
 
 Note: 
 
@@ -322,6 +322,8 @@ A full-featured variant, `RuleConditionalTransfer`, is maintained as a separate 
 
 ## Deployment Guide
 
+> ⚠️ **Before production deployment:** this project has [not undergone an audit](#ruleengine---rules). Review the unaudited status, configure roles with least privilege (grant only the roles each operator needs, and prefer the `Ownable2Step` variants for single-owner setups), and run an end-to-end transfer test on the target token setup.
+
 1. Deploy the rule contract(s) with the desired admin and optional module addresses.
 2. Configure the rule state and roles, including whitelist/blacklist entries and oracle or registry addresses.
 3. Add rules to the RuleEngine, or set the rule directly on the CMTAT token.
@@ -376,7 +378,7 @@ Several rules are available in multiple access-control variants. Use the simples
 | [RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer) (external) | Read-Write | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #b00020;">&#x2718;</span></strong><br /> (experimental rule) | Full-featured approval-based transfer rule implementing Swiss law *Vinkulierung*. Supports automatic approval after three months, automatic transfer execution, and a conditional whitelist for address pairs that bypass approval. Maintained in a separate repository. |
 | [RuleSelf](https://github.com/rya-sge/ruleself) (community) | — | <strong><span style="color: #b00020;">&#x2718;</span></strong> | — | <strong><span style="color: #b00020;">&#x2718;</span></strong><br /> (community project) | Use [Self](https://self.xyz), a zero-knowledge identity  solution to determine which is allowed to interact with the token.<br />Community-maintained rule project. Not developed or maintained by CMTA. |
 
-All rules are compatible with CMTAT, as noted earlier in this README.
+All rules implement the CMTAT rule interfaces needed by their supported transfer paths. Some operation rules require the spender-aware callback, as documented in their rule-specific notes.
 
 ### Technical documentation
 
@@ -466,7 +468,7 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 ### Read-only (validation) rule
 
-Currently, there are eight validation rules: whitelist, whitelistWrapper, spender whitelist, blacklist, sanctionlist, max total supply, identity registry, and ERC-2980.
+Currently, there are eight validation rules: whitelist, whitelist wrapper, spender whitelist, blacklist, sanctions list, max total supply, identity registry, and ERC-2980.
 
 #### Whitelist
 
@@ -701,7 +703,7 @@ All `Ownable2Step` variants also advertise ERC-165 support for `IERC165` (`0x01f
 
 ### Address List
 
-Common access control between `blacklistRule`and `WhitelistRule`
+Common access control between the blacklist rule and whitelist rule.
 
 These roles are listed above in the Role Summary table.
 
