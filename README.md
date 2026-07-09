@@ -1555,8 +1555,43 @@ Returns the number of approvals for the transfer hash.
 
 ### Automated Analysis
 
-Latest tool outputs for this release cycle (including feedback documents) are available in [`doc/security/audits/tools/v0.3.0/`](./doc/security/audits/tools/v0.3.0/).
-`v0.3.0` cleanup: removed unused `RuleConditionalTransferLight_TransferFailed` custom error after SafeERC20 migration.
+See the consolidated [Audit & Security-Analysis Overview](./doc/security/audits/AUDIT_OVERVIEW.md) for the full index and triage. Latest tool outputs (including feedback documents) are in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/).
+
+Commands used for `v0.4.0` (mocks excluded):
+
+```bash
+slither . --checklist --filter-paths "node_modules,lib,test,forge-std,mocks" \
+  > doc/security/audits/tools/v0.4.0/slither-report.md
+aderyn -x mocks --output doc/security/audits/tools/v0.4.0/aderyn-report.md
+```
+
+#### Aderyn (v0.4.0)
+
+Static analysis with [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5. Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **No High/Medium issues; nothing to fix** — all 8 Low findings are by-design or false positives (see [feedback](./doc/security/audits/tools/v0.4.0/aderyn-report-feedback.md)). Instance counts rose vs `v0.3.0` only because `v0.4.0` adds the `RuleMintAllowance` and `RuleConditionalTransferLightMultiToken` families.
+
+| ID | Title | Instances | Verdict |
+|---|---|---|---|
+| L-1 | Centralization Risk | 62 | By design (regulated token issuer model) |
+| L-2 | Unspecific Solidity Pragma | 63 | By design (`^0.8.20` library; project pins solc 0.8.34) |
+| L-3 | Address State Variable Set Without Checks | 1 | False positive — zero-check enforced at public `setSanctionListOracle` |
+| L-4 | PUSH0 Opcode | 63 | By design — project targets Prague EVM |
+| L-5 | Modifier Invoked Only Once | 2 | By design — template method pattern |
+| L-6 | Empty Block | 55 | By design — `_authorize*()` hooks + required interface no-ops |
+| L-7 | Costly operations inside loop | 6 | By design — `EnumerableSet` requires one `SSTORE` per element |
+| L-8 | Unchecked Return | 13 | Mixed — majority false positives; constructor `_grantRole` intentional |
+
+#### Slither (v0.4.0)
+
+Static analysis with [Slither](https://github.com/crytic/slither) 0.11.5. Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **Nothing to fix** — the two High `arbitrary-send-erc20` hits are false positives (approval-gated, allowance-checked compliance flow); see [feedback](./doc/security/audits/tools/v0.4.0/slither-report-feedback.md).
+
+| Category | Severity | Instances | Verdict |
+|---|---|---|---|
+| arbitrary-send-erc20 | High | 2 | False positive — `from` guarded by `onlyTransferApprover`, recorded approval, allowance check, bound token (light + multi-token) |
+| unused-return | Medium | 6 | False positive — existence pre-checked at public layer before internal helper |
+| calls-loop | Low | 16 | By design — wrapper must query each child rule; child rules are read-only |
+| assembly | Informational | 2 | By design — memory-safe hash in `_transferHash` (light + multi-token) |
+| naming-convention | Informational | 2 | By design — parameter names match ERC-2980 spec |
+| unused-state | Informational | 8 | False positive — `RuleNFTAdapter` constants used in base dispatch (per-contract analysis limitation) |
 
 #### Aderyn (v0.3.0)
 
