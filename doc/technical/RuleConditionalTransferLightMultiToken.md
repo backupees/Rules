@@ -22,7 +22,9 @@ This prevents approval reuse across tokens when the rule receives token-specific
 
 ### Flow with a CMTAT token
 
-The sequence below shows the two-phase flow with token-scoped approvals: an operator approves a `(token, from, to, value)` transfer, then the CMTAT token (with this rule configured in its RuleEngine) validates and consumes that approval. Approvals of one token cannot be spent by another.
+The sequence below shows the two-phase flow with token-scoped approvals: an operator approves a `(token, from, to, value)` transfer, then the CMTAT token validates and consumes that approval.
+
+> **Token scoping only holds when the rule is bound directly to each token** (`CMTAT.setRuleEngine(rule)`), because approvals are *consumed* under `msg.sender`. Behind a shared `RuleEngine`, `msg.sender` is the engine: approvals recorded under a token key can never be consumed, and approvals recorded under the engine key are shared by every token routed through that engine. See the Notes section below and `RESULT.md` finding F-4.
 
 ![RuleConditionalTransferLightMultiToken flow with a CMTAT token](../img/rule-conditional-transfer-light-multitoken-flow.png)
 

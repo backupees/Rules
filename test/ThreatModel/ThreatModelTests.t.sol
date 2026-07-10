@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {Test, stdError} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
 import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 
@@ -117,36 +117,38 @@ contract ThreatModelTests is Test, HelperContract {
     }
 
     /*//////////////////////////////////////////////////////////////
-        MTS-1 — RuleMaxTotalSupply view reverts instead of returning a code
+        MTS-1 — RuleMaxTotalSupply views return a code (never revert) on overflow  [FIXED — I-3]
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice MTS-1: `detectTransferRestriction` and `canTransfer` are ERC-1404 / ERC-3643 views
-     *         that must never revert, but `currentSupply + value` overflows for large `value`.
+     * @notice MTS-1 (regression): `detectTransferRestriction`, `canTransfer` and
+     *         `detectTransferRestrictionFrom` are ERC-1404 / ERC-3643 views that must never revert.
+     *         After the overflow-safe fix (I-3), a `value` that would overflow `currentSupply + value`
+     *         returns CODE_MAX_TOTAL_SUPPLY_EXCEEDED (resp. `false`) instead of panicking.
      */
-    function test_MTS1_DetectTransferRestrictionPanicsOnOverflow_CurrentBehaviour() public {
+    function test_MTS1_DetectTransferRestrictionReturnsCodeOnOverflow() public {
         TotalSupplyMock token = new TotalSupplyMock();
         token.setTotalSupply(1);
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleMaxTotalSupply = new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, address(token), 1000);
 
-        // Arithmetic overflow (panic 0x11) instead of returning CODE_MAX_TOTAL_SUPPLY_EXCEEDED.
-        vm.expectRevert(stdError.arithmeticError);
-        ruleMaxTotalSupply.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, type(uint256).max);
-
-        vm.expectRevert(stdError.arithmeticError);
-        ruleMaxTotalSupply.canTransfer(ZERO_ADDRESS, ADDRESS1, type(uint256).max);
-
-        vm.expectRevert(stdError.arithmeticError);
-        ruleMaxTotalSupply.detectTransferRestrictionFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS1, type(uint256).max);
+        assertEq(
+            ruleMaxTotalSupply.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, type(uint256).max),
+            CODE_MAX_TOTAL_SUPPLY_EXCEEDED
+        );
+        assertEq(ruleMaxTotalSupply.canTransfer(ZERO_ADDRESS, ADDRESS1, type(uint256).max), false);
+        assertEq(
+            ruleMaxTotalSupply.detectTransferRestrictionFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS1, type(uint256).max),
+            CODE_MAX_TOTAL_SUPPLY_EXCEEDED
+        );
     }
 
     /**
-     * @notice MTS-1: the same overflow propagates through a RuleEngine, so the token-level
-     *         ERC-1404 view of any CMTAT wired to this rule also reverts.
+     * @notice MTS-1 (regression): the overflow-safe view returns a code through a RuleEngine too,
+     *         so the token-level ERC-1404 view of any CMTAT wired to this rule no longer reverts.
      */
-    function test_MTS1_OverflowPropagatesThroughRuleEngine_CurrentBehaviour() public {
+    function test_MTS1_OverflowReturnsCodeThroughRuleEngine() public {
         TotalSupplyMock token = new TotalSupplyMock();
         token.setTotalSupply(1);
 
@@ -157,15 +159,33 @@ contract ThreatModelTests is Test, HelperContract {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock.addRule(ruleMaxTotalSupply);
 
-        vm.expectRevert(stdError.arithmeticError);
-        ruleEngineMock.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, type(uint256).max);
+        assertEq(
+            ruleEngineMock.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, type(uint256).max),
+            CODE_MAX_TOTAL_SUPPLY_EXCEEDED
+        );
     }
 
     /**
-     * @notice MTS-1: fuzz the boundary. Whenever `currentSupply + value` does not overflow the
-     *         view must return a code; the overflowing region is exactly where it panics.
+     * @notice MTS-1 (regression): fuzz the full uint256 domain, including the overflow region.
+     *         The view must return the correct code and never revert.
      */
-    function testFuzz_MTS1_DetectRestrictionNeverRevertsBelowOverflow(uint256 currentSupply, uint256 value) public {
+    function testFuzz_MTS1_DetectRestrictionNeverReverts(uint256 currentSupply, uint256 value, uint256 maxSupply)
+        public
+    {
+        TotalSupplyMock token = new TotalSupplyMock();
+        token.setTotalSupply(currentSupply);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleMaxTotalSupply = new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, address(token), maxSupply);
+
+        uint8 code = ruleMaxTotalSupply.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, value);
+        bool exceeds = currentSupply > maxSupply || value > maxSupply - currentSupply;
+        assertEq(code, exceeds ? CODE_MAX_TOTAL_SUPPLY_EXCEEDED : TRANSFER_OK);
+    }
+
+    /**
+     * @notice MTS-1 (kept): the non-overflowing region still returns the correct code.
+     */
+    function testFuzz_MTS1_DetectRestrictionBelowOverflow(uint256 currentSupply, uint256 value) public {
         currentSupply = bound(currentSupply, 0, type(uint128).max);
         value = bound(value, 0, type(uint256).max - currentSupply);
 

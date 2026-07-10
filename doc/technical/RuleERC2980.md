@@ -58,7 +58,7 @@ If `allowBurn` is `false`, `address(0)` is not whitelisted by default and burn/r
 
 ### `addWhitelistAddress(address targetAddress)`
 
-Adds a single address to the whitelist. Reverts if already listed.
+Adds a single address to the whitelist. Reverts with `RuleERC2980_AddressAlreadyWhitelisted` if already listed.
 
 ### `addWhitelistAddresses(address[] calldata targetAddresses)`
 
@@ -66,7 +66,7 @@ Batch-adds addresses to the whitelist. Silently skips duplicates.
 
 ### `removeWhitelistAddress(address targetAddress)`
 
-Removes a single address from the whitelist. Reverts if not listed.
+Removes a single address from the whitelist. Reverts with `RuleERC2980_AddressNotWhitelisted` if not listed.
 
 ### `removeWhitelistAddresses(address[] calldata targetAddresses)`
 
@@ -92,7 +92,7 @@ ERC-2980 interface getter. Equivalent to `isWhitelisted`.
 
 ### `addFrozenlistAddress(address targetAddress)`
 
-Adds a single address to the frozenlist. Reverts if already listed.
+Adds a single address to the frozenlist. Reverts with `RuleERC2980_AddressAlreadyFrozen` if already listed.
 
 ### `addFrozenlistAddresses(address[] calldata targetAddresses)`
 
@@ -100,7 +100,7 @@ Batch-adds addresses to the frozenlist. Silently skips duplicates.
 
 ### `removeFrozenlistAddress(address targetAddress)`
 
-Removes a single address from the frozenlist. Reverts if not listed.
+Removes a single address from the frozenlist. Reverts with `RuleERC2980_AddressNotFrozen` if not listed.
 
 ### `removeFrozenlistAddresses(address[] calldata targetAddresses)`
 

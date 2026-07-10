@@ -1553,6 +1553,26 @@ Returns the number of approvals for the transfer hash.
 
 ## Security
 
+### Manual Threat Model & Review (v0.4.0)
+
+A manual, test-backed security review of `src/` is recorded in three documents at the repository root:
+
+| Document | Contents |
+|---|---|
+| [`THREAT_MODEL.md`](./THREAT_MODEL.md) | Trust model and actors, 30 catalogued threats with IDs, data-flow diagrams, 12 invariants, reachable privileged surface |
+| [`RESULT.md`](./RESULT.md) | Findings, invariant and access-control verification, and an explicit disposition for every threat ID |
+| [`TEST_IMPROVEMENT.md`](./TEST_IMPROVEMENT.md) | Test-gap analysis and the deferred test backlog |
+
+**Outcome: 0 Critical, 0 High, 0 Medium, 2 Low, 8 Informational.** Two hypotheses that would have been High were specifically probed and cleared: an ERC-2771 forwarder cannot impersonate a bound token (the operation rules deliberately do not inherit `ERC2771Context`), and the hand-rolled keccak preimage in `_transferHash` is injective.
+
+| ID | Severity | Summary |
+|---|---|---|
+| F-1 | Low | `RuleIdentityRegistry` screens the minter as `spender` on mint, unlike its three sibling allowlist rules, so issuance halts unless the minter is itself identity-verified. Fail-closed; no bypass |
+| F-4 | Low | `RuleConditionalTransferLightMultiToken` stores approvals under the caller-supplied `token` but consumes them under `msg.sender`. Behind a shared `RuleEngine` this strands token-keyed approvals and collapses per-token isolation |
+| F-2, F-3, F-5, F-7, F-8, F-9, F-10, F-14 | Info | Max-supply views panic on overflow; `approveAndTransferIfAllowed` is direct-binding-only; the wrapper does not interface-check child rules; `RuleMintAllowance.canTransfer` is not authoritative; multi-token `detectTransferRestriction` depends on `msg.sender`; `unbindToken` leaves stale state; documentation drift |
+
+Proofs live in [`test/ThreatModel/ThreatModelTests.t.sol`](./test/ThreatModel/ThreatModelTests.t.sol) (18 tests: 15 unit/integration, 3 fuzz).
+
 ### Automated Analysis
 
 See the consolidated [Audit & Security-Analysis Overview](./doc/security/audits/AUDIT_OVERVIEW.md) for the full index and triage. Latest tool outputs (including feedback documents) are in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/).

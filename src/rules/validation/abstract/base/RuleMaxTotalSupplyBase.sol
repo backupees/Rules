@@ -136,7 +136,9 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     {
         if (from == address(0)) {
             uint256 currentSupply = tokenContract.totalSupply();
-            if (currentSupply + value > maxTotalSupply) {
+            // Overflow-safe: `currentSupply + value` could exceed uint256 and this is a
+            // MUST-NOT-revert ERC-1404/ERC-3643 view, so compare against the remaining headroom.
+            if (currentSupply > maxTotalSupply || value > maxTotalSupply - currentSupply) {
                 return CODE_MAX_TOTAL_SUPPLY_EXCEEDED;
             }
         }
