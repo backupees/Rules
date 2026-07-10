@@ -110,6 +110,20 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
     error RuleERC2980_InvalidTransferFrom(
         address rule, address spender, address from, address to, uint256 value, uint8 code
     );
-    error RuleERC2980_AddressAlreadyListed();
-    error RuleERC2980_AddressNotFound();
+    /**
+     * @notice Thrown when adding an address that is already on the whitelist.
+     */
+    error RuleERC2980_AddressAlreadyWhitelisted();
+    /**
+     * @notice Thrown when removing an address that is not on the whitelist.
+     */
+    error RuleERC2980_AddressNotWhitelisted();
+    /**
+     * @notice Thrown when adding an address that is already on the frozenlist.
+     */
+    error RuleERC2980_AddressAlreadyFrozen();
+    /**
+     * @notice Thrown when removing an address that is not on the frozenlist.
+     */
+    error RuleERC2980_AddressNotFrozen();
 }

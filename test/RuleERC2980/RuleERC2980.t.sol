@@ -285,7 +285,7 @@ contract RuleERC2980Test is Test, HelperContract {
 
     function testAddWhitelistAddressAlreadyListedReverts() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressAlreadyListed.selector);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressAlreadyWhitelisted.selector);
         ruleERC2980.addWhitelistAddress(ADDRESS2);
     }
 
@@ -298,7 +298,7 @@ contract RuleERC2980Test is Test, HelperContract {
 
     function testRemoveWhitelistAddressNotFoundReverts() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressNotFound.selector);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressNotWhitelisted.selector);
         ruleERC2980.removeWhitelistAddress(ADDRESS1);
     }
 
@@ -350,7 +350,7 @@ contract RuleERC2980Test is Test, HelperContract {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleERC2980.addFrozenlistAddress(ADDRESS1);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressAlreadyListed.selector);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressAlreadyFrozen.selector);
         ruleERC2980.addFrozenlistAddress(ADDRESS1);
     }
 
@@ -365,7 +365,7 @@ contract RuleERC2980Test is Test, HelperContract {
 
     function testRemoveFrozenlistAddressNotFoundReverts() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressNotFound.selector);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_AddressNotFrozen.selector);
         ruleERC2980.removeFrozenlistAddress(ADDRESS1);
     }
 

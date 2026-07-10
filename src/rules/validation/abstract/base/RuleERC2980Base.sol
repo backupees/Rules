@@ -108,7 +108,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to add to the whitelist.
      */
     function addWhitelistAddress(address targetAddress) public onlyWhitelistAdd {
-        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyListed());
+        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
         _addWhitelistAddress(targetAddress);
         emit AddWhitelistAddress(targetAddress);
     }
@@ -123,7 +123,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to remove from the whitelist.
      */
     function removeWhitelistAddress(address targetAddress) public onlyWhitelistRemove {
-        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotFound());
+        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotWhitelisted());
         _removeWhitelistAddress(targetAddress);
         emit RemoveWhitelistAddress(targetAddress);
     }
@@ -162,7 +162,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to add to the frozenlist.
      */
     function addFrozenlistAddress(address targetAddress) public onlyFrozenlistAdd {
-        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyListed());
+        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyFrozen());
         _addFrozenlistAddress(targetAddress);
         emit AddFrozenlistAddress(targetAddress);
     }
@@ -177,7 +177,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to remove from the frozenlist.
      */
     function removeFrozenlistAddress(address targetAddress) public onlyFrozenlistRemove {
-        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFound());
+        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFrozen());
         _removeFrozenlistAddress(targetAddress);
         emit RemoveFrozenlistAddress(targetAddress);
     }
