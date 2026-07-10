@@ -45,6 +45,27 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 
 
+## Unreleased
+
+### Fixed
+
+- `RuleMaxTotalSupply`: `detectTransferRestriction` / `canTransfer` / `detectTransferRestrictionFrom` no longer revert with an arithmetic panic when `currentSupply + value` would overflow `uint256`. The mint check now compares against the remaining headroom (`value > maxTotalSupply - currentSupply`), so these ERC-1404 / ERC-3643 views always return a restriction code as required. Enforcement (`transferred`) is unchanged.
+
+### Changed
+
+- `RuleERC2980`: split the shared list-management errors into per-list errors so a revert identifies which list rejected. `RuleERC2980_AddressAlreadyListed` becomes `RuleERC2980_AddressAlreadyWhitelisted` / `RuleERC2980_AddressAlreadyFrozen`, and `RuleERC2980_AddressNotFound` becomes `RuleERC2980_AddressNotWhitelisted` / `RuleERC2980_AddressNotFrozen`. **Breaking (ABI):** the removed errors' 4-byte selectors no longer exist; off-chain tooling matching on them must update.
+
+### Testing
+
+- Add `test/ThreatModel/ThreatModelTests.t.sol` — 18 threat-model proof-of-concept tests (15 unit/integration, 3 fuzz) covering the identity-registry mint path, `RuleMaxTotalSupply` view overflow, the multi-token approval-key divergence, `approveAndTransferIfAllowed` under a `RuleEngine`, residual state after `unbindToken`, `_transferHash` injectivity, mint-quota accounting, and `RuleWhitelistWrapper` child-rule composition. Full suite: 425 tests, production line coverage 94.91%.
+
+### Documentation
+
+- `RuleMintAllowance`: document that `canTransfer` / `detectTransferRestriction` are **not authoritative** (hardcoded to "allowed" because the 3-arg path has no minter identity) and that a mint pre-flight must use the spender-aware `canTransferFrom(minter, address(0), to, value)` / `detectTransferRestrictionFrom`. Added a bold callout and an eligibility-views table to `doc/technical/RuleMintAllowance.md` and a warning to the README rule section.
+- Add `THREAT_MODEL.md`, `RESULT.md` and `TEST_IMPROVEMENT.md` — manual security review of `src/` (0 High/Medium, 2 Low, 8 Info). Slither call-graph / inheritance / function-summary artifacts in `AUDIT/slither-graph/`.
+- Add a "Manual Threat Model & Review" section to `README.md`.
+- `CLAUDE.md` / `AGENTS.md`: correct the version string to `0.4.0`, document the two integration topologies and the CMTAT v3.3+ mint `spender` convention, and add the missing `RuleMintAllowance`, `RuleConditionalTransferLightMultiToken`, `RuleNFTAdapter` and restriction code `70` entries.
+
 ## v0.4.0
 
 ### Added

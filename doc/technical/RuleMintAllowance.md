@@ -10,6 +10,8 @@ Regular transfers and burns are **not restricted** by this rule — it only acts
 
 `detectTransferRestriction(from, to, value)` (the 3-arg form without a spender) always returns `TRANSFER_OK` because the minter's identity is not available in that call path. Use `detectTransferRestrictionFrom(minter, address(0), to, amount)` to query a minter's allowance.
 
+> ⚠️ **`canTransfer` and `detectTransferRestriction` are NOT authoritative for this rule.** They are hardcoded to "allowed" (`true` / `TRANSFER_OK`) because the 3-arg signature carries no minter identity, so a pre-flight that gates on them will disagree with enforcement: the mint still reverts with `RuleMintAllowance_AllowanceExceeded` if the quota is insufficient. **For a mint pre-flight, always use the spender-aware view** `canTransferFrom(minter, address(0), to, value)` (or `detectTransferRestrictionFrom(minter, address(0), to, value)`), which returns the real answer.
+
 > Compatibility warning: this rule does **not** enforce mint allowances for a token that only calls the standard ERC-3643 3-arg compliance functions. It requires the spender-aware RuleEngine/CMTAT v3.3+ path (`detectTransferRestrictionFrom` and `transferred(spender, from, to, value)`) so the minter address is available.
 
 For that reason, `RuleMintAllowance` does not advertise the full ERC-3643 `ICompliance` interface through ERC-165. It still implements the inherited 3-arg callbacks required by the rule interface, but they are not sufficient to enforce mint quotas.
@@ -98,6 +100,17 @@ Because of this, `RuleMintAllowance` must not be used as a standalone compliance
 ### Burns not restricted
 
 Burns (`to == address(0)`) are not tracked by this rule. Minters do not recover allowance when tokens are burned.
+
+### Eligibility views: which one is authoritative
+
+| View | Signature | Authoritative for mint quota? |
+| --- | --- | --- |
+| `canTransfer` | `(from, to, value)` | ❌ No — hardcoded `true` (no minter identity) |
+| `detectTransferRestriction` | `(from, to, value)` | ❌ No — hardcoded `TRANSFER_OK` |
+| `canTransferFrom` | `(minter, address(0), to, value)` | ✅ **Yes** — returns `false` when the quota is insufficient |
+| `detectTransferRestrictionFrom` | `(minter, address(0), to, value)` | ✅ **Yes** — returns `70` when the quota is insufficient |
+
+An integrator that pre-flights a mint with `canTransfer` will see "allowed" even when the mint will revert on the quota. This is intentional: the 3-arg views cannot see the minter. Always pre-flight mints with the spender-aware pair, passing the minter as the spender and `address(0)` as `from`.
 
 ## Usage scenario
 

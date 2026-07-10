@@ -640,6 +640,8 @@ Compatibility warning: `RuleMintAllowance` does not enforce quotas for a token t
 
 For the same reason, it does not advertise the full ERC-3643 `ICompliance` interface through ERC-165; the 3-arg callbacks alone cannot enforce the mint quota.
 
+> ⚠️ **`canTransfer` / `detectTransferRestriction` are not authoritative for this rule** — they are hardcoded to "allowed" because the 3-arg signature has no minter identity, so they disagree with enforcement. Pre-flight a mint with the spender-aware view `canTransferFrom(minter, address(0), to, value)` (or `detectTransferRestrictionFrom`). See [RuleMintAllowance.md](./doc/technical/RuleMintAllowance.md#eligibility-views-which-one-is-authoritative).
+
 **Usage scenario**
 
 The compliance manager binds the rule to the RuleEngine with `bindToken(ruleEngine)`. Attempting to bind a second RuleEngine/token reverts until the current binding is removed with `unbindToken`. The operator assigns `setMintAllowance(alice, 100_000e18)`. Alice's mints deduct from her quota through `transferred(alice, address(0), recipient, amount)`; once exhausted, further mints revert with code 70 until the operator increases the quota.
