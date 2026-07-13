@@ -113,9 +113,19 @@ Approves and executes `safeTransferFrom` on the specified token, requiring allow
 
 Only bound tokens can call transfer execution hooks. Approval consumption uses the **caller** (`msg.sender`) as the token key — which is why the rule must be bound directly to each token. See [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work).
 
-### `detectTransferRestriction(from, to, value)`
+### `detectTransferRestrictionForToken(address token, address from, address to, uint256 value) -> uint8`
 
-⚠️ **Caller-dependent.** This view derives the token key from `msg.sender`, so it only returns a meaningful answer when invoked *by the bound token*. Any other caller — an off-chain `eth_call` from a wallet, explorer, or aggregator — always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46), even for a transfer that is approved and will succeed. It is fail-closed, but it carries no signal for third-party pre-flight. See `RESULT.md` finding **F-8**.
+**The view integrators should use.** Returns the restriction code for a transfer of `token`, taking the token **explicitly** instead of deriving it from `msg.sender`. Any caller — including an off-chain `eth_call` from a wallet, explorer or aggregator — gets the real answer.
+
+### `canTransferForToken(address token, address from, address to, uint256 value) -> bool`
+
+Boolean counterpart of `detectTransferRestrictionForToken`. Prefer it over `canTransfer`, which is caller-dependent.
+
+### `detectTransferRestriction(from, to, value)` / `canTransfer(from, to, value)`
+
+⚠️ **Caller-dependent — prefer the `…ForToken` views above.** These ERC-1404 / ERC-3643 views derive the token key from `msg.sender`, so they only return a meaningful answer when invoked *by the bound token*. Any other caller always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46) / `false`, even for a transfer that is approved and will succeed. They are fail-closed, but carry no signal for third-party pre-flight. See `RESULT.md` finding **F-8**.
+
+The standardized signatures are kept as-is (the token cannot be added to them without breaking ERC-1404), and both the implicit and explicit views are backed by the same internal helper, so for the bound token they can never disagree.
 
 ## Notes
 

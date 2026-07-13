@@ -41,12 +41,34 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 | `RuleIdentityRegistry` | registry == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 55–57 |
 | `RuleERC2980` | n/a (local lists) | ❌ | `canTransfer` / `canTransferFrom` | 60–63 |
 | `RuleConditionalTransferLight` | n/a (needs `bindToken`) | ✅ consumes an approval | `canTransfer` / `canTransferFrom` | 46 |
-| `RuleConditionalTransferLightMultiToken` | n/a (needs `bindToken`) | ✅ consumes an approval | ⚠️ `msg.sender`-dependent [10] | 46 |
+| `RuleConditionalTransferLightMultiToken` | n/a (needs `bindToken`) | ✅ consumes an approval | `canTransferForToken` / `detectTransferRestrictionForToken` [10] | 46 |
 | `RuleMintAllowance` | n/a (needs `bindToken`) | ✅ debits quota | ⚠️ `canTransferFrom` **only** [11] | 70 |
 
 ---
 
-## 3. Notes & caveats
+## 3. Overload surface (ERC-7943 `tokenId` / `ITransferContext`)
+
+Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads and the `ITransferContext` struct entrypoints come from `RuleNFTAdapter`, and **only the rules that inherit it have them**. This is a deliberate design choice, not an oversight: `RuleMaxTotalSupply` caps a fungible supply, and the conditional-transfer / mint-allowance rules key on fungible amounts, so a `tokenId` dimension would be meaningless for them.
+
+| Rule | ERC-7943 `tokenId` overloads [12] | `transferred(FungibleTransferContext)` | `transferred(MultiTokenTransferContext)` |
+|---|---|---|---|
+| `RuleWhitelist` | ✅ | ✅ | ✅ |
+| `RuleWhitelistWrapper` | ✅ | ✅ | ✅ |
+| `RuleBlacklist` | ✅ | ✅ | ✅ |
+| `RuleSpenderWhitelist` | ✅ | ✅ | ✅ |
+| `RuleSanctionsList` | ✅ | ✅ | ✅ |
+| `RuleERC2980` | ✅ | ✅ | ✅ |
+| `RuleIdentityRegistry` | ✅ | ✅ | ✅ |
+| `RuleMaxTotalSupply` | ❌ | ❌ | ❌ |
+| `RuleConditionalTransferLight` | ❌ | ✅ | ❌ |
+| `RuleConditionalTransferLightMultiToken` | ❌ | ✅ | ❌ |
+| `RuleMintAllowance` | ❌ | ❌ | ❌ |
+
+The `tokenId` parameter is **always ignored** by the rules that accept it — `RuleNFTAdapter` exists purely to re-expose the same restriction logic under the ERC-7943 signatures. The `tokenId` overload of any function therefore returns exactly what its fungible counterpart returns, and the `ctx` entrypoints dispatch to the same internal hooks (`ctx.sender == 0` or `ctx.sender == ctx.from` ⇒ the direct hook; otherwise the spender-aware hook). This parity is asserted for every rule above in `test/TransferContext/OverloadParity.t.sol`.
+
+**Access control on the `ctx` entrypoints (threat `AC-5`).** `transferred(FungibleTransferContext)` / `transferred(MultiTokenTransferContext)` are `external` with **no caller restriction** on the validation rules. That is safe because those rules' hooks are `view`: an arbitrary caller can run the check and be reverted by it, but cannot mutate any state. The stateful multi-token rule guards its own `ctx` entrypoint with `onlyTransferExecutor`.
+
+## 4. Notes & caveats
 
 1. **Deny-lists intentionally screen the minter/burner.** `RuleBlacklist` and `RuleSanctionsList` do **not** exempt mint/burn from the spender check, so a blacklisted/sanctioned address cannot mint or burn. This is correct fail-closed behaviour for a deny-list (threat `BL-1`), the mirror image of the whitelist rules, which exempt mint/burn because the minter acts on its own authority rather than as a delegated spender.
 
@@ -66,9 +88,11 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 
 9. **`RuleMaxTotalSupply` views are overflow-safe** (finding **F-2**, fixed): `detectTransferRestriction` / `canTransfer` return code `50` instead of reverting when `currentSupply + value` would overflow.
 
-10. **`RuleConditionalTransferLightMultiToken` is direct-binding-only, and its `detectTransferRestriction` depends on `msg.sender`.** Approvals are recorded under the `token` argument but *consumed* under `msg.sender`, so the rule **must be bound directly to each token** (`CMTAT.setRuleEngine(rule)`) and **must not be added to a `RuleEngine`** — behind an engine it either reverts or silently loses all per-token isolation (finding **F-4**; full case analysis in [RuleConditionalTransferLightMultiToken.md](./RuleConditionalTransferLightMultiToken.md#deployment-topology--why-a-ruleengine-does-not-work)). For the same reason `detectTransferRestriction` derives the token key from the caller, so an off-chain `eth_call` from a non-bound address always reads "not approved" (code 46) even for an approved transfer (threat `CTL-4`, finding **F-8**).
+10. **`RuleConditionalTransferLightMultiToken` is direct-binding-only, and its `detectTransferRestriction` depends on `msg.sender`.** Approvals are recorded under the `token` argument but *consumed* under `msg.sender`, so the rule **must be bound directly to each token** (`CMTAT.setRuleEngine(rule)`) and **must not be added to a `RuleEngine`** — behind an engine it either reverts or silently loses all per-token isolation (finding **F-4**; full case analysis in [RuleConditionalTransferLightMultiToken.md](./RuleConditionalTransferLightMultiToken.md#deployment-topology--why-a-ruleengine-does-not-work)). For the same reason `detectTransferRestriction` / `canTransfer` derive the token key from the caller, so an off-chain `eth_call` from a non-bound address always reads "not approved" (code 46) even for an approved transfer (threat `CTL-4`, finding **F-8**). Use the caller-explicit **`detectTransferRestrictionForToken(token, …)`** / **`canTransferForToken(token, …)`** views for pre-flight — they take the token as a parameter and give every caller the real answer.
 
 11. **`RuleMintAllowance.canTransfer` / `detectTransferRestriction` are NOT authoritative** (finding **F-7**): they are hardcoded to "allowed" because the 3-arg signature has no minter identity. Pre-flight a mint with `canTransferFrom(minter, address(0), to, value)`. See [RuleMintAllowance.md](./RuleMintAllowance.md#eligibility-views-which-one-is-authoritative).
+
+12. **The ERC-7943 `tokenId` overloads** are `detectTransferRestriction(from,to,tokenId,value)`, `detectTransferRestrictionFrom(spender,from,to,tokenId,value)`, `canTransfer(from,to,tokenId,amount)`, `canTransferFrom(spender,from,to,tokenId,value)`, `transferred(from,to,tokenId,value)` and `transferred(spender,from,to,tokenId,value)` — all supplied by `RuleNFTAdapter`. Per ERC-7943, `amount`/`value` MUST be `1` for ERC-721. The rules ignore `tokenId` entirely; it exists so an ERC-721/ERC-1155 token can call the same compliance rule without a shim.
 
 ---
 
