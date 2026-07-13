@@ -29,7 +29,7 @@ contract Ownable2StepERC165SupportTest is Test {
     function testAllOwnable2StepRulesAdvertiseOwnableInterfaces() public {
         RuleBlacklistOwnable2Step blacklist = new RuleBlacklistOwnable2Step(OWNER, address(0));
         RuleWhitelistOwnable2Step whitelist = new RuleWhitelistOwnable2Step(OWNER, address(0), false, false);
-        RuleWhitelistWrapperOwnable2Step wrapper = new RuleWhitelistWrapperOwnable2Step(OWNER, address(0), false);
+        RuleWhitelistWrapperOwnable2Step wrapper = new RuleWhitelistWrapperOwnable2Step(OWNER, address(0), false, true);
         RuleSpenderWhitelistOwnable2Step spenderWhitelist = new RuleSpenderWhitelistOwnable2Step(OWNER, address(0));
         RuleERC2980Ownable2Step erc2980 = new RuleERC2980Ownable2Step(OWNER, address(0), false);
         RuleSanctionsListOwnable2Step sanctions =

@@ -45,10 +45,12 @@ abstract contract RuleERC2980Internal {
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            if (_whitelist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
+            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
+            if (addressesToAdd[i] == address(0) || !_whitelist.add(addressesToAdd[i])) {
                 skipped += 1;
+            } else {
+                added += 1;
             }
         }
     }
@@ -103,10 +105,12 @@ abstract contract RuleERC2980Internal {
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            if (_frozenlist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
+            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
+            if (addressesToAdd[i] == address(0) || !_frozenlist.add(addressesToAdd[i])) {
                 skipped += 1;
+            } else {
+                added += 1;
             }
         }
     }

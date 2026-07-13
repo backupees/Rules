@@ -24,6 +24,14 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
      * @notice Restriction message returned when the recipient is not whitelisted.
      */
     string constant TEXT_ADDRESS_TO_NOT_WHITELISTED = "The recipient is not in the whitelist";
+    /**
+     * @notice Restriction message returned when minting is not allowed.
+     */
+    string constant TEXT_MINT_NOT_ALLOWED = "Minting is not allowed";
+    /**
+     * @notice Restriction message returned when burning is not allowed.
+     */
+    string constant TEXT_BURN_NOT_ALLOWED = "Burning is not allowed";
 
     /* ============ Code ============ */
     // It is very important that each rule uses a unique code
@@ -43,6 +51,14 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
      * @notice Restriction code returned when the recipient is not whitelisted.
      */
     uint8 public constant CODE_ADDRESS_TO_NOT_WHITELISTED = 63;
+    /**
+     * @notice Restriction code returned when minting is not allowed by this rule.
+     */
+    uint8 public constant CODE_MINT_NOT_ALLOWED = 64;
+    /**
+     * @notice Restriction code returned when burning is not allowed by this rule.
+     */
+    uint8 public constant CODE_BURN_NOT_ALLOWED = 65;
 
     /* ============ Roles ============ */
     /**
@@ -105,11 +121,29 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
      */
     event RemoveFrozenlistAddress(address indexed targetAddress);
 
+    /**
+     * @notice Emitted when the `allowMint` flag is updated.
+     * @param newValue New value of the `allowMint` flag.
+     */
+    event AllowMintUpdated(bool newValue);
+    /**
+     * @notice Emitted when the `allowBurn` flag is updated.
+     * @param newValue New value of the `allowBurn` flag.
+     */
+    event AllowBurnUpdated(bool newValue);
+
     /* ============ Custom errors ============ */
     error RuleERC2980_InvalidTransfer(address rule, address from, address to, uint256 value, uint8 code);
     error RuleERC2980_InvalidTransferFrom(
         address rule, address spender, address from, address to, uint256 value, uint8 code
     );
+    /**
+     * @notice Thrown when trying to add the zero address to the whitelist or the frozenlist.
+     * @dev The zero address is the ERC-20 mint/burn sentinel, not a participant. Listing it would
+     *      make the MANDATORY ERC-2980 getter `whitelist(address(0))` return `true`. Mint/burn
+     *      permission is governed by the explicit `allowMint` / `allowBurn` flags instead.
+     */
+    error RuleERC2980_ZeroAddressNotAllowed();
     /**
      * @notice Thrown when adding an address that is already on the whitelist.
      */

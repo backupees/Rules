@@ -27,11 +27,18 @@ abstract contract RuleWhitelistWrapperBase is
     //////////////////////////////////////////////////////////////*/
     /**
      * @notice Deploys the whitelist wrapper base.
+     * @dev The wrapper holds no addresses of its own — it ORs its child rules. It therefore needs its
+     *      OWN mint/burn flags: the children no longer list `address(0)`, so without these a mint
+     *      would resolve `from` as unlisted and be rejected.
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
      * @param checkSpender_ Whether to also verify the spender on delegated transfers.
+     * @param allowMintBurn When true, permits both minting and burning.
      */
-    constructor(address forwarderIrrevocable, bool checkSpender_) MetaTxModuleStandalone(forwarderIrrevocable) {
+    constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
+        MetaTxModuleStandalone(forwarderIrrevocable)
+    {
         checkSpender = checkSpender_;
+        _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -118,6 +125,30 @@ abstract contract RuleWhitelistWrapperBase is
         override
         returns (uint8)
     {
+        // Gate the mint/burn OPERATION explicitly, before consulting any child rule.
+        uint8 mintBurnCode = _detectMintBurnRestriction(from, to);
+        if (mintBurnCode != uint8(REJECTED_CODE_BASE.TRANSFER_OK)) {
+            return mintBurnCode;
+        }
+
+        bool isMint = from == address(0);
+        bool isBurn = to == address(0);
+
+        // Resolve only the REAL participants against the children: the zero address is a sentinel,
+        // not a listed member of any child, so asking about it would always fail.
+        if (isMint) {
+            if (!_isListedInAnyChild(to)) {
+                return CODE_ADDRESS_TO_NOT_WHITELISTED;
+            }
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+        if (isBurn) {
+            if (!_isListedInAnyChild(from)) {
+                return CODE_ADDRESS_FROM_NOT_WHITELISTED;
+            }
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+
         address[] memory targetAddress = new address[](2);
         targetAddress[0] = from;
         targetAddress[1] = to;
@@ -130,6 +161,17 @@ abstract contract RuleWhitelistWrapperBase is
         } else {
             return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
         }
+    }
+
+    /**
+     * @notice Returns true when `targetAddress` is listed in at least one child rule.
+     * @param targetAddress The address to resolve across the children.
+     * @return True if listed in any child.
+     */
+    function _isListedInAnyChild(address targetAddress) internal view virtual returns (bool) {
+        address[] memory targets = new address[](1);
+        targets[0] = targetAddress;
+        return _detectTransferRestrictionForTargets(targets)[0];
     }
 
     /**

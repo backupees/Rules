@@ -24,9 +24,10 @@ contract CMTATRuleEngineIntegration is Test, HelperContract {
         ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock.addRule(ruleWhitelist);
-        // Allow minting: whitelist ZERO_ADDRESS (mint source) and recipient.
+        // Allow minting: set the explicit flag (the zero address is NEVER whitelisted) and
+        // whitelist the recipient, which a permitted mint still requires.
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleWhitelist.addAddress(ZERO_ADDRESS);
+        ruleWhitelist.setAllowMint(true);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleWhitelist.addAddress(ADDRESS1);
 

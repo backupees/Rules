@@ -149,7 +149,7 @@ contract AddressListInterfaceIdTest is Test, HelperContract {
      */
     function test_WrapperDoesNotAdvertiseIAddressList() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
 
         assertFalse(
             wrapper.supportsInterface(AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID),

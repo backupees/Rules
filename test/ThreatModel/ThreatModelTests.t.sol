@@ -486,7 +486,7 @@ contract ThreatModelTests is Test, HelperContract {
         childA.addAddress(ADDRESS1);
         childB.addAddress(ADDRESS2);
 
-        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
         wrapper.addRule(IRule(address(childA)));
         wrapper.addRule(IRule(address(childB)));
         vm.stopPrank();
@@ -514,7 +514,7 @@ contract ThreatModelTests is Test, HelperContract {
         childA.addAddress(ADDRESS1);
         childA.addAddress(ADDRESS2);
 
-        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
         wrapper.addRule(IRule(address(childA)));
         assertEq(wrapper.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), TRANSFER_OK);
 
@@ -537,7 +537,7 @@ contract ThreatModelTests is Test, HelperContract {
      */
     function test_WW2_EmptyWrapperFailsClosed() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
         assertEq(wrapper.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), CODE_ADDRESS_FROM_NOT_WHITELISTED);
         assertEq(wrapper.isVerified(ADDRESS1), false);
     }

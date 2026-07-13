@@ -193,7 +193,7 @@ contract OverloadParity is Test, HelperContract {
         child.addAddress(ADDRESS2);
         child.addAddress(ADDRESS3);
 
-        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, true);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, true, true);
         wrapper.addRule(IRule(address(child)));
         vm.stopPrank();
 

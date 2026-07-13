@@ -31,6 +31,12 @@ Operation rules that treat `msg.sender` or `getTokenBound()` as a *token identit
 
 Full per-rule semantics (who each rule screens, mint/burn handling, unset-oracle behaviour, stateful?, authoritative view) are tabulated in `doc/technical/RULE_SEMANTICS.md` — consult it before assuming any rule behaves like its siblings.
 
+### Standards conformance (non-negotiable)
+Rules that implement a standardized interface must match that standard's semantics, not merely its function signatures. Specs are vendored in `doc/ERCSpecification/` — read them before changing a rule's screening logic.
+
+- **`RuleIdentityRegistry` must conform to ERC-3643.** The spec mandates that **only the receiver** be identity-verified: *"The receiver MUST be whitelisted on the Identity Registry and verified"*; `transferFrom` "works the same way"; `mint` and `forcedTransfer` "only require the receiver"; `burn` "bypasses all checks on eligibility". The sender, the spender and the minter are **not** required to be verified. The rule currently screens all three — see `RULE_IMPROVEMENT.md` I-1. In particular, checking the sender **traps de-listed holders** (the spec checks only the receiver precisely so a lapsed investor can still exit their position).
+- **`isVerified(address(0))` must be `false`** — ERC-3643 defines `isVerified` as "is this wallet a valid investor holding the required claims", and `address(0)` is not a wallet. Likewise `RuleERC2980`'s `whitelist(address)` / `frozenlist(address)` are MANDATORY ERC-2980 getters and must not return `true` for `address(0)`. **Enforced (I-12):** mint/burn permission is an explicit `allowMint` / `allowBurn` flag, and the zero address can never enter any list — single adds revert, batch adds skip it. Never re-introduce "whitelist `address(0)` to enable mint/burn".
+
 ## Key Directories
 | Path | Description |
 |---|---|
@@ -92,13 +98,13 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 ## Restriction Code Ranges
 | Rule | Codes |
 |---|---|
-| RuleWhitelist / RuleWhitelistWrapper | 21–23 |
+| RuleWhitelist / RuleWhitelistWrapper | 21–23, 24 (mint not allowed), 25 (burn not allowed) |
 | RuleSanctionsList | 30–32 |
 | RuleBlacklist | 36–38 |
 | RuleConditionalTransferLight / …MultiToken | 46 |
 | RuleMaxTotalSupply | 50 |
 | RuleIdentityRegistry | 55–57 |
-| RuleERC2980 | 60–63 |
+| RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
 

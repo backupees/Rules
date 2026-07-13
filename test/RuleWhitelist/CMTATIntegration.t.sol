@@ -195,14 +195,14 @@ contract CMTATIntegration is Test, HelperContract {
 
     function testCanMint() public {
         // Arrange
-        // Add address zero to the whitelist
+        // Permit minting via the explicit flag (the zero address is never whitelisted)
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleWhitelist.addAddress(ZERO_ADDRESS);
+        ruleWhitelist.setAllowMint(true);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleWhitelist.addAddress(ADDRESS1);
-        // Arrange - Assert
-        resBool = ruleWhitelist.isAddressListed(ZERO_ADDRESS);
-        assertEq(resBool, true);
+        // Arrange - Assert: the sentinel is NOT listed; the explicit flag is what permits the mint.
+        assertFalse(ruleWhitelist.isAddressListed(ZERO_ADDRESS));
+        assertTrue(ruleWhitelist.allowMint());
 
         // Act
         vm.prank(DEFAULT_ADMIN_ADDRESS);

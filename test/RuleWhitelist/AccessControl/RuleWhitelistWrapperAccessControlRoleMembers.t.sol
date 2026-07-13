@@ -10,7 +10,7 @@ import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelis
 contract RuleWhitelistWrapperAccessControlRoleMembers is AccessControlEnumerableTestBase {
     function _deployAccessControl() internal override returns (IAccessControlEnumerableLike, address) {
         address adminAddr = DEFAULT_ADMIN_ADDRESS;
-        RuleWhitelistWrapper rule = new RuleWhitelistWrapper(adminAddr, ZERO_ADDRESS, true);
+        RuleWhitelistWrapper rule = new RuleWhitelistWrapper(adminAddr, ZERO_ADDRESS, true, true);
         return (IAccessControlEnumerableLike(address(rule)), adminAddr);
     }
 

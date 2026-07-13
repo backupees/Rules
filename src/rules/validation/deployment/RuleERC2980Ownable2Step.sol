@@ -20,10 +20,10 @@ contract RuleERC2980Ownable2Step is RuleERC2980Base, Ownable2Step, Ownable2StepE
     /**
      * @param owner Contract owner.
      * @param forwarderIrrevocable Address of the ERC-2771 forwarder for meta-transactions.
-     * @param allowBurn If true, whitelists `address(0)` at deployment to allow burn/redemption flows.
+     * @param allowMintBurn When true, permits both minting and burning (sets `allowMint` and `allowBurn`).
      */
-    constructor(address owner, address forwarderIrrevocable, bool allowBurn)
-        RuleERC2980Base(forwarderIrrevocable, allowBurn)
+    constructor(address owner, address forwarderIrrevocable, bool allowMintBurn)
+        RuleERC2980Base(forwarderIrrevocable, allowMintBurn)
         Ownable(owner)
     {}
 
@@ -53,6 +53,11 @@ contract RuleERC2980Ownable2Step is RuleERC2980Base, Ownable2Step, Ownable2StepE
     /**
      * @notice Restricts adding addresses to the whitelist to the contract owner.
      */
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to the contract owner.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyOwner {}
+
     function _authorizeWhitelistAdd() internal view virtual override onlyOwner {}
 
     /**

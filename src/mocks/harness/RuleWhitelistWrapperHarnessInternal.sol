@@ -17,8 +17,8 @@ contract RuleWhitelistWrapperHarnessInternal is RuleWhitelistWrapper {
      * @param forwarderIrrevocable Trusted ERC-2771 forwarder address
      * @param checkSpender_ Whether the spender is also checked against the whitelist
      */
-    constructor(address admin, address forwarderIrrevocable, bool checkSpender_)
-        RuleWhitelistWrapper(admin, forwarderIrrevocable, checkSpender_)
+    constructor(address admin, address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
+        RuleWhitelistWrapper(admin, forwarderIrrevocable, checkSpender_, allowMintBurn)
     {}
 
     /*//////////////////////////////////////////////////////////////

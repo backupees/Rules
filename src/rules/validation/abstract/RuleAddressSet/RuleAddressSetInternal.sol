@@ -39,10 +39,12 @@ abstract contract RuleAddressSetInternal {
      */
     function _addAddresses(address[] calldata addressesToAdd) internal returns (uint256 added, uint256 skipped) {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            if (_listedAddresses.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
+            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
+            if (addressesToAdd[i] == address(0) || !_listedAddresses.add(addressesToAdd[i])) {
                 skipped += 1;
+            } else {
+                added += 1;
             }
         }
     }

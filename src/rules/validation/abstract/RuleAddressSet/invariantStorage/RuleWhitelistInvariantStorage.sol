@@ -21,6 +21,14 @@ abstract contract RuleWhitelistInvariantStorage is RuleSharedInvariantStorage {
      * @notice Restriction message returned when the spender is not whitelisted.
      */
     string constant TEXT_ADDRESS_SPENDER_NOT_WHITELISTED = "The spender is not in the whitelist";
+    /**
+     * @notice Restriction message returned when minting is not allowed.
+     */
+    string constant TEXT_MINT_NOT_ALLOWED = "Minting is not allowed";
+    /**
+     * @notice Restriction message returned when burning is not allowed.
+     */
+    string constant TEXT_BURN_NOT_ALLOWED = "Burning is not allowed";
 
     /* ============ Code ============ */
     // It is very important that each rule uses an unique code
@@ -36,6 +44,14 @@ abstract contract RuleWhitelistInvariantStorage is RuleSharedInvariantStorage {
      * @notice Restriction code returned when the spender is not whitelisted.
      */
     uint8 public constant CODE_ADDRESS_SPENDER_NOT_WHITELISTED = 23;
+    /**
+     * @notice Restriction code returned when minting is not allowed by this rule.
+     */
+    uint8 public constant CODE_MINT_NOT_ALLOWED = 24;
+    /**
+     * @notice Restriction code returned when burning is not allowed by this rule.
+     */
+    uint8 public constant CODE_BURN_NOT_ALLOWED = 25;
 
     /* ============ Events ============ */
     /**
@@ -43,6 +59,16 @@ abstract contract RuleWhitelistInvariantStorage is RuleSharedInvariantStorage {
      * @param newValue New value of the `checkSpender` flag.
      */
     event CheckSpenderUpdated(bool newValue);
+    /**
+     * @notice Emitted when the `allowMint` flag is updated.
+     * @param newValue New value of the `allowMint` flag.
+     */
+    event AllowMintUpdated(bool newValue);
+    /**
+     * @notice Emitted when the `allowBurn` flag is updated.
+     * @param newValue New value of the `allowBurn` flag.
+     */
+    event AllowBurnUpdated(bool newValue);
 
     error RuleWhitelist_InvalidTransfer(address rule, address from, address to, uint256 value, uint8 code);
     error RuleWhitelist_InvalidTransferFrom(

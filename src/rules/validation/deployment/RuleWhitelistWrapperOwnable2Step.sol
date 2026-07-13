@@ -21,9 +21,10 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
      * @param owner Address of the contract owner
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
      * @param checkSpender_ Enables spender checks for transferFrom when true.
+     * @param allowMintBurn When true, permits both minting and burning (sets `allowMint` and `allowBurn`).
      */
-    constructor(address owner, address forwarderIrrevocable, bool checkSpender_)
-        RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_)
+    constructor(address owner, address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
+        RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_, allowMintBurn)
         Ownable(owner)
     {}
 
@@ -55,6 +56,11 @@ contract RuleWhitelistWrapperOwnable2Step is RuleWhitelistWrapperBase, Ownable2S
      * @notice Restricts toggling the spender-check setting to the contract owner.
      */
     function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
+
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to the contract owner.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyOwner {}
 
     /**
      * @notice Restricts rules management to the contract owner.

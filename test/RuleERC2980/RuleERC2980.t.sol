@@ -16,6 +16,8 @@ contract RuleERC2980Test is Test, HelperContract {
     uint8 constant CODE_TO_FROZEN = 61;
     uint8 constant CODE_SPENDER_FROZEN = 62;
     uint8 constant CODE_TO_NOT_WHITELISTED = 63;
+    uint8 constant CODE_ERC2980_MINT_NOT_ALLOWED = 64;
+    uint8 constant CODE_ERC2980_BURN_NOT_ALLOWED = 65;
 
     function setUp() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
@@ -104,19 +106,46 @@ contract RuleERC2980Test is Test, HelperContract {
         assertEq(resUint8, NO_ERROR);
     }
 
-    function testBurnRecipientNotWhitelistedByDefault() public {
+    /// @notice With `allowMintBurn = false`, a burn is refused with the DEDICATED code, not with
+    ///         "recipient not whitelisted" — the zero address is a sentinel, not a recipient.
+    function testBurnRefusedWithDedicatedCodeByDefault() public {
+        assertFalse(ruleERC2980.allowBurn());
         assertFalse(ruleERC2980.whitelist(ZERO_ADDRESS));
         resUint8 = ruleERC2980.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 20);
-        assertEq(resUint8, CODE_TO_NOT_WHITELISTED);
+        assertEq(resUint8, CODE_ERC2980_BURN_NOT_ALLOWED);
     }
 
-    function testAllowBurnConstructorWhitelistsZeroAddress() public {
+    /// @notice `allowMintBurn` permits burning WITHOUT whitelisting the zero address, so the
+    ///         MANDATORY ERC-2980 getter `whitelist(address(0))` stays truthful (`false`).
+    function testAllowMintBurnConstructorPermitsBurnWithoutWhitelistingZeroAddress() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         RuleERC2980 burnEnabledRule = new RuleERC2980(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true);
 
-        assertTrue(burnEnabledRule.whitelist(ZERO_ADDRESS));
+        assertTrue(burnEnabledRule.allowMint());
+        assertTrue(burnEnabledRule.allowBurn());
+
+        // The ERC-2980 mandatory getter no longer lies about the sentinel.
+        assertFalse(burnEnabledRule.whitelist(ZERO_ADDRESS));
+        assertFalse(burnEnabledRule.isWhitelisted(ZERO_ADDRESS));
+        assertFalse(burnEnabledRule.frozenlist(ZERO_ADDRESS));
+        assertFalse(burnEnabledRule.isVerified(ZERO_ADDRESS));
+
         resUint8 = burnEnabledRule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 20);
         assertEq(resUint8, NO_ERROR);
+    }
+
+    /// @notice The zero address can never enter either ERC-2980 list.
+    function testCannotListZeroAddress() public {
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_ZeroAddressNotAllowed.selector);
+        ruleERC2980.addWhitelistAddress(ZERO_ADDRESS);
+
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_ZeroAddressNotAllowed.selector);
+        ruleERC2980.addFrozenlistAddress(ZERO_ADDRESS);
+        vm.stopPrank();
+
+        assertFalse(ruleERC2980.whitelist(ZERO_ADDRESS));
+        assertFalse(ruleERC2980.frozenlist(ZERO_ADDRESS));
     }
 
     /*//////////////////////////////////////////////////////////////

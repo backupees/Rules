@@ -65,6 +65,11 @@ contract RuleWhitelist is RuleWhitelistBase, AccessControlModuleStandalone {
     function _authorizeCheckSpenderManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to holders of DEFAULT_ADMIN_ROLE.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /**
      * @notice Restricts adding addresses to the whitelist to holders of ADDRESS_LIST_ADD_ROLE.
      */
     function _authorizeAddressListAdd() internal view virtual override onlyRole(ADDRESS_LIST_ADD_ROLE) {}

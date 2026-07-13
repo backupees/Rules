@@ -26,4 +26,13 @@ abstract contract RuleAddressSetInvariantStorage {
      * @notice Thrown when trying to remove an address that is not listed.
      */
     error RuleAddressSet_AddressNotFound();
+
+    /**
+     * @notice Thrown when trying to add the zero address to the set.
+     * @dev The zero address is the ERC-20 mint/burn sentinel, not a participant. Listing it would
+     *      make `isVerified(address(0))` / `contains(address(0))` return `true`, contradicting
+     *      ERC-3643. Mint/burn permission is governed by the explicit `allowMint` / `allowBurn`
+     *      flags instead.
+     */
+    error RuleAddressSet_ZeroAddressNotAllowed();
 }

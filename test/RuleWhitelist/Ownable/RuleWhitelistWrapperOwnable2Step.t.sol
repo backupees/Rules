@@ -11,7 +11,7 @@ contract RuleWhitelistWrapperOwnable2StepTest is Ownable2StepTestBase {
 
     function _deployOwnable2Step() internal override returns (IOwnable2StepLike, address) {
         address ownerAddr = WHITELIST_OPERATOR_ADDRESS;
-        wrapper = new RuleWhitelistWrapperOwnable2Step(ownerAddr, ZERO_ADDRESS, true);
+        wrapper = new RuleWhitelistWrapperOwnable2Step(ownerAddr, ZERO_ADDRESS, true, true);
         rule = new RuleWhitelist(ownerAddr, ZERO_ADDRESS, true, false);
         return (IOwnable2StepLike(address(wrapper)), ownerAddr);
     }

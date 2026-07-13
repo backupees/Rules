@@ -37,10 +37,10 @@ contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
     /**
      * @param admin Address that receives `DEFAULT_ADMIN_ROLE` (implicitly holds all roles).
      * @param forwarderIrrevocable Address of the ERC-2771 forwarder for meta-transactions.
-     * @param allowBurn If true, whitelists `address(0)` at deployment to allow burn/redemption flows.
+     * @param allowMintBurn When true, permits both minting and burning (sets `allowMint` and `allowBurn`).
      */
-    constructor(address admin, address forwarderIrrevocable, bool allowBurn)
-        RuleERC2980Base(forwarderIrrevocable, allowBurn)
+    constructor(address admin, address forwarderIrrevocable, bool allowMintBurn)
+        RuleERC2980Base(forwarderIrrevocable, allowMintBurn)
         AccessControlModuleStandalone(admin)
     {}
 
@@ -70,6 +70,11 @@ contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
     /**
      * @notice Restricts adding addresses to the whitelist to holders of WHITELIST_ADD_ROLE.
      */
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to holders of DEFAULT_ADMIN_ROLE.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
     function _authorizeWhitelistAdd() internal view virtual override onlyRole(WHITELIST_ADD_ROLE) {}
 
     /**

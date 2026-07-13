@@ -83,6 +83,7 @@ abstract contract RuleAddressSet is
      * @param targetAddress The address to be added.
      */
     function addAddress(address targetAddress) public onlyAddressListAdd {
+        require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
         require(!_isAddressListed(targetAddress), RuleAddressSet_AddressAlreadyListed());
         _addAddress(targetAddress);
         emit AddAddress(targetAddress);

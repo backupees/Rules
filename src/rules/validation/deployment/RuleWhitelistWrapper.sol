@@ -26,9 +26,10 @@ contract RuleWhitelistWrapper is
      * @param admin Address of the contract (Access Control)
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
      * @param checkSpender_ Enables spender checks for transferFrom when true.
+     * @param allowMintBurn When true, permits both minting and burning (sets `allowMint` and `allowBurn`).
      */
-    constructor(address admin, address forwarderIrrevocable, bool checkSpender_)
-        RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_)
+    constructor(address admin, address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
+        RuleWhitelistWrapperBase(forwarderIrrevocable, checkSpender_, allowMintBurn)
         AccessControlModuleStandalone(admin)
     {}
 
@@ -71,6 +72,11 @@ contract RuleWhitelistWrapper is
      * @notice Restricts toggling the spender-check setting to holders of DEFAULT_ADMIN_ROLE.
      */
     function _authorizeCheckSpenderManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to holders of DEFAULT_ADMIN_ROLE.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @notice Restricts rules management to holders of RULES_MANAGEMENT_ROLE.

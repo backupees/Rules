@@ -67,6 +67,11 @@ contract RuleWhitelistOwnable2Step is RuleWhitelistBase, Ownable2Step, Ownable2S
      */
     function _authorizeCheckSpenderManager() internal view virtual override onlyOwner {}
 
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to the contract owner.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyOwner {}
+
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

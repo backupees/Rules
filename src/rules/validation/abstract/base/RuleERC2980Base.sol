@@ -39,20 +39,43 @@ abstract contract RuleERC2980Base is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Initializes the rule, optionally whitelisting the zero address to allow burns.
-     * @param forwarderIrrevocable Trusted ERC-2771 forwarder address, set permanently at deployment.
-     * @param allowBurn When true, whitelists `address(0)` so tokens can be burned (sent to the zero address).
+     * @notice Whether this rule permits minting (`from == address(0)`).
+     * @dev Mint/burn permission is an EXPLICIT flag, never whitelist membership of `address(0)`.
+     *      The zero address is the ERC-20 sentinel, not a participant: whitelisting it made the
+     *      MANDATORY ERC-2980 getter `whitelist(address(0))` return `true`, a spec violation.
+     *      A permitted mint still requires the RECIPIENT to be whitelisted and not frozen.
      */
-    constructor(address forwarderIrrevocable, bool allowBurn) MetaTxModuleStandalone(forwarderIrrevocable) {
-        if (allowBurn) {
-            _addWhitelistAddress(address(0));
-            emit AddWhitelistAddress(address(0));
-        }
+    bool public allowMint;
+
+    /**
+     * @notice Whether this rule permits burning (`to == address(0)`).
+     * @dev See {allowMint}. A permitted burn still requires the SENDER not to be frozen.
+     */
+    bool public allowBurn;
+
+    /**
+     * @notice Initializes the rule.
+     * @dev `allowMintBurn` sets BOTH {allowMint} and {allowBurn} — the common case, since mint and
+     *      burn are normally permitted. Use {setAllowMint} / {setAllowBurn} afterwards for
+     *      independent control (e.g. to permanently close issuance while still allowing redemptions).
+     * @param forwarderIrrevocable Trusted ERC-2771 forwarder address, set permanently at deployment.
+     * @param allowMintBurn When true, permits both minting and burning.
+     */
+    constructor(address forwarderIrrevocable, bool allowMintBurn) MetaTxModuleStandalone(forwarderIrrevocable) {
+        allowMint = allowMintBurn;
+        allowBurn = allowMintBurn;
+        emit AllowMintUpdated(allowMintBurn);
+        emit AllowBurnUpdated(allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
+
+    modifier onlyMintBurnManager() {
+        _authorizeMintBurnManager();
+        _;
+    }
 
     modifier onlyWhitelistAdd() {
         _authorizeWhitelistAdd();
@@ -108,6 +131,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to add to the whitelist.
      */
     function addWhitelistAddress(address targetAddress) public onlyWhitelistAdd {
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
         require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
         _addWhitelistAddress(targetAddress);
         emit AddWhitelistAddress(targetAddress);
@@ -162,6 +186,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to add to the frozenlist.
      */
     function addFrozenlistAddress(address targetAddress) public onlyFrozenlistAdd {
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
         require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyFrozen());
         _addFrozenlistAddress(targetAddress);
         emit AddFrozenlistAddress(targetAddress);
@@ -185,6 +210,24 @@ abstract contract RuleERC2980Base is
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Enables or disables minting through this rule.
+     * @param value The new value of the `allowMint` flag.
+     */
+    function setAllowMint(bool value) public virtual onlyMintBurnManager {
+        allowMint = value;
+        emit AllowMintUpdated(value);
+    }
+
+    /**
+     * @notice Enables or disables burning through this rule.
+     * @param value The new value of the `allowBurn` flag.
+     */
+    function setAllowBurn(bool value) public virtual onlyMintBurnManager {
+        allowBurn = value;
+        emit AllowBurnUpdated(value);
+    }
 
     /**
      * @inheritdoc IERC3643IComplianceContract
@@ -221,7 +264,8 @@ abstract contract RuleERC2980Base is
         returns (bool)
     {
         return restrictionCode == CODE_ADDRESS_FROM_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_IS_FROZEN
-            || restrictionCode == CODE_ADDRESS_SPENDER_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED;
+            || restrictionCode == CODE_ADDRESS_SPENDER_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED
+            || restrictionCode == CODE_MINT_NOT_ALLOWED || restrictionCode == CODE_BURN_NOT_ALLOWED;
     }
 
     /**
@@ -242,6 +286,10 @@ abstract contract RuleERC2980Base is
             return TEXT_ADDRESS_SPENDER_IS_FROZEN;
         } else if (restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED) {
             return TEXT_ADDRESS_TO_NOT_WHITELISTED;
+        } else if (restrictionCode == CODE_MINT_NOT_ALLOWED) {
+            return TEXT_MINT_NOT_ALLOWED;
+        } else if (restrictionCode == CODE_BURN_NOT_ALLOWED) {
+            return TEXT_BURN_NOT_ALLOWED;
         } else {
             return TEXT_CODE_NOT_FOUND;
         }
@@ -346,6 +394,11 @@ abstract contract RuleERC2980Base is
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Authorization hook invoked before toggling `allowMint` / `allowBurn`.
+     */
+    function _authorizeMintBurnManager() internal view virtual;
+
+    /**
      * @notice Authorization hook invoked before adding addresses to the whitelist.
      */
     function _authorizeWhitelistAdd() internal view virtual;
@@ -376,14 +429,26 @@ abstract contract RuleERC2980Base is
         override
         returns (uint8)
     {
-        // Frozenlist check has priority
-        if (_isFrozen(from)) {
+        bool isMint = from == address(0);
+        bool isBurn = to == address(0);
+
+        // Gate the mint/burn OPERATION explicitly, rather than by whitelisting the zero address.
+        if (isMint && !allowMint) {
+            return CODE_MINT_NOT_ALLOWED;
+        }
+        if (isBurn && !allowBurn) {
+            return CODE_BURN_NOT_ALLOWED;
+        }
+
+        // Frozenlist check has priority — but only for REAL participants.
+        if (!isMint && _isFrozen(from)) {
             return CODE_ADDRESS_FROM_IS_FROZEN;
-        } else if (_isFrozen(to)) {
+        }
+        if (!isBurn && _isFrozen(to)) {
             return CODE_ADDRESS_TO_IS_FROZEN;
         }
-        // Whitelist check: only the recipient must be whitelisted
-        if (!_isWhitelisted(to)) {
+        // Whitelist check: only the recipient must be whitelisted (ERC-2980); no recipient on a burn.
+        if (!isBurn && !_isWhitelisted(to)) {
             return CODE_ADDRESS_TO_NOT_WHITELISTED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);

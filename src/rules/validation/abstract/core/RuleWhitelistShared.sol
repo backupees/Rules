@@ -22,6 +22,32 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
      */
     bool public checkSpender;
 
+    /**
+     * @notice Whether this rule permits minting (`from == address(0)`).
+     * @dev Mint/burn permission is an EXPLICIT flag, never list membership of `address(0)`.
+     *      The zero address is the ERC-20 mint/burn sentinel, not a participant: listing it would
+     *      make `isVerified(address(0))` return `true`, contradicting ERC-3643 (which defines
+     *      `isVerified` as "is this wallet a valid investor holding the required claims").
+     *      Note this flag only gates the *operation*: a permitted mint still requires the RECIPIENT
+     *      to be whitelisted, so `allowMint = true` is not a bypass.
+     */
+    bool public allowMint;
+
+    /**
+     * @notice Whether this rule permits burning (`to == address(0)`).
+     * @dev See {allowMint}. A permitted burn still requires the SENDER to be whitelisted.
+     */
+    bool public allowBurn;
+
+    /*//////////////////////////////////////////////////////////////
+                            ACCESS CONTROL
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyMintBurnManager() {
+        _authorizeMintBurnManager();
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -36,7 +62,26 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override returns (bool isKnown) {
         return restrictionCode == CODE_ADDRESS_FROM_NOT_WHITELISTED
             || restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED
-            || restrictionCode == CODE_ADDRESS_SPENDER_NOT_WHITELISTED;
+            || restrictionCode == CODE_ADDRESS_SPENDER_NOT_WHITELISTED || restrictionCode == CODE_MINT_NOT_ALLOWED
+            || restrictionCode == CODE_BURN_NOT_ALLOWED;
+    }
+
+    /**
+     * @notice Enables or disables minting through this rule.
+     * @param value The new value of the `allowMint` flag.
+     */
+    function setAllowMint(bool value) public virtual onlyMintBurnManager {
+        allowMint = value;
+        emit AllowMintUpdated(value);
+    }
+
+    /**
+     * @notice Enables or disables burning through this rule.
+     * @param value The new value of the `allowBurn` flag.
+     */
+    function setAllowBurn(bool value) public virtual onlyMintBurnManager {
+        allowBurn = value;
+        emit AllowBurnUpdated(value);
     }
 
     /**
@@ -58,6 +103,10 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
             return TEXT_ADDRESS_TO_NOT_WHITELISTED;
         } else if (restrictionCode == CODE_ADDRESS_SPENDER_NOT_WHITELISTED) {
             return TEXT_ADDRESS_SPENDER_NOT_WHITELISTED;
+        } else if (restrictionCode == CODE_MINT_NOT_ALLOWED) {
+            return TEXT_MINT_NOT_ALLOWED;
+        } else if (restrictionCode == CODE_BURN_NOT_ALLOWED) {
+            return TEXT_BURN_NOT_ALLOWED;
         } else {
             return TEXT_CODE_NOT_FOUND;
         }
@@ -100,6 +149,40 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets both mint/burn flags at once (deployment helper).
+     * @param allowMint_ Whether minting is permitted.
+     * @param allowBurn_ Whether burning is permitted.
+     */
+    function _setAllowMintBurn(bool allowMint_, bool allowBurn_) internal virtual {
+        allowMint = allowMint_;
+        allowBurn = allowBurn_;
+        emit AllowMintUpdated(allowMint_);
+        emit AllowBurnUpdated(allowBurn_);
+    }
+
+    /**
+     * @notice Gates the mint/burn OPERATION, before any address is screened.
+     * @dev Shared by {RuleWhitelistBase} and {RuleWhitelistWrapperBase} so the two can never drift.
+     * @param from The sender (zero address for a mint).
+     * @param to The recipient (zero address for a burn).
+     * @return The restriction code, or TRANSFER_OK when the operation is permitted.
+     */
+    function _detectMintBurnRestriction(address from, address to) internal view virtual returns (uint8) {
+        if (from == address(0) && !allowMint) {
+            return CODE_MINT_NOT_ALLOWED;
+        }
+        if (to == address(0) && !allowBurn) {
+            return CODE_BURN_NOT_ALLOWED;
+        }
+        return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+    }
+
+    /**
+     * @notice Authorizes the caller to toggle `allowMint` / `allowBurn`; reverts otherwise.
+     */
+    function _authorizeMintBurnManager() internal view virtual;
 
     /**
      * @inheritdoc RuleNFTAdapter

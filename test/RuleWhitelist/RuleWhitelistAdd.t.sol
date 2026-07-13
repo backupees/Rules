@@ -70,49 +70,37 @@ contract RuleWhitelistAddTest is Test, HelperContract {
         assertEq(resUint256, 2);
     }
 
-    function testCanAddAddressZeroToTheWhitelist() public {
-        // Arrange - Assert
-        resBool = ruleWhitelist.isAddressListed(address(0x0));
-        assertEq(resBool, false);
+    /// @notice The zero address is the mint/burn sentinel, not a participant: it can never be listed.
+    ///         Mint/burn permission is governed by the explicit `allowMint` / `allowBurn` flags.
+    function testCannotAddAddressZeroToTheWhitelist() public {
+        assertFalse(ruleWhitelist.isAddressListed(address(0x0)));
 
-        // Act
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.AddAddress(address(0x0));
+        vm.expectRevert(RuleAddressSet_ZeroAddressNotAllowed.selector);
         ruleWhitelist.addAddress(address(0x0));
 
-        // Assert
-        resBool = ruleWhitelist.isAddressListed(address(0x0));
-        assertEq(resBool, true);
+        assertFalse(ruleWhitelist.isAddressListed(address(0x0)));
+        assertEq(ruleWhitelist.listedAddressCount(), 0);
     }
 
-    function testCanAddAddressesZeroToTheWhitelist() public {
-        // Arrange
-        resUint256 = ruleWhitelist.listedAddressCount();
-        assertEq(resUint256, 0);
+    /// @notice Batch add SKIPS the zero address silently (non-reverting batch convention) while
+    ///         still adding the real addresses. The sentinel never enters the list.
+    function testAddAddressesSkipsZeroAddress() public {
+        assertEq(ruleWhitelist.listedAddressCount(), 0);
         address[] memory whitelist = new address[](3);
         whitelist[0] = ADDRESS1;
         whitelist[1] = ADDRESS2;
-        // our target address
         whitelist[2] = address(0x0);
 
-        // Act
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.AddAddresses(whitelist);
-        (resCallBool,) = address(ruleWhitelist).call(abi.encodeWithSignature("addAddresses(address[])", whitelist));
+        ruleWhitelist.addAddresses(whitelist);
 
-        // Assert - Main
-        // Seem that call returns true even if the function is reverted
-        // TODO : check the return value of call
-        resBool = ruleWhitelist.isAddressListed(address(0x0));
-        assertEq(resBool, true);
-
-        // Assert - Secondary
-        resBool = ruleWhitelist.isAddressListed(ADDRESS1);
-        assertEq(resBool, true);
-        resBool = ruleWhitelist.isAddressListed(ADDRESS2);
-        assertEq(resBool, true);
-        resUint256 = ruleWhitelist.listedAddressCount();
-        assertEq(resUint256, 3);
+        // The sentinel was skipped...
+        assertFalse(ruleWhitelist.isAddressListed(address(0x0)));
+        // ...but the real addresses were added.
+        assertTrue(ruleWhitelist.isAddressListed(ADDRESS1));
+        assertTrue(ruleWhitelist.isAddressListed(ADDRESS2));
+        assertEq(ruleWhitelist.listedAddressCount(), 2);
     }
 
     function testAddAddressTwiceToTheWhitelist() public {
@@ -166,6 +154,8 @@ contract RuleWhitelistAddTest is Test, HelperContract {
     }
 
     function testFuzz_AddRemoveIdempotent(address addressA, address addressB) public {
+        // The zero address is the mint/burn sentinel and can never be listed.
+        vm.assume(addressA != address(0) && addressB != address(0));
         address[] memory targets = new address[](3);
         targets[0] = addressA;
         targets[1] = addressB;

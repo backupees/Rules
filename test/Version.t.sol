@@ -37,7 +37,7 @@ contract VersionTest is Test, HelperContract {
     }
 
     function testVersionRuleWhitelistWrapper() public {
-        RuleWhitelistWrapper rule = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, false);
+        RuleWhitelistWrapper rule = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, false, true);
         assertEq(rule.version(), EXPECTED_VERSION);
     }
 

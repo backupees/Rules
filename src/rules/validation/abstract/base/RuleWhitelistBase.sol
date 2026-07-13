@@ -18,18 +18,22 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
 
     /**
      * @notice Deploys the whitelist rule base.
+     * @dev `allowMintBurn` sets BOTH {allowMint} and {allowBurn} — the common case, since mint and
+     *      burn are normally permitted for a whitelist rule. Use {setAllowMint} / {setAllowBurn}
+     *      afterwards for independent control (e.g. to permanently close issuance while still
+     *      allowing redemptions).
+     * @dev Mint/burn permission is an explicit flag and NO LONGER whitelists `address(0)`: the zero
+     *      address is the ERC-20 sentinel, not a participant, and listing it made
+     *      `isVerified(address(0))` return `true` in violation of ERC-3643.
      * @param forwarderIrrevocable Trusted ERC-2771 forwarder address for meta-transactions.
      * @param checkSpender_ Whether to also verify the spender on delegated transfers.
-     * @param allowMintBurn When true, whitelists the zero address so mint/burn is permitted.
+     * @param allowMintBurn When true, permits both minting and burning.
      */
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleAddressSet(forwarderIrrevocable)
     {
         checkSpender = checkSpender_;
-        if (allowMintBurn) {
-            _addAddress(address(0));
-            emit AddAddress(address(0));
-        }
+        _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -113,9 +117,21 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
         override
         returns (uint8)
     {
-        if (!isAddressListed(from)) {
+        bool isMint = from == address(0);
+        bool isBurn = to == address(0);
+
+        // Gate the mint/burn OPERATION explicitly, rather than by listing the zero address.
+        uint8 mintBurnCode = _detectMintBurnRestriction(from, to);
+        if (mintBurnCode != uint8(REJECTED_CODE_BASE.TRANSFER_OK)) {
+            return mintBurnCode;
+        }
+
+        // Screen only the REAL participants. A permitted mint still requires a whitelisted
+        // recipient; a permitted burn still requires a whitelisted sender.
+        if (!isMint && !isAddressListed(from)) {
             return CODE_ADDRESS_FROM_NOT_WHITELISTED;
-        } else if (!isAddressListed(to)) {
+        }
+        if (!isBurn && !isAddressListed(to)) {
             return CODE_ADDRESS_TO_NOT_WHITELISTED;
         }
         return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
