@@ -65,7 +65,7 @@ Full per-rule semantics (who each rule screens, mint/burn handling, unset-oracle
 | `RuleERC2980Ownable2Step` | Ownable2Step variant of RuleERC2980 |
 | `RuleConditionalTransferLight` | Require operator approval before each transfer; bound to exactly one token at a time (`bindToken` reverts if a token is already bound; use `unbindToken` first to migrate) |
 | `RuleConditionalTransferLightOwnable2Step` | Owner-only approval and execution for conditional transfers |
-| `RuleConditionalTransferLightMultiToken` / `…Ownable2Step` | Conditional transfers with approvals keyed `(token, from, to, value)`. **Caveat**: approvals are *consumed* under `msg.sender`, so per-token scoping only holds in Topology B (direct binding). See `RESULT.md` F-4 |
+| `RuleConditionalTransferLightMultiToken` / `…Ownable2Step` | Conditional transfers with approvals keyed `(token, from, to, value)`. **Direct-binding-only (Topology B)** — approvals are *consumed* under `msg.sender`, so this rule must NOT be added to a RuleEngine; behind an engine it either reverts or loses all per-token isolation. See `RESULT.md` F-4 and `doc/technical/RuleConditionalTransferLightMultiToken.md` |
 | `RuleMintAllowance` / `RuleMintAllowanceOwnable2Step` | Per-minter mint quota, debited on the 4-arg `transferred(spender, from=0, to, value)` path. Requires CMTAT ≥ v3.3. `canTransfer` is **not** authoritative for this rule — use `canTransferFrom(minter, address(0), to, value)` |
 | `AccessControlModuleStandalone` | Base RBAC module; admin implicitly holds all roles |
 | `MetaTxModuleStandalone` | ERC-2771 meta-transaction support. Note: the operation rules deliberately do **not** inherit this, so `_msgSender()` used as a binding identity is never forwarder-controlled |

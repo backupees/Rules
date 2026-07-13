@@ -277,7 +277,7 @@ There are two categories of rules: validation rules (read-only) and operation ru
 | Require identity-registry verification (ERC-3643) | `RuleIdentityRegistry` |
 | ERC-2980 Swiss compliance (whitelist + frozenlist) | `RuleERC2980` |
 | Require operator approval per transfer | `RuleConditionalTransferLight` |
-| Per-transfer approval across several bound tokens | `RuleConditionalTransferLightMultiToken` |
+| Per-transfer approval across several **directly-bound** tokens (not behind a RuleEngine) | `RuleConditionalTransferLightMultiToken` |
 | Limit mint quota per minter | `RuleMintAllowance` |
 
 Each rule is also available in `Ownable2Step` and `AccessControl` variants; see [Choosing a Rule Variant](#choosing-a-rule-variant). Stateful rules have binding constraints — see the [Binding model](#binding-model) table.
@@ -420,7 +420,7 @@ Stateful (operation) rules restrict which caller may consume their state via `tr
 | Rule | Binding model | Notes |
 | --- | --- | --- |
 | `RuleConditionalTransferLight` | Single token | Rebind only after `unbindToken`; second `bindToken` reverts with `RuleConditionalTransferLight_TokenAlreadyBound` |
-| `RuleConditionalTransferLightMultiToken` | Multiple direct tokens | Approvals keyed by `(token, from, to, value)`; not suitable for per-token isolation behind one shared `RuleEngine` |
+| `RuleConditionalTransferLightMultiToken` | **Multiple direct tokens only** | Approvals keyed by `(token, from, to, value)` but *consumed* under `msg.sender`. ⚠️ **Do not add this rule to a `RuleEngine`** — bind each token directly (`CMTAT.setRuleEngine(rule)`). Behind an engine the rule either reverts or silently loses all per-token isolation; see [Deployment topology](./doc/technical/RuleConditionalTransferLightMultiToken.md#deployment-topology--why-a-ruleengine-does-not-work) |
 | `RuleMintAllowance` | Single RuleEngine/token | Bind the RuleEngine address in a CMTAT + RuleEngine setup; rebind only after `unbindToken`. Requires the spender-aware mint callback |
 
 Validation (read-only) rules have no binding requirement: they hold no per-transfer state and can be shared across tokens and RuleEngines freely.
