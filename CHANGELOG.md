@@ -49,6 +49,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ### Added
 
+- ERC-165: `RuleWhitelist`, `RuleBlacklist`, `RuleSpenderWhitelist` (and their `Ownable2Step` variants) now advertise the `IAddressList` interface (`0x5d10e182`). Purely additive — no call is rejected. This is the prerequisite for `RuleWhitelistWrapper` to interface-check its child rules (improvement I-4, finding F-5). Adds `AddressListInterfaceId` (pre-computed constant) and `IAddressListInterfaceIdHelper` (flattened interface used to derive it): `type(IAddressList).interfaceId` cannot be used, because it omits `contains(address)` inherited from `IIdentityRegistryContains`. `RuleWhitelistWrapper` deliberately does **not** advertise it — it exposes no address set of its own, so a wrapper cannot be nested inside another wrapper.
 - `RuleConditionalTransferLight` / `RuleConditionalTransferLightMultiToken`: new `resetApproval(...)` operator function that discards **every** outstanding approval for a transfer key in one call (returns the cleared count, emits `TransferApprovalReset`). It deliberately does **not** require a bound token, so it can clean up approvals that survived an `unbindToken` — and, for the multi-token rule, approvals stranded under a key that can never be consumed.
 - `RuleMintAllowance`: new `clearMintAllowances(address[] calldata minters)` operator function that zeroes the listed minters' quotas (non-reverting batch), for discarding stale quotas before rebinding.
 

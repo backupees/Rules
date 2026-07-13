@@ -738,8 +738,24 @@ This repository is developed and tested with [Foundry](https://book.getfoundry.s
 | Gas report | `forge test --gas-report` |
 | Gas snapshot | `forge snapshot` (check only: `forge snapshot --check`) |
 | Coverage | `forge coverage` |
+| Invariant suite only | `forge test --match-path "test/invariant/*"` |
 | Format | `forge fmt` |
 | Deploy a script | `forge script script/<Deploy...>.s.sol --rpc-url <url> --account <keystore>` |
+
+### Invariant testing
+
+The two **stateful (operation) rules** — `RuleConditionalTransferLight` and `RuleMintAllowance` — are covered by a handler-driven `StdInvariant` suite in [`test/invariant/`](./test/invariant/), which fuzzes long randomly-ordered call sequences and re-checks four invariants after every step (8 192 calls each, `fail_on_revert = true`):
+
+| Invariant | Asserts |
+| --- | --- |
+| `invariant_approvalConservation` | `totalApproved − totalCancelled − totalExecuted == Σ approvalCounts` — approvals are never double-spent or lost |
+| `invariant_noApprovalExceedsTotalRecorded` | `Σ approvalCounts ≤ totalApproved` |
+| `invariant_allowanceMatchesGhost` | the on-chain mint quota exactly matches an independently-computed ghost mirror, after any interleaving |
+| `invariant_mintedNeverExceedsCredited` | `Σ minted ≤ Σ credited` |
+
+Both suites are **mutation-verified**: injecting an approval double-spend or an off-by-one quota deduction makes them fail. Validation rules are read-only and hold no per-transfer state, so they are covered by unit and fuzz tests instead.
+
+Full details — handler architecture, ghost variables, the negative controls, the coverage map against the threat-model invariants, and how to add a new one — are in **[doc/technical/INVARIANT_TESTS.md](./doc/technical/INVARIANT_TESTS.md)**.
 
 Deployment scripts: `script/DeployCMTATWithWhitelist.s.sol`, `script/DeployCMTATWithBlacklist.s.sol`, `script/DeployCMTATWithBlacklistAndSanctionsList.s.sol`.
 

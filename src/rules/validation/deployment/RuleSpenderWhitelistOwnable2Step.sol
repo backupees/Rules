@@ -41,11 +41,11 @@ contract RuleSpenderWhitelistOwnable2Step is RuleSpenderWhitelistBase, Ownable2S
         public
         view
         virtual
-        override(RuleTransferValidation, Ownable2StepERC165Module)
+        override(RuleSpenderWhitelistBase, Ownable2StepERC165Module)
         returns (bool)
     {
         return Ownable2StepERC165Module.supportsInterface(interfaceId)
-            || RuleTransferValidation.supportsInterface(interfaceId);
+            || RuleSpenderWhitelistBase.supportsInterface(interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////

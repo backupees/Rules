@@ -3,7 +3,9 @@ pragma solidity ^0.8.20;
 
 import {RuleAddressSet} from "../RuleAddressSet/RuleAddressSet.sol";
 import {RuleNFTAdapter} from "../core/RuleNFTAdapter.sol";
+import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
 import {RuleSpenderWhitelistInvariantStorage} from "../invariant/RuleSpenderWhitelistInvariantStorage.sol";
+import {AddressListInterfaceId} from "../../../interfaces/library/AddressListInterfaceId.sol";
 import {IERC1404, IERC1404Extend} from "CMTAT/interfaces/tokenization/draft-IERC1404.sol";
 import {IERC3643IComplianceContract} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
@@ -66,6 +68,16 @@ abstract contract RuleSpenderWhitelistBase is RuleAddressSet, RuleNFTAdapter, Ru
             return TEXT_ADDRESS_SPENDER_NOT_WHITELISTED;
         }
         return TEXT_CODE_NOT_FOUND;
+    }
+
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
+        // Advertise IAddressList: this rule manages an address set and is callable through
+        // the IAddressList interface.
+        return interfaceId == AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID
+            || RuleTransferValidation.supportsInterface(interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////

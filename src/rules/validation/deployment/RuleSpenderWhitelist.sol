@@ -40,11 +40,11 @@ contract RuleSpenderWhitelist is RuleSpenderWhitelistBase, AccessControlModuleSt
         public
         view
         virtual
-        override(AccessControlEnumerable, RuleTransferValidation)
+        override(AccessControlEnumerable, RuleSpenderWhitelistBase)
         returns (bool)
     {
         return AccessControlEnumerable.supportsInterface(interfaceId)
-            || RuleTransferValidation.supportsInterface(interfaceId);
+            || RuleSpenderWhitelistBase.supportsInterface(interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////

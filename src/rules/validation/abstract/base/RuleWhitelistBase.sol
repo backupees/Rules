@@ -5,6 +5,7 @@ import {RuleAddressSet} from "../RuleAddressSet/RuleAddressSet.sol";
 import {RuleWhitelistShared} from "../core/RuleWhitelistShared.sol";
 import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
 import {IIdentityRegistryVerified} from "../../../interfaces/IIdentityRegistry.sol";
+import {AddressListInterfaceId} from "../../../interfaces/library/AddressListInterfaceId.sol";
 
 /**
  * @title RuleWhitelistBase
@@ -62,7 +63,10 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
      * @inheritdoc RuleTransferValidation
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
-        return RuleTransferValidation.supportsInterface(interfaceId);
+        // Advertise IAddressList: this rule manages an address set and is usable as a
+        // child rule of RuleWhitelistWrapper, which calls it through IAddressList.
+        return interfaceId == AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID
+            || RuleTransferValidation.supportsInterface(interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////
