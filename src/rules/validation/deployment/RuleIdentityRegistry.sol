@@ -21,9 +21,9 @@ contract RuleIdentityRegistry is AccessControlModuleStandalone, RuleIdentityRegi
      * @param admin Address that receives the default admin role.
      * @param identityRegistry_ Address of the ERC-3643 identity registry to query.
      */
-    constructor(address admin, address identityRegistry_)
+    constructor(address admin, address identityRegistry_, bool checkSender_, bool checkSpender_)
         AccessControlModuleStandalone(admin)
-        RuleIdentityRegistryBase(identityRegistry_)
+        RuleIdentityRegistryBase(identityRegistry_, checkSender_, checkSpender_)
     {}
 
     /*//////////////////////////////////////////////////////////////

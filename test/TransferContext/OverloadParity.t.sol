@@ -248,7 +248,7 @@ contract OverloadParity is Test, HelperContract {
         registry.setVerified(ADDRESS3, true);
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        RuleIdentityRegistry rule = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry));
+        RuleIdentityRegistry rule = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry), false, false);
 
         _assertParity(address(rule), ADDRESS3, ADDRESS1, ADDRESS2, ATTACKER, ADDRESS2, "RuleIdentityRegistry");
     }

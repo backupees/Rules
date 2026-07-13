@@ -2,7 +2,22 @@
 
 [TOC]
 
-This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity Registry to verify that transfer participants are registered and verified. When an identity registry is configured, the sender, recipient, and spender (in `transferFrom`) are all checked via `isVerified()`.
+This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity Registry to verify that transfer participants are registered and verified.
+
+> ## ✅ ERC-3643 conformant: only the RECEIVER is verified
+>
+> The specification mandates exactly one identity check:
+>
+> - *"The **receiver** MUST be whitelisted on the Identity Registry and verified"* (§ Transfer)
+> - *"`transferFrom` **works the same way**"* — receiver only
+> - *"`mint` and `forcedTransfer` **only require the receiver** to be whitelisted and verified"*
+> - *"The `burn` function **bypasses all checks** on eligibility"*
+>
+> The **sender**, the **spender** and the **minter** are therefore **not** verified by default.
+>
+> **Why the sender is deliberately not checked:** ERC-3643 screens only the receiver precisely so that an investor whose identity lapses (expired claim, revoked identity) can still **exit their position** by sending to a verified counterparty. Screening the sender would trap them — unable to receive *and* unable to send.
+>
+> Stricter screening is available as an **explicit opt-in** (`checkSender`, `checkSpender`), never as a silent default.
 
 ## Configuration
 

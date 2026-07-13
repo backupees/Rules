@@ -22,7 +22,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 | `RuleBlacklist` | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks listed minter [1] | ✅ blocks listed burner [1] |
 | `RuleSanctionsList` | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks sanctioned minter [1] | ✅ blocks sanctioned burner [1] |
 | `RuleMaxTotalSupply` | ⚙️ mint only [2] | ❌ | ❌ ignored | ❌ caps supply, not minter | ❌ |
-| `RuleIdentityRegistry` | ✅ must be verified | ✅ must be verified | ✅ must be verified | ✅ **minter must be verified** [3] | ❌ burn exempt [3] |
+| `RuleIdentityRegistry` | ⚙️ only if `checkSender` [3] | ✅ **must be verified** (ERC-3643) [3] | ⚙️ only if `checkSpender` [3] | ❌ exempt [3] | ❌ exempt [3] |
 | `RuleERC2980` | ⚙️ frozen-check only [4] | ✅ frozen-check + must be whitelisted | ✅ frozen-check | ✅ blocks frozen minter | ✅ blocks frozen burner |
 | `RuleConditionalTransferLight` | ❌ per-tuple approval [5] | ❌ per-tuple approval [5] | ❌ spender ignored | ❌ exempt | ❌ exempt |
 | `RuleConditionalTransferLightMultiToken` | ❌ per-tuple approval [5] | ❌ per-tuple approval [5] | ❌ spender ignored | ❌ exempt | ❌ exempt |
@@ -32,14 +32,14 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 
 | Rule | When its oracle/registry is unset | Stateful on transfer? [7] | Authoritative pre-flight view | Restriction codes |
 |---|---|---|---|---|
-| `RuleWhitelist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 21–23 |
-| `RuleWhitelistWrapper` | empty wrapper ⇒ **all rejected** (fail-closed) | ❌ | `canTransfer` / `canTransferFrom` | 21–23 |
+| `RuleWhitelist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 21–25 |
+| `RuleWhitelistWrapper` | empty wrapper ⇒ **all rejected** (fail-closed) | ❌ | `canTransfer` / `canTransferFrom` | 21–25 |
 | `RuleSpenderWhitelist` | n/a (local address set) | ❌ | `canTransfer` (always ✓) / `canTransferFrom` | 66 |
 | `RuleBlacklist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 36–38 |
 | `RuleSanctionsList` | oracle == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 30–32 |
 | `RuleMaxTotalSupply` | token contract required (non-zero) | ❌ | `canTransfer` / `canTransferFrom` [9] | 50 |
 | `RuleIdentityRegistry` | registry == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 55–57 |
-| `RuleERC2980` | n/a (local lists) | ❌ | `canTransfer` / `canTransferFrom` | 60–63 |
+| `RuleERC2980` | n/a (local lists) | ❌ | `canTransfer` / `canTransferFrom` | 60–65 |
 | `RuleConditionalTransferLight` | n/a (needs `bindToken`) | ✅ consumes an approval | `canTransfer` / `canTransferFrom` | 46 |
 | `RuleConditionalTransferLightMultiToken` | n/a (needs `bindToken`) | ✅ consumes an approval | `canTransferForToken` / `detectTransferRestrictionForToken` [10] | 46 |
 | `RuleMintAllowance` | n/a (needs `bindToken`) | ✅ debits quota | ⚠️ `canTransferFrom` **only** [11] | 70 |
@@ -70,11 +70,14 @@ The `tokenId` parameter is **always ignored** by the rules that accept it — `R
 
 ## 4. Notes & caveats
 
+> **Mint/burn permission is an explicit flag, never `address(0)` list membership.** `RuleWhitelist`, `RuleWhitelistWrapper` and `RuleERC2980` each expose `allowMint` / `allowBurn` — set together by the `allowMintBurn` constructor parameter, then independently settable via `setAllowMint` / `setAllowBurn` (e.g. to permanently close issuance while keeping redemptions open). The zero address can **never** enter any list (single adds revert, batch adds skip it), so the standardized getters stay truthful: `isVerified(address(0))` and `whitelist(address(0))` are always `false`, as ERC-3643 and ERC-2980 require. A blocked mint returns a dedicated code (`24` for the whitelist rules, `64` for ERC-2980) rather than the misleading "sender not whitelisted". The flag gates the **operation only**: a permitted mint still requires a whitelisted *recipient*, and a permitted burn a whitelisted *sender*.
+
+
 1. **Deny-lists intentionally screen the minter/burner.** `RuleBlacklist` and `RuleSanctionsList` do **not** exempt mint/burn from the spender check, so a blacklisted/sanctioned address cannot mint or burn. This is correct fail-closed behaviour for a deny-list (threat `BL-1`), the mirror image of the whitelist rules, which exempt mint/burn because the minter acts on its own authority rather than as a delegated spender.
 
 2. **`RuleMaxTotalSupply` only acts on mints.** `_detectTransferRestriction` returns `TRANSFER_OK` unless `from == address(0)`; it caps *total supply*, so the "screened party" is the mint operation, not any address. The spender is ignored on every path.
 
-3. **`RuleIdentityRegistry` screens the minter on mint but not the burner on burn** — see finding **F-1** (`RESULT.md`). The spender (minter) must itself be identity-verified for a mint to succeed, which diverges from the whitelist rules. Burn short-circuits (`to == address(0)` returns OK before the spender check), so the burner is not screened. If mint screening is not intended, add the `from != address(0)` guard used by the sibling whitelist rules.
+3. **`RuleIdentityRegistry` is ERC-3643 conformant: only the RECEIVER is verified** (improvement I-1, finding **F-1** fixed). The spec mandates exactly one check — *"The receiver MUST be whitelisted on the Identity Registry and verified"* — and explicitly states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility". The sender, spender and minter are therefore **not** screened by default. Checking the sender would **trap de-listed holders**: ERC-3643 screens only the receiver precisely so an investor whose identity lapses can still exit their position by sending to a verified counterparty. Stricter screening is available as an explicit opt-in via `checkSender` / `checkSpender` (both default `false`); mint and burn stay exempt from the spender check even when `checkSpender` is on.
 
 4. **`RuleERC2980` does not require the sender to be whitelisted** — only that the sender is *not frozen*; only the recipient must be whitelisted (threat `E29-1`, ERC-2980 semantics). Note also that freezing `address(0)` blocks all mints and that burns require `address(0)` to be whitelisted via the `allowBurn` constructor flag (threat `E29-2`).
 

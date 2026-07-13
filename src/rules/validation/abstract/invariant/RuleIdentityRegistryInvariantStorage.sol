@@ -39,6 +39,18 @@ abstract contract RuleIdentityRegistryInvariantStorage is RuleSharedInvariantSto
      * @param newRegistry Address of the newly configured identity registry.
      */
     event IdentityRegistryUpdated(address indexed newRegistry);
+    /**
+     * @notice Emitted when the identity rule's `checkSender` flag is updated.
+     * @param newValue New value of the `checkSender` flag.
+     */
+    event IdentityCheckSenderUpdated(bool newValue);
+    /**
+     * @notice Emitted when the identity rule's `checkSpender` flag is updated.
+     * @dev Named distinctly from the whitelist rule's `CheckSpenderUpdated` so a contract may inherit
+     *      both invariant-storage contracts (e.g. the test HelperContract) without a name clash.
+     * @param newValue New value of the `checkSpender` flag.
+     */
+    event IdentityCheckSpenderUpdated(bool newValue);
 
     error RuleIdentityRegistry_InvalidTransfer(address rule, address from, address to, uint256 value, uint8 code);
     error RuleIdentityRegistry_InvalidTransferFrom(

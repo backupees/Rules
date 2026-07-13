@@ -11,7 +11,8 @@ contract RuleIdentityRegistryOwnable2StepTest is Ownable2StepTestBase {
     function _deployOwnable2Step() internal override returns (IOwnable2StepLike, address) {
         address ownerAddr = WHITELIST_OPERATOR_ADDRESS;
         IdentityRegistryMock registry = new IdentityRegistryMock();
-        RuleIdentityRegistryOwnable2Step rule = new RuleIdentityRegistryOwnable2Step(ownerAddr, address(registry));
+        RuleIdentityRegistryOwnable2Step rule =
+            new RuleIdentityRegistryOwnable2Step(ownerAddr, address(registry), false, false);
         return (IOwnable2StepLike(address(rule)), ownerAddr);
     }
 }
@@ -24,7 +25,7 @@ contract RuleIdentityRegistryOwnable2StepAccessControl is Test, HelperContract {
 
     function setUp() public {
         registry = new IdentityRegistryMock();
-        rule = new RuleIdentityRegistryOwnable2Step(WHITELIST_OPERATOR_ADDRESS, address(registry));
+        rule = new RuleIdentityRegistryOwnable2Step(WHITELIST_OPERATOR_ADDRESS, address(registry), false, false);
     }
 
     function testOwnerCanSetAndClearIdentityRegistry() public {

@@ -34,7 +34,8 @@ contract Ownable2StepERC165SupportTest is Test {
         RuleERC2980Ownable2Step erc2980 = new RuleERC2980Ownable2Step(OWNER, address(0), false);
         RuleSanctionsListOwnable2Step sanctions =
             new RuleSanctionsListOwnable2Step(OWNER, address(0), ISanctionsList(address(0)));
-        RuleIdentityRegistryOwnable2Step identity = new RuleIdentityRegistryOwnable2Step(OWNER, address(0));
+        RuleIdentityRegistryOwnable2Step identity =
+            new RuleIdentityRegistryOwnable2Step(OWNER, address(0), false, false);
         RuleMaxTotalSupplyOwnable2Step maxSupply = new RuleMaxTotalSupplyOwnable2Step(OWNER, address(1), 1);
         RuleConditionalTransferLightOwnable2Step conditional = new RuleConditionalTransferLightOwnable2Step(OWNER);
         RuleConditionalTransferLightMultiTokenOwnable2Step conditionalMulti =

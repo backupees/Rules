@@ -21,7 +21,10 @@ contract RuleIdentityRegistryOwnable2Step is RuleIdentityRegistryBase, Ownable2S
      * @param owner Contract owner.
      * @param identityRegistry_ Address of the ERC-3643 identity registry to query.
      */
-    constructor(address owner, address identityRegistry_) RuleIdentityRegistryBase(identityRegistry_) Ownable(owner) {}
+    constructor(address owner, address identityRegistry_, bool checkSender_, bool checkSpender_)
+        RuleIdentityRegistryBase(identityRegistry_, checkSender_, checkSpender_)
+        Ownable(owner)
+    {}
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS

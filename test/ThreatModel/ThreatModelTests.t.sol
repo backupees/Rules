@@ -38,16 +38,16 @@ contract ThreatModelTests is Test, HelperContract {
     address private constant FORWARDER = address(0);
 
     /*//////////////////////////////////////////////////////////////
-        IR-1 — RuleIdentityRegistry screens the minter as `spender`
+        IR-1 — RuleIdentityRegistry is ERC-3643 conformant  [FIXED — I-1]
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice IR-1: a CMTAT mint reverts with CODE_ADDRESS_SPENDER_NOT_VERIFIED when the
-     *         recipient is verified but the minter itself is not registered in the identity
-     *         registry, because CMTAT v3.3+ routes mints through the 4-arg `transferred`
-     *         overload with `spender == minter` and the rule never exempts `from == address(0)`.
+     * @notice IR-1 (regression): ERC-3643 states that `mint` "only require[s] the receiver to be
+     *         whitelisted and verified on the Identity Registry". The minter is NOT screened, so a
+     *         mint to a verified recipient succeeds even when the minter's own EOA is unregistered.
+     *         This previously reverted with CODE_ADDRESS_SPENDER_NOT_VERIFIED (finding F-1).
      */
-    function test_IR1_MintRevertsWhenMinterNotVerified_CurrentBehaviour() public {
+    function test_IR1_MintSucceedsWhenMinterNotVerified() public {
         IdentityRegistryMock registry = new IdentityRegistryMock();
         cmtatDeployment = new CMTATDeployment();
         cmtatContract = cmtatDeployment.cmtat();
@@ -55,7 +55,7 @@ contract ThreatModelTests is Test, HelperContract {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry));
+        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry), false, false);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock.addRule(ruleIdentityRegistry);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
@@ -63,35 +63,68 @@ contract ThreatModelTests is Test, HelperContract {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         cmtatContract.grantRole(keccak256("MINTER_ROLE"), MINTER);
 
-        // The recipient is fully KYC-verified. The minter (the issuer's operational EOA) is not.
+        // The recipient is KYC-verified. The minter (the issuer's operational EOA) is NOT.
         registry.setVerified(ADDRESS1, true);
 
-        vm.prank(MINTER);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                RuleIdentityRegistry_InvalidTransferFrom.selector,
-                address(ruleIdentityRegistry),
-                MINTER,
-                ZERO_ADDRESS,
-                ADDRESS1,
-                uint256(100),
-                CODE_ADDRESS_SPENDER_NOT_VERIFIED
-            )
-        );
-        cmtatContract.mint(ADDRESS1, 100);
-        assertEq(cmtatContract.balanceOf(ADDRESS1), 0);
-
-        // Registering the minter in the identity registry is the only way to unblock issuance.
-        registry.setVerified(MINTER, true);
         vm.prank(MINTER);
         cmtatContract.mint(ADDRESS1, 100);
         assertEq(cmtatContract.balanceOf(ADDRESS1), 100);
     }
 
     /**
-     * @notice IR-1 (contrast): RuleWhitelist with `checkSpender = true` explicitly exempts mints
-     *         from the spender check, so an unlisted minter can mint to a whitelisted recipient.
-     *         This is the behaviour RuleIdentityRegistry diverges from.
+     * @notice IR-1 (regression): the receiver check IS mandated — a mint to an unverified recipient
+     *         is still rejected.
+     */
+    function test_IR1_MintStillRejectedWhenRecipientNotVerified() public {
+        IdentityRegistryMock registry = new IdentityRegistryMock();
+        cmtatDeployment = new CMTATDeployment();
+        cmtatContract = cmtatDeployment.cmtat();
+
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry), false, false);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock.addRule(ruleIdentityRegistry);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        cmtatContract.setRuleEngine(ruleEngineMock);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        cmtatContract.grantRole(keccak256("MINTER_ROLE"), MINTER);
+
+        registry.setVerified(MINTER, true); // minter verified, RECIPIENT is not
+
+        vm.prank(MINTER);
+        vm.expectRevert();
+        cmtatContract.mint(ADDRESS1, 100);
+        assertEq(cmtatContract.balanceOf(ADDRESS1), 0);
+    }
+
+    /**
+     * @notice IR-1 (regression): the sender is not screened by default, so a DE-LISTED HOLDER can
+     *         still exit their position to a verified counterparty — the reason ERC-3643 checks only
+     *         the receiver. Previously the holder was trapped.
+     */
+    function test_IR1_DelistedHolderCanStillExit() public {
+        IdentityRegistryMock registry = new IdentityRegistryMock();
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry), false, false);
+
+        registry.setVerified(ADDRESS1, true);
+        registry.setVerified(ADDRESS2, true);
+        assertEq(ruleIdentityRegistry.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), TRANSFER_OK);
+
+        // ADDRESS1's identity lapses (claim expired / identity revoked).
+        registry.setVerified(ADDRESS1, false);
+
+        // They can no longer RECEIVE...
+        assertEq(ruleIdentityRegistry.detectTransferRestriction(ADDRESS2, ADDRESS1, 10), CODE_ADDRESS_TO_NOT_VERIFIED);
+        // ...but they can still SEND to a verified counterparty, i.e. exit their position.
+        assertEq(ruleIdentityRegistry.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), TRANSFER_OK);
+    }
+
+    /**
+     * @notice IR-1 (contrast, unchanged): RuleWhitelist with `checkSpender = true` also exempts mints
+     *         from the spender check. The two rules now agree.
      */
     function test_IR1_WhitelistExemptsMintFromSpenderCheck() public {
         cmtatDeployment = new CMTATDeployment();
