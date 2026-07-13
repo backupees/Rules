@@ -57,6 +57,16 @@ abstract contract RuleConditionalTransferLightInvariantStorage is RuleSharedInva
      * @param cleared The approval count that was discarded
      */
     event TransferApprovalReset(address indexed from, address indexed to, uint256 value, uint256 cleared);
+    /**
+     * @notice Emitted when a RuleEngine is authorized to call the transfer execution hooks
+     * @param ruleEngine The RuleEngine now allowed to call `transferred`
+     */
+    event RuleEngineBound(address indexed ruleEngine);
+    /**
+     * @notice Emitted when a RuleEngine's authorization to call the transfer execution hooks is revoked
+     * @param ruleEngine The RuleEngine no longer allowed to call `transferred`
+     */
+    event RuleEngineUnbound(address indexed ruleEngine);
 
     /* ============ Custom error ============ */
     error RuleConditionalTransferLight_TransferExecutorUnauthorized(address account);
@@ -67,4 +77,7 @@ abstract contract RuleConditionalTransferLightInvariantStorage is RuleSharedInva
     );
     error TransferNotApproved();
     error TransferApprovalNotFound();
+    error RuleConditionalTransferLight_RuleEngineAddressZeroNotAllowed();
+    error RuleConditionalTransferLight_RuleEngineNotBound();
+    error RuleConditionalTransferLight_RuleEngineAlreadyBound();
 }

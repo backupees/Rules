@@ -419,7 +419,7 @@ Stateful (operation) rules restrict which caller may consume their state via `tr
 
 | Rule | Binding model | Notes |
 | --- | --- | --- |
-| `RuleConditionalTransferLight` | Single token | Rebind only after `unbindToken`; second `bindToken` reverts with `RuleConditionalTransferLight_TokenAlreadyBound` |
+| `RuleConditionalTransferLight` | Single token **+ optional RuleEngine** | Two independent bindings: `bindToken(token)` sets the ERC-20 this rule acts on, `bindRuleEngine(engine)` authorises the engine to call `transferred`. `transferred` accepts either. Behind a RuleEngine, bind **both** — then `approveAndTransferIfAllowed` works too. Rebind only after `unbindToken` / `unbindRuleEngine`. See [Binding: token vs RuleEngine](./doc/technical/RuleConditionalTransferLight.md#binding-token-vs-ruleengine) |
 | `RuleConditionalTransferLightMultiToken` | **Multiple direct tokens only** | Approvals keyed by `(token, from, to, value)` but *consumed* under `msg.sender`. ⚠️ **Do not add this rule to a `RuleEngine`** — bind each token directly (`CMTAT.setRuleEngine(rule)`). Behind an engine the rule either reverts or silently loses all per-token isolation; see [Deployment topology](./doc/technical/RuleConditionalTransferLightMultiToken.md#deployment-topology--why-a-ruleengine-does-not-work) |
 | `RuleMintAllowance` | Single RuleEngine/token | Bind the RuleEngine address in a CMTAT + RuleEngine setup; rebind only after `unbindToken`. Requires the spender-aware mint callback |
 
@@ -443,7 +443,10 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 #### RuleWhitelistWrapper
 
-- `RuleWhitelistWrapper`: requires child rules that implement `IAddressList`. Gas cost grows with the number of rules, and a wrapper with zero rules rejects all transfers.
+- `RuleWhitelistWrapper`: requires child rules that implement `IAddressList`. A wrapper with zero rules rejects all transfers (fail-closed).
+- **Scan cost is paid on every transfer, by the transferring user.** The wrapper makes one external `STATICCALL` per child rule — **~8.8k gas each** — and the scan runs during transfer *execution*, not only in views. At the default cap of 10 children the worst case is ~90k gas per transfer (~121k with `checkSpender = true`).
+- **Two amplifiers:** a transfer that is going to be *rejected* never resolves its target addresses, so it never early-exits and always scans **all** children — the failing path is the most expensive one. And `checkSpender = true` adds a third address that must also be found, lowering the early-exit rate.
+- **Operator responsibility:** keep the child list at or below the default `maxRules = 10`, and order children by expected hit rate so the early exit fires sooner. The scan is linear (~8.8k gas/child, measured flat up to 200 children), so `setMaxRules` accepts any non-zero value and raising the cap to 100 makes every transfer cost ~884k gas. That is a permanent tax on holders rather than a broken token — transfers still fit in a block until ~3,400 children — but it cannot be undone for transfers already paid. Full cost model and guidance: [RuleWhitelistWrapper.md](./doc/technical/RuleWhitelistWrapper.md#gas-cost-of-the-child-rule-scan).
 
 #### RuleSpenderWhitelist
 

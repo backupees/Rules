@@ -61,19 +61,58 @@ Unlike `approveTransfer`, this deliberately does **not** require a token to be b
 
 ### `approveAndTransferIfAllowed(address from, address to, uint256 value) → bool`
 
-Approves the transfer and immediately calls `SafeERC20.safeTransferFrom` on the currently bound token, using this rule contract as the spender. Requires `from` to have previously approved this contract for at least `value` tokens. Restricted to `OPERATOR_ROLE`.
+Approves the transfer and immediately calls `SafeERC20.safeTransferFrom` on the bound token, using this rule contract as the spender. Requires `from` to have previously approved this contract for at least `value` tokens. Restricted to `OPERATOR_ROLE`.
 
-> ⚠️ Requires the bound entity to be the ERC-20 token itself (direct-binding mode). Under a `RuleEngine` the bound entity is the engine, so this call reverts.
+Works in **both** topologies, provided the bindings are set correctly — see [Binding: token vs RuleEngine](#binding-token-vs-ruleengine).
 
 ### `approvedCount(address from, address to, uint256 value) → uint256`
 
 Returns the current approval count for the `(from, to, value)` tuple.
 
+### Binding: token vs RuleEngine
+
+The rule keeps **two independent bindings**, because they answer two different questions:
+
+| Binding | Answers | Used for |
+| --- | --- | --- |
+| `bindToken(token)` | *Which ERC-20 does this rule act on?* | the token `approveAndTransferIfAllowed` calls `safeTransferFrom` on — and, in direct-binding mode, an authorized caller of `transferred` |
+| `bindRuleEngine(engine)` | *Who else may call `transferred`?* | under the RuleEngine topology the **engine**, not the token, is the caller of the compliance hooks |
+
+`transferred` accepts a call from **either** the bound token **or** the bound RuleEngine (`isTransferExecutor(caller)`).
+
+**Wire it like this:**
+
+```solidity
+// Direct binding (token calls the rule itself)
+cmtat.setRuleEngine(address(rule));
+rule.bindToken(address(cmtat));
+
+// Behind a RuleEngine (the engine calls the rule)
+cmtat.setRuleEngine(address(ruleEngine));
+ruleEngine.addRule(rule);
+rule.bindToken(address(cmtat));          // the ERC-20 target
+rule.bindRuleEngine(address(ruleEngine)); // the authorized caller
+```
+
+> **Why two bindings?** They were originally one slot, which had to be *both* the ERC-20 target and the authorized caller. In direct mode those coincide, so it worked. Behind a RuleEngine they are different addresses, and a single slot could only hold one: binding the engine broke `approveAndTransferIfAllowed` (the engine is not an ERC-20), while binding the token left the engine unauthorized and reverted **every** transfer and mint. Splitting the roles fixes both. See `RESULT.md` finding **F-3**.
+
+Always bind the **token** with `bindToken` — putting the RuleEngine there instead makes `getTokenBound()` a non-ERC-20 and `approveAndTransferIfAllowed` will revert.
+
 ### `bindToken(address token)` / `unbindToken(address token)`
 
-Binds or unbinds a token contract. Only bound tokens are authorised to call `transferred`. Restricted to `COMPLIANCE_MANAGER_ROLE`.
+Binds or unbinds the ERC-20 token. Restricted to `COMPLIANCE_MANAGER_ROLE`. A second `bindToken` reverts until the current token is unbound.
 
 > ⚠️ **`unbindToken` does not clear `approvalCounts`.** Approvals recorded while the previous token was bound remain in storage and become consumable by the next token that is bound. The operator who controls rebinding also controls approvals, so the trust model is preserved — but when migrating to a different token, call `resetApproval` for each affected `(from, to, value)` **before** rebinding if the old approvals must not carry over.
+
+### `bindRuleEngine(address ruleEngine)` / `unbindRuleEngine()`
+
+Authorises (or revokes) a `RuleEngine` to call the transfer execution hooks. Restricted to `COMPLIANCE_MANAGER_ROLE`. Reverts on the zero address, and on a second binding until `unbindRuleEngine` is called. Emits `RuleEngineBound` / `RuleEngineUnbound`.
+
+Like `unbindToken`, `unbindRuleEngine` does **not** clear `approvalCounts`.
+
+### `isTransferExecutor(address caller) → bool`
+
+Returns `true` if `caller` is the bound token or the bound RuleEngine — i.e. whether it may call `transferred`.
 
 ## Workflow
 
