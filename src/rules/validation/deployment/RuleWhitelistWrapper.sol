@@ -70,18 +70,18 @@ contract RuleWhitelistWrapper is
     /**
      * @notice Restricts toggling the spender-check setting to holders of DEFAULT_ADMIN_ROLE.
      */
-    function _authorizeCheckSpenderManager() internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeCheckSpenderManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @notice Restricts rules management to holders of RULES_MANAGEMENT_ROLE.
      * @dev Restrict rules management to the dedicated role.
      */
-    function _onlyRulesManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
+    function _onlyRulesManager() internal view virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
 
     /**
      * @notice Restricts rules-limit management to holders of RULES_MANAGEMENT_ROLE.
      */
-    function _onlyRulesLimitManager() internal virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
+    function _onlyRulesLimitManager() internal view virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS

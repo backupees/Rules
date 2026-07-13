@@ -46,7 +46,7 @@ contract RuleConditionalTransferLightMultiTokenOwnable2Step is
     /**
      * @notice Reverts unless the caller is the owner.
      */
-    function _onlyComplianceManager() internal virtual override onlyOwner {}
+    function _onlyComplianceManager() internal view virtual override onlyOwner {}
 
     /**
      * @notice Reverts unless the caller is the owner.
