@@ -61,6 +61,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ### Documentation
 
+- Add `doc/technical/RULE_SEMANTICS.md` — a per-rule comparison table (who each rule screens for `from` / `to` / spender on `transferFrom` / mint / burn, behaviour when the oracle/registry is unset, stateful?, and which pre-flight view is authoritative), with a highlights summary and link added to the README.
 - `RuleMintAllowance`: document that `canTransfer` / `detectTransferRestriction` are **not authoritative** (hardcoded to "allowed" because the 3-arg path has no minter identity) and that a mint pre-flight must use the spender-aware `canTransferFrom(minter, address(0), to, value)` / `detectTransferRestrictionFrom`. Added a bold callout and an eligibility-views table to `doc/technical/RuleMintAllowance.md` and a warning to the README rule section.
 - Add `THREAT_MODEL.md`, `RESULT.md` and `TEST_IMPROVEMENT.md` — manual security review of `src/` (0 High/Medium, 2 Low, 8 Info). Slither call-graph / inheritance / function-summary artifacts in `AUDIT/slither-graph/`.
 - Add a "Manual Threat Model & Review" section to `README.md`.

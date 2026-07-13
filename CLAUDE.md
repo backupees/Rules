@@ -29,6 +29,8 @@ Operation rules that treat `msg.sender` or `getTokenBound()` as a *token identit
 - `RuleIdentityRegistry`, `RuleBlacklist`, `RuleSanctionsList`, `RuleERC2980` do **not** — they screen the minter. For the deny-lists this is intended; for `RuleIdentityRegistry` it means the minter must itself be identity-verified (see `RESULT.md` F-1).
 - `RuleMintAllowance` is the only rule that *uses* the mint spender: it debits `mintAllowance[spender]`.
 
+Full per-rule semantics (who each rule screens, mint/burn handling, unset-oracle behaviour, stateful?, authoritative view) are tabulated in `doc/technical/RULE_SEMANTICS.md` — consult it before assuming any rule behaves like its siblings.
+
 ## Key Directories
 | Path | Description |
 |---|---|

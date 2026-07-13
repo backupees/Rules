@@ -282,6 +282,14 @@ There are two categories of rules: validation rules (read-only) and operation ru
 
 Each rule is also available in `Ownable2Step` and `AccessControl` variants; see [Choosing a Rule Variant](#choosing-a-rule-variant). Stateful rules have binding constraints — see the [Binding model](#binding-model) table.
 
+### How rules differ (semantics comparison)
+
+Rules do **not** all treat the spender, mint/burn, or an unset oracle the same way. The full side-by-side table — who each rule screens (`from` / `to` / spender on `transferFrom` / mint / burn), how it behaves when its oracle/registry is unset, whether it is stateful, and which pre-flight view is authoritative — is in **[RULE_SEMANTICS.md](./doc/technical/RULE_SEMANTICS.md)**. The differences most likely to surprise an integrator:
+
+- **Spender on mint.** `RuleWhitelist` / `RuleWhitelistWrapper` / `RuleSpenderWhitelist` **exempt** the minter; `RuleBlacklist` / `RuleSanctionsList` **screen** it (deny-list, by design); `RuleIdentityRegistry` also screens it, so the minter must itself be identity-verified; `RuleMintAllowance` **debits the minter's quota**.
+- **Unset oracle/registry.** `RuleSanctionsList` (oracle unset) and `RuleIdentityRegistry` (registry unset) **fail open** — all transfers pass. An empty `RuleWhitelistWrapper` **fails closed**.
+- **Authoritative pre-flight view.** For `RuleMintAllowance`, `canTransfer` is not authoritative — use `canTransferFrom`. For `RuleConditionalTransferLightMultiToken`, `detectTransferRestriction` is `msg.sender`-dependent.
+
 ### Validation Rules (Read-Only)
 
 Validation rules only read blockchain state — they never modify it during a transfer. They implement `transferred()` as a `view` function: it re-runs the same restriction check and reverts if the transfer would be blocked, but writes nothing to storage.
