@@ -226,6 +226,46 @@ contract ThreatModelTests is Test, HelperContract {
     }
 
     /**
+     * @notice CTL-1 (the other half): the obvious workaround — bind the TOKEN instead of the engine,
+     *         so that `getTokenBound()` is a real ERC-20 — does not merely fail to help. It bricks the
+     *         rule entirely: the engine, not the token, is the caller of `transferred()`, so with the
+     *         token bound the engine is unauthorized and **every mint and transfer reverts**.
+     *
+     *         Together with the test above this proves the helper is structurally impossible behind a
+     *         RuleEngine: `bindToken` has a single slot, but the rule needs the ENGINE bound (for the
+     *         `transferred` callback) and the TOKEN as the ERC-20 target (for `safeTransferFrom`).
+     */
+    function test_CTL1_BindingTokenUnderRuleEngineBricksEveryTransfer_CurrentBehaviour() public {
+        cmtatDeployment = new CMTATDeployment();
+        cmtatContract = cmtatDeployment.cmtat();
+
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleConditionalTransferLight = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock.addRule(ruleConditionalTransferLight);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        cmtatContract.setRuleEngine(ruleEngineMock);
+
+        // Bind the TOKEN, so `getTokenBound()` would be a usable ERC-20 for the helper.
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleConditionalTransferLight.bindToken(address(cmtatContract));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        cmtatContract.grantRole(keccak256("MINTER_ROLE"), DEFAULT_ADMIN_ADDRESS);
+
+        // Even a plain mint now reverts: CMTAT -> RuleEngine -> rule.transferred, and the rule sees
+        // msg.sender == RuleEngine, which is not the bound entity.
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RuleConditionalTransferLight_TransferExecutorUnauthorized.selector, address(ruleEngineMock)
+            )
+        );
+        cmtatContract.mint(ADDRESS1, 100);
+    }
+
+    /**
      * @notice CTL-1: only the bound entity may consume approvals; any other caller is rejected.
      */
     function test_CTL1_UnboundCallerCannotConsumeApproval() public {

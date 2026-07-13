@@ -212,6 +212,12 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
     /**
      * @inheritdoc IERC1404
+     * @dev CALLER-DEPENDENT. The token key is derived from `msg.sender`, so this view only returns a
+     *      meaningful answer when it is invoked BY the bound token. Any other caller — an off-chain
+     *      `eth_call` from a wallet, an explorer, an aggregator — always receives
+     *      `CODE_TRANSFER_REQUEST_NOT_APPROVED`, even for a transfer that is approved and will succeed.
+     *      It is fail-closed, but it carries no signal for third-party pre-flight.
+     *      Use {detectTransferRestrictionForToken} instead, which takes the token explicitly.
      */
     function detectTransferRestriction(address from, address to, uint256 value)
         public
@@ -219,21 +225,47 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
         override(IERC1404)
         returns (uint8)
     {
-        if (from == address(0) || to == address(0)) {
-            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
-        }
+        return _detectTransferRestrictionForToken(_msgSender(), from, to, value);
+    }
 
-        address token = _msgSender();
-        if (!isTokenBound(token)) {
-            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
-        }
+    /**
+     * @notice Caller-explicit pre-flight: returns the restriction code for a transfer of `token`.
+     * @dev Unlike {detectTransferRestriction}, the token is passed in rather than derived from
+     *      `msg.sender`, so any caller (notably an off-chain `eth_call`) gets the real answer.
+     *      This is the view integrators should use.
+     * @param token The token the transfer applies to.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return The restriction code, or TRANSFER_OK when an approval exists.
+     */
+    function detectTransferRestrictionForToken(address token, address from, address to, uint256 value)
+        public
+        view
+        virtual
+        returns (uint8)
+    {
+        return _detectTransferRestrictionForToken(token, from, to, value);
+    }
 
-        bytes32 transferHash = _transferHash(token, from, to, value);
-        if (approvalCounts[transferHash] == 0) {
-            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
-        }
-
-        return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
+    /**
+     * @notice Caller-explicit pre-flight: whether a transfer of `token` is currently approved.
+     * @dev The boolean counterpart of {detectTransferRestrictionForToken}. Prefer this over
+     *      {canTransfer}, which is caller-dependent.
+     * @param token The token the transfer applies to.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return True when the transfer is approved for `token`.
+     */
+    function canTransferForToken(address token, address from, address to, uint256 value)
+        public
+        view
+        virtual
+        returns (bool)
+    {
+        return _detectTransferRestrictionForToken(token, from, to, value)
+            == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
     /**
@@ -256,6 +288,8 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
     /**
      * @inheritdoc IERC3643ComplianceRead
+     * @dev CALLER-DEPENDENT, for the same reason as {detectTransferRestriction}: a caller that is not
+     *      the bound token always reads `false`. Use {canTransferForToken} for an off-chain pre-flight.
      */
     function canTransfer(address from, address to, uint256 value)
         public
@@ -277,6 +311,39 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
     {
         return detectTransferRestrictionFrom(spender, from, to, value)
             == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
+    }
+
+    /**
+     * @notice Computes the restriction code for a transfer of `token`, independently of the caller.
+     * @dev Single source of truth for the read path: {detectTransferRestriction} feeds it
+     *      `_msgSender()`, while {detectTransferRestrictionForToken} feeds it an explicit token, so
+     *      the two can never disagree. Mints and burns are exempt; an unbound token has no
+     *      consumable approvals and is therefore always restricted (fail-closed).
+     * @param token The token the transfer applies to.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return The restriction code, or TRANSFER_OK when an approval exists.
+     */
+    function _detectTransferRestrictionForToken(address token, address from, address to, uint256 value)
+        internal
+        view
+        virtual
+        returns (uint8)
+    {
+        if (from == address(0) || to == address(0)) {
+            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+
+        if (!isTokenBound(token)) {
+            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
+        }
+
+        if (approvalCounts[_transferHash(token, from, to, value)] == 0) {
+            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
+        }
+
+        return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
     /**
