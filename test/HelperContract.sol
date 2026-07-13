@@ -22,9 +22,7 @@ import {
     RuleConditionalTransferLightInvariantStorage
 } from "src/rules/operation/abstract/RuleConditionalTransferLightInvariantStorage.sol";
 // RuleMintAllowance
-import {
-    RuleMintAllowanceInvariantStorage
-} from "src/rules/operation/abstract/RuleMintAllowanceInvariantStorage.sol";
+import {RuleMintAllowanceInvariantStorage} from "src/rules/operation/abstract/RuleMintAllowanceInvariantStorage.sol";
 import {
     RuleWhitelistInvariantStorage
 } from "src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleWhitelistInvariantStorage.sol";

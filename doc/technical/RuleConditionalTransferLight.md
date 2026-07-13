@@ -53,9 +53,17 @@ Increments the approval count for the `(from, to, value)` hash by 1. Restricted 
 
 Decrements the approval count for the `(from, to, value)` hash by 1. Reverts if no approval exists. Restricted to `OPERATOR_ROLE`. Emits `TransferApprovalCancelled`.
 
+### `resetApproval(address from, address to, uint256 value) → uint256`
+
+Discards **every** outstanding approval for the `(from, to, value)` hash in one call and returns the count that was cleared. Reverts if no approval exists. Restricted to `OPERATOR_ROLE`. Emits `TransferApprovalReset`.
+
+Unlike `approveTransfer`, this deliberately does **not** require a token to be bound — its main use is discarding approvals that survived an `unbindToken` (see below), at which point nothing is bound.
+
 ### `approveAndTransferIfAllowed(address from, address to, uint256 value) → bool`
 
 Approves the transfer and immediately calls `SafeERC20.safeTransferFrom` on the currently bound token, using this rule contract as the spender. Requires `from` to have previously approved this contract for at least `value` tokens. Restricted to `OPERATOR_ROLE`.
+
+> ⚠️ Requires the bound entity to be the ERC-20 token itself (direct-binding mode). Under a `RuleEngine` the bound entity is the engine, so this call reverts.
 
 ### `approvedCount(address from, address to, uint256 value) → uint256`
 
@@ -64,6 +72,8 @@ Returns the current approval count for the `(from, to, value)` tuple.
 ### `bindToken(address token)` / `unbindToken(address token)`
 
 Binds or unbinds a token contract. Only bound tokens are authorised to call `transferred`. Restricted to `COMPLIANCE_MANAGER_ROLE`.
+
+> ⚠️ **`unbindToken` does not clear `approvalCounts`.** Approvals recorded while the previous token was bound remain in storage and become consumable by the next token that is bound. The operator who controls rebinding also controls approvals, so the trust model is preserved — but when migrating to a different token, call `resetApproval` for each affected `(from, to, value)` **before** rebinding if the old approvals must not carry over.
 
 ## Workflow
 

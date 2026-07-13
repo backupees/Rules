@@ -39,8 +39,7 @@ contract RuleConditionalTransferLightMultiTokenOwnable2Step is
         return Ownable2StepERC165Module.supportsInterface(interfaceId)
             || interfaceId == RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID
             || interfaceId == ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID
-            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID
-            || interfaceId == type(IERC7551Compliance).interfaceId
+            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID || interfaceId == type(IERC7551Compliance).interfaceId
             || interfaceId == type(IERC3643ComplianceFull).interfaceId;
     }
 

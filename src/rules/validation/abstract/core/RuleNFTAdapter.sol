@@ -130,7 +130,13 @@ abstract contract RuleNFTAdapter is RuleTransferValidation, IERC7943NonFungibleC
         uint256,
         /* tokenId */
         uint256 value
-    ) public view virtual override(IERC7943NonFungibleComplianceExtend) returns (uint8) {
+    )
+        public
+        view
+        virtual
+        override(IERC7943NonFungibleComplianceExtend)
+        returns (uint8)
+    {
         return _detectTransferRestrictionFrom(spender, from, to, value);
     }
 

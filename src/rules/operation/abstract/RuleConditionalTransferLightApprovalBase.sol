@@ -72,6 +72,31 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
     }
 
     /**
+     * @notice Discards every outstanding approval for the given transfer in one call.
+     * @dev
+     * - Reverts if no approval exists, per the single-item convention (use {cancelTransferApproval}
+     *   to remove exactly one).
+     * - Deliberately does NOT require a bound token: the primary use is cleaning up approvals that
+     *   survived an {unbindToken}, at which point no token is bound. See the {bindToken} warning.
+     * @param from The sender of the transfer whose approvals are cleared.
+     * @param to The recipient of the transfer whose approvals are cleared.
+     * @param value The amount of the transfer whose approvals are cleared.
+     * @return cleared The approval count that was discarded.
+     */
+    function resetApproval(address from, address to, uint256 value)
+        public
+        virtual
+        onlyTransferApprover
+        returns (uint256 cleared)
+    {
+        bytes32 transferHash = _transferHash(from, to, value);
+        cleared = approvalCounts[transferHash];
+        require(cleared != 0, TransferApprovalNotFound());
+        approvalCounts[transferHash] = 0;
+        emit TransferApprovalReset(from, to, value, cleared);
+    }
+
+    /**
      * @notice Returns the number of outstanding approvals for the given transfer.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.

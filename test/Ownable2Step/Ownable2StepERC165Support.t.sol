@@ -15,7 +15,9 @@ import {RuleERC2980Ownable2Step} from "src/rules/validation/deployment/RuleERC29
 import {RuleSanctionsListOwnable2Step} from "src/rules/validation/deployment/RuleSanctionsListOwnable2Step.sol";
 import {RuleIdentityRegistryOwnable2Step} from "src/rules/validation/deployment/RuleIdentityRegistryOwnable2Step.sol";
 import {RuleMaxTotalSupplyOwnable2Step} from "src/rules/validation/deployment/RuleMaxTotalSupplyOwnable2Step.sol";
-import {RuleConditionalTransferLightOwnable2Step} from "src/rules/operation/RuleConditionalTransferLightOwnable2Step.sol";
+import {
+    RuleConditionalTransferLightOwnable2Step
+} from "src/rules/operation/RuleConditionalTransferLightOwnable2Step.sol";
 import {
     RuleConditionalTransferLightMultiTokenOwnable2Step
 } from "src/rules/operation/RuleConditionalTransferLightMultiTokenOwnable2Step.sol";

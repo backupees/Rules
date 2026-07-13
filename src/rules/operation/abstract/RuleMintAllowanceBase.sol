@@ -113,10 +113,30 @@ abstract contract RuleMintAllowanceBase is
     }
 
     /**
+     * @notice Sets the allowance of every listed minter to zero.
+     * @dev
+     *      Batch operation: does not revert on minters that already have a zero allowance.
+     *      Intended for migration: `unbindToken` does NOT clear `mintAllowance`, so call this
+     *      before rebinding to a different RuleEngine/token if the previous quotas must not
+     *      carry over. See the {bindToken} warning.
+     * @param minters The minters whose allowances are cleared.
+     */
+    function clearMintAllowances(address[] calldata minters) public virtual onlyAllowanceOperator {
+        for (uint256 i = 0; i < minters.length; ++i) {
+            _setMintAllowance(minters[i], 0);
+        }
+    }
+
+    /**
      * @notice Binds a caller to this rule. Reverts if a caller is already bound.
      * @dev Enforces single-target binding to prevent one allowance state from being
      *      shared across several RuleEngines/tokens. To migrate, call `unbindToken`
      *      first, then bind the new caller.
+     * @dev WARNING: `unbindToken` does not clear `mintAllowance`. Quotas granted while the
+     *      previous RuleEngine/token was bound remain in storage and are spendable by the same
+     *      minters once a new caller is bound. The operator who controls rebinding also controls
+     *      allowances, so the trust model is preserved, but integrators should be aware of this
+     *      behavior. Call {clearMintAllowances} before rebinding to discard the previous quotas.
      * @param token The caller (RuleEngine/token) to bind to this rule.
      */
     function bindToken(address token) public virtual override onlyComplianceManager {

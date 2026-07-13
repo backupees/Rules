@@ -49,6 +49,14 @@ abstract contract RuleConditionalTransferLightInvariantStorage is RuleSharedInva
      * @param remaining The approval count remaining for this transfer after cancellation
      */
     event TransferApprovalCancelled(address indexed from, address indexed to, uint256 value, uint256 remaining);
+    /**
+     * @notice Emitted when every outstanding approval for a transfer is cleared at once
+     * @param from The sender of the cleared transfer approvals
+     * @param to The recipient of the cleared transfer approvals
+     * @param value The amount of the cleared transfer approvals
+     * @param cleared The approval count that was discarded
+     */
+    event TransferApprovalReset(address indexed from, address indexed to, uint256 value, uint256 cleared);
 
     /* ============ Custom error ============ */
     error RuleConditionalTransferLight_TransferExecutorUnauthorized(address account);

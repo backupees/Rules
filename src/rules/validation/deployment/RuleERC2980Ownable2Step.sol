@@ -43,8 +43,7 @@ contract RuleERC2980Ownable2Step is RuleERC2980Base, Ownable2Step, Ownable2StepE
         override(RuleERC2980Base, Ownable2StepERC165Module)
         returns (bool)
     {
-        return Ownable2StepERC165Module.supportsInterface(interfaceId)
-            || RuleERC2980Base.supportsInterface(interfaceId);
+        return Ownable2StepERC165Module.supportsInterface(interfaceId) || RuleERC2980Base.supportsInterface(interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////

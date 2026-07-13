@@ -17,7 +17,11 @@ import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643C
  * @dev Requires operator approval for each transfer. Same transfer (from, to, value)
  *      can be approved multiple times to allow repeated transfers.
  */
-contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleConditionalTransferLightBase, ERC3643ComplianceRolesStorage {
+contract RuleConditionalTransferLight is
+    AccessControlModuleStandalone,
+    RuleConditionalTransferLightBase,
+    ERC3643ComplianceRolesStorage
+{
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -43,8 +47,7 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
     {
         return interfaceId == RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID
             || interfaceId == ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID
-            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID
-            || interfaceId == type(IERC7551Compliance).interfaceId
+            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID || interfaceId == type(IERC7551Compliance).interfaceId
             || interfaceId == type(IERC3643ComplianceFull).interfaceId
             || AccessControlEnumerable.supportsInterface(interfaceId);
     }
@@ -66,6 +69,11 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
     /**
      * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
      */
-    function _authorizeComplianceBindingChange(address) internal view virtual override onlyRole(COMPLIANCE_MANAGER_ROLE)
+    function _authorizeComplianceBindingChange(address)
+        internal
+        view
+        virtual
+        override
+        onlyRole(COMPLIANCE_MANAGER_ROLE)
     {}
 }

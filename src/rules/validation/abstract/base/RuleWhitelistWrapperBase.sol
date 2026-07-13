@@ -63,13 +63,7 @@ abstract contract RuleWhitelistWrapperBase is
     /**
      * @inheritdoc RuleTransferValidation
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(RuleTransferValidation)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
         return RuleTransferValidation.supportsInterface(interfaceId);
     }
 

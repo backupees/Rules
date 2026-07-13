@@ -95,6 +95,12 @@ Approves one transfer for a specific token key.
 
 Removes one approval for a specific token key. Reverts if none exists.
 
+### `resetApproval(address token, address from, address to, uint256 value) -> uint256`
+
+Discards **every** outstanding approval for the `(token, from, to, value)` key in one call and returns the count that was cleared. Reverts if none exists. Restricted to `OPERATOR_ROLE`. Emits `TransferApprovalReset`.
+
+Unlike `approveTransfer`, this deliberately does **not** require the token to be bound. That is what makes it usable for the two cleanup cases: approvals left behind by an `unbindToken`, and approvals stranded under a key that can never be consumed (see finding **F-4** and the [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work) section).
+
 ### `approvedCount(address token, address from, address to, uint256 value) -> uint256`
 
 Returns the remaining count for a specific token key.
@@ -116,4 +122,4 @@ Only bound tokens can call transfer execution hooks. Approval consumption uses t
 - Mints and burns are exempt from approval consumption (`from == address(0)` or `to == address(0)`).
 - This rule is ERC-20 operation-focused, like `RuleConditionalTransferLight`.
 - **Do not deploy this rule behind a `RuleEngine`.** Approvals are consumed under `msg.sender`, so token scoping is lost (or the rule breaks outright) in that topology — the full case analysis is in [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work). If you need a conditional-transfer rule for a single token behind a RuleEngine, use [`RuleConditionalTransferLight`](./RuleConditionalTransferLight.md) instead.
-- `unbindToken` does **not** clear `approvalCounts`. Approvals recorded for a previously bound token remain in storage and become consumable again if that token is rebound.
+- `unbindToken` does **not** clear `approvalCounts`. Approvals recorded for a previously bound token remain in storage and become consumable again if that token is rebound. Use `resetApproval(token, from, to, value)` to discard them before rebinding — it works on an unbound token precisely for this reason.

@@ -10,7 +10,9 @@ import {ERC3643ComplianceModule} from "RuleEngine/modules/ERC3643ComplianceModul
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {VersionModule} from "../../../modules/VersionModule.sol";
-import {RuleConditionalTransferLightMultiTokenInvariantStorage} from "./RuleConditionalTransferLightMultiTokenInvariantStorage.sol";
+import {
+    RuleConditionalTransferLightMultiTokenInvariantStorage
+} from "./RuleConditionalTransferLightMultiTokenInvariantStorage.sol";
 import {ITransferContext} from "../../interfaces/ITransferContext.sol";
 
 /**
@@ -105,7 +107,10 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      * @param to The recipient of the transfer whose approval is cancelled.
      * @param value The amount of the transfer whose approval is cancelled.
      */
-    function cancelTransferApproval(address token, address from, address to, uint256 value) public onlyTransferApprover {
+    function cancelTransferApproval(address token, address from, address to, uint256 value)
+        public
+        onlyTransferApprover
+    {
         _cancelTransferApproval(token, from, to, value);
     }
 
@@ -129,8 +134,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
         uint256 allowed = IERC20(token).allowance(from, address(this));
         require(
-            allowed >= value,
-            RuleConditionalTransferLightMultiToken_InsufficientAllowance(token, from, allowed, value)
+            allowed >= value, RuleConditionalTransferLightMultiToken_InsufficientAllowance(token, from, allowed, value)
         );
 
         IERC20(token).safeTransferFrom(from, to, value);
@@ -163,6 +167,34 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
         onlyTransferExecutor
     {
         _transferred(_msgSender(), from, to, value);
+    }
+
+    /**
+     * @notice Discards every outstanding approval for the given per-token transfer in one call.
+     * @dev
+     * - Reverts if no approval exists, per the single-item convention (use {cancelTransferApproval}
+     *   to remove exactly one).
+     * - Deliberately does NOT require the token to be bound, unlike {approveTransfer}: the primary
+     *   use is cleaning up approvals that survived an {unbindToken}, at which point the token is by
+     *   definition no longer bound. It is also the only way to clear approvals stranded under a key
+     *   that can never be consumed (see `RESULT.md` finding F-4).
+     * @param token The token whose approvals are cleared.
+     * @param from The sender of the transfer whose approvals are cleared.
+     * @param to The recipient of the transfer whose approvals are cleared.
+     * @param value The amount of the transfer whose approvals are cleared.
+     * @return cleared The approval count that was discarded.
+     */
+    function resetApproval(address token, address from, address to, uint256 value)
+        public
+        virtual
+        onlyTransferApprover
+        returns (uint256 cleared)
+    {
+        bytes32 transferHash = _transferHash(token, from, to, value);
+        cleared = approvalCounts[transferHash];
+        require(cleared != 0, RuleConditionalTransferLightMultiToken_TransferApprovalNotFound());
+        approvalCounts[transferHash] = 0;
+        emit TransferApprovalReset(token, from, to, value, cleared);
     }
 
     /**

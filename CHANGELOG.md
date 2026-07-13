@@ -47,6 +47,11 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ## Unreleased
 
+### Added
+
+- `RuleConditionalTransferLight` / `RuleConditionalTransferLightMultiToken`: new `resetApproval(...)` operator function that discards **every** outstanding approval for a transfer key in one call (returns the cleared count, emits `TransferApprovalReset`). It deliberately does **not** require a bound token, so it can clean up approvals that survived an `unbindToken` — and, for the multi-token rule, approvals stranded under a key that can never be consumed.
+- `RuleMintAllowance`: new `clearMintAllowances(address[] calldata minters)` operator function that zeroes the listed minters' quotas (non-reverting batch), for discarding stale quotas before rebinding.
+
 ### Fixed
 
 - `RuleMaxTotalSupply`: `detectTransferRestriction` / `canTransfer` / `detectTransferRestrictionFrom` no longer revert with an arithmetic panic when `currentSupply + value` would overflow `uint256`. The mint check now compares against the remaining headroom (`value > maxTotalSupply - currentSupply`), so these ERC-1404 / ERC-3643 views always return a restriction code as required. Enforcement (`transferred`) is unchanged.
@@ -63,6 +68,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 ### Documentation
 
 - `RuleConditionalTransferLightMultiToken`: document that the rule is **direct-binding-only** and **must not be added to a `RuleEngine`**. Approvals are recorded under the `token` argument but consumed under `msg.sender`, so behind an engine every wiring either reverts or silently loses per-token isolation. Added a "Deployment topology" section with the exhaustive case analysis to `doc/technical/RuleConditionalTransferLightMultiToken.md`, documented the caller-dependent `detectTransferRestriction`, and propagated the constraint to the README binding-model table, `RULE_SEMANTICS.md` and the project guide.
+- Add `doc/technical/INVARIANT_TESTS.md` — documents the stateful invariant suite: handler architecture and ghost variables, each of the four invariants and what it proves, the mutation-testing negative controls, the coverage map against the threat-model invariants, and how to add a new invariant. Linked from a new "Invariant testing" section in the README.
 - Add `doc/technical/RULE_SEMANTICS.md` — a per-rule comparison table (who each rule screens for `from` / `to` / spender on `transferFrom` / mint / burn, behaviour when the oracle/registry is unset, stateful?, and which pre-flight view is authoritative), with a highlights summary and link added to the README.
 - `RuleMintAllowance`: document that `canTransfer` / `detectTransferRestriction` are **not authoritative** (hardcoded to "allowed" because the 3-arg path has no minter identity) and that a mint pre-flight must use the spender-aware `canTransferFrom(minter, address(0), to, value)` / `detectTransferRestrictionFrom`. Added a bold callout and an eligibility-views table to `doc/technical/RuleMintAllowance.md` and a warning to the README rule section.
 - Add `THREAT_MODEL.md`, `RESULT.md` and `TEST_IMPROVEMENT.md` — manual security review of `src/` (0 High/Medium, 2 Low, 8 Info). Slither call-graph / inheritance / function-summary artifacts in `AUDIT/slither-graph/`.

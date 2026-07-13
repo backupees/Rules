@@ -136,6 +136,7 @@ abstract contract RuleConditionalTransferLightBase is
      *      from the previous token remain in storage and can be consumed after rebinding.
      *      The operator who controls rebinding also controls approvals, so the trust
      *      model is preserved, but integrators should be aware of this behavior.
+     *      Call {resetApproval} for each affected transfer before rebinding to discard them.
      * @param token The token to bind to this rule.
      */
     function bindToken(address token) public override onlyComplianceManager {

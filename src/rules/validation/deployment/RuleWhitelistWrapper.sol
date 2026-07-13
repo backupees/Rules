@@ -14,7 +14,11 @@ import {RulesManagementModuleRolesStorage} from "RuleEngine/modules/library/Rule
 /**
  * @title Wrapper to call several different whitelist rules
  */
-contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleStandalone, RulesManagementModuleRolesStorage {
+contract RuleWhitelistWrapper is
+    RuleWhitelistWrapperBase,
+    AccessControlModuleStandalone,
+    RulesManagementModuleRolesStorage
+{
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -39,13 +43,7 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
      * @param account Address being checked for the role.
      * @return True if `account` holds `role`.
      */
-    function hasRole(bytes32 role, address account)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function hasRole(bytes32 role, address account) public view virtual override returns (bool) {
         return AccessControlModuleStandalone.hasRole(role, account);
     }
 
@@ -95,12 +93,7 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
      * @param account Address receiving the role.
      * @return True if the role was newly granted.
      */
-    function _grantRole(bytes32 role, address account)
-        internal
-        virtual
-        override
-        returns (bool)
-    {
+    function _grantRole(bytes32 role, address account) internal virtual override returns (bool) {
         return AccessControlEnumerable._grantRole(role, account);
     }
 
@@ -110,12 +103,7 @@ contract RuleWhitelistWrapper is RuleWhitelistWrapperBase, AccessControlModuleSt
      * @param account Address losing the role.
      * @return True if the role was previously held and is now revoked.
      */
-    function _revokeRole(bytes32 role, address account)
-        internal
-        virtual
-        override
-        returns (bool)
-    {
+    function _revokeRole(bytes32 role, address account) internal virtual override returns (bool) {
         return AccessControlEnumerable._revokeRole(role, account);
     }
 

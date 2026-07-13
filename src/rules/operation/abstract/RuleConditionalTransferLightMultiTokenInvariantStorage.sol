@@ -17,7 +17,8 @@ abstract contract RuleConditionalTransferLightMultiTokenInvariantStorage is Rule
     /**
      * @notice Human-readable message returned when a transfer has not been approved
      */
-    string constant TEXT_TRANSFER_REQUEST_NOT_APPROVED = "ConditionalTransferLightMultiToken: The request is not approved";
+    string constant TEXT_TRANSFER_REQUEST_NOT_APPROVED =
+        "ConditionalTransferLightMultiToken: The request is not approved";
     /**
      * @notice Restriction code returned when a transfer request has not been approved
      */
@@ -32,7 +33,9 @@ abstract contract RuleConditionalTransferLightMultiTokenInvariantStorage is Rule
      * @param value The amount of the approved transfer
      * @param count The approval count for this transfer after the approval
      */
-    event TransferApproved(address indexed token, address indexed from, address indexed to, uint256 value, uint256 count);
+    event TransferApproved(
+        address indexed token, address indexed from, address indexed to, uint256 value, uint256 count
+    );
     /**
      * @notice Emitted when an approved transfer is executed for a given token
      * @param token The token the transfer applies to
@@ -41,7 +44,9 @@ abstract contract RuleConditionalTransferLightMultiTokenInvariantStorage is Rule
      * @param value The amount of the executed transfer
      * @param remaining The approval count remaining for this transfer after execution
      */
-    event TransferExecuted(address indexed token, address indexed from, address indexed to, uint256 value, uint256 remaining);
+    event TransferExecuted(
+        address indexed token, address indexed from, address indexed to, uint256 value, uint256 remaining
+    );
     /**
      * @notice Emitted when a transfer approval is cancelled for a given token
      * @param token The token the approval applies to
@@ -52,6 +57,17 @@ abstract contract RuleConditionalTransferLightMultiTokenInvariantStorage is Rule
      */
     event TransferApprovalCancelled(
         address indexed token, address indexed from, address indexed to, uint256 value, uint256 remaining
+    );
+    /**
+     * @notice Emitted when every outstanding approval for a per-token transfer is cleared at once
+     * @param token The token the cleared approvals applied to
+     * @param from The sender of the cleared transfer approvals
+     * @param to The recipient of the cleared transfer approvals
+     * @param value The amount of the cleared transfer approvals
+     * @param cleared The approval count that was discarded
+     */
+    event TransferApprovalReset(
+        address indexed token, address indexed from, address indexed to, uint256 value, uint256 cleared
     );
 
     /* ============ Custom error ============ */

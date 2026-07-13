@@ -14,7 +14,10 @@ contract DeployCMTATWithBlacklistTest is Test {
         assertEq(address(token.ruleEngine()), address(rule));
     }
 
-    function _deploy(DeployCMTATWithBlacklist script) internal returns (CMTATStandardStandalone token, RuleBlacklist rule) {
+    function _deploy(DeployCMTATWithBlacklist script)
+        internal
+        returns (CMTATStandardStandalone token, RuleBlacklist rule)
+    {
         (token, rule) = script.deploy(address(1), address(0));
     }
 }

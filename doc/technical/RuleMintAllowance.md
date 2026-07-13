@@ -64,6 +64,12 @@ Adds `amount` to `minter`'s current allowance. Restricted to `ALLOWANCE_OPERATOR
 
 Subtracts `amount` from `minter`'s current allowance. Reverts with `RuleMintAllowance_DecreaseBelowZero` if `amount` exceeds the current allowance. Restricted to `ALLOWANCE_OPERATOR_ROLE`. Emits `MintAllowanceDecreased`.
 
+### `clearMintAllowances(address[] calldata minters)`
+
+Sets the allowance of every listed minter to zero. Batch operation: does not revert on minters that already have a zero allowance, on duplicates, or on an empty array. Restricted to `ALLOWANCE_OPERATOR_ROLE`. Emits `MintAllowanceSet(minter, 0)` per entry.
+
+Intended for migration — see the `bindToken` warning below.
+
 ### `mintAllowance(address minter) → uint256`
 
 Returns the remaining mint allowance for `minter`. Default is `0`.
@@ -71,6 +77,8 @@ Returns the remaining mint allowance for `minter`. Default is `0`.
 ### `bindToken(address token)` / `unbindToken(address token)`
 
 Binds or unbinds the caller address. Only the bound address is authorised to call `transferred`. In practice, bind the RuleEngine address. Restricted to `COMPLIANCE_MANAGER_ROLE`. A second `bindToken` call reverts until the current binding is removed.
+
+> ⚠️ **`unbindToken` does not clear `mintAllowance`.** Quotas granted while the previous RuleEngine/token was bound remain in storage and are spendable by the same minters as soon as a new caller is bound. The operator who controls rebinding also controls allowances, so the trust model is preserved — but when migrating, call `clearMintAllowances` **before** rebinding if the old quotas must not carry over.
 
 ## Workflow
 
