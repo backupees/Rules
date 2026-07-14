@@ -233,73 +233,103 @@ contract ThreatModelTests is Test, HelperContract {
     }
 
     /*//////////////////////////////////////////////////////////////
-        CTL-1 — approveAndTransferIfAllowed under a RuleEngine
+        CTL-1 — approveAndTransferIfAllowed behind a RuleEngine  [FIXED — I-5]
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice CTL-1: `RuleConditionalTransferLight.approveAndTransferIfAllowed` treats the bound
-     *         entity as an ERC-20. Under the documented RuleEngine topology the bound entity is
-     *         the RuleEngine, so the helper always reverts and cannot be used.
+     * @notice CTL-1 (regression): the helper WORKS behind a RuleEngine once the two binding roles are
+     *         split — `bindToken(token)` for the ERC-20 target, `bindRuleEngine(engine)` for the
+     *         authorized caller. It previously could not work at all: a single binding slot had to be
+     *         both, and behind an engine those are different addresses (finding F-3).
+     *         End-to-end coverage lives in
+     *         `test/RuleConditionalTransferLight/RuleConditionalTransferLightBindRuleEngine.t.sol`.
      */
-    function test_CTL1_ApproveAndTransferIfAllowedUnusableUnderRuleEngine_CurrentBehaviour() public {
+    function test_CTL1_ApproveAndTransferIfAllowedWorksOnceEngineIsBound() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleConditionalTransferLight = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
 
-        // Binding the RuleEngine is mandatory: it is the caller of `transferred()`.
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleConditionalTransferLight.bindToken(address(ruleEngineMock));
-        assertEq(ruleConditionalTransferLight.getTokenBound(), address(ruleEngineMock));
+        MockERC20WithTransferContext token = new MockERC20WithTransferContext("Token", "TKN");
 
-        // `IERC20(ruleEngine).allowance(...)` has no matching function on the RuleEngine.
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        vm.expectRevert();
-        ruleConditionalTransferLight.approveAndTransferIfAllowed(ADDRESS1, ADDRESS2, 10);
+        ruleConditionalTransferLight.bindToken(address(token));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleConditionalTransferLight.bindRuleEngine(address(ruleEngineMock));
+
+        // Both are authorized executors; the ERC-20 target is the TOKEN, never the engine.
+        assertTrue(ruleConditionalTransferLight.isTransferExecutor(address(token)));
+        assertTrue(ruleConditionalTransferLight.isTransferExecutor(address(ruleEngineMock)));
+        assertEq(ruleConditionalTransferLight.getTokenBound(), address(token));
     }
 
     /**
-     * @notice CTL-1 (the other half): the obvious workaround — bind the TOKEN instead of the engine,
-     *         so that `getTokenBound()` is a real ERC-20 — does not merely fail to help. It bricks the
-     *         rule entirely: the engine, not the token, is the caller of `transferred()`, so with the
-     *         token bound the engine is unauthorized and **every mint and transfer reverts**.
-     *
-     *         Together with the test above this proves the helper is structurally impossible behind a
-     *         RuleEngine: `bindToken` has a single slot, but the rule needs the ENGINE bound (for the
-     *         `transferred` callback) and the TOKEN as the ERC-20 target (for `safeTransferFrom`).
+     * @notice CTL-1 (regression): the two unsupported wirings still fail loudly.
+     *         Binding ONLY the engine leaves `getTokenBound()` a non-ERC-20, so the helper reverts;
+     *         binding ONLY the token leaves the engine unauthorized, so it cannot consume approvals.
      */
-    function test_CTL1_BindingTokenUnderRuleEngineBricksEveryTransfer_CurrentBehaviour() public {
-        cmtatDeployment = new CMTATDeployment();
-        cmtatContract = cmtatDeployment.cmtat();
+    function test_CTL1_UnsupportedWiringsStillFail() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS);
+
+        // (a) engine bound as the "token": IERC20(engine).allowance(...) has no such function.
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleConditionalTransferLight engineOnly = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        engineOnly.bindToken(address(ruleEngineMock));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        vm.expectRevert();
+        engineOnly.approveAndTransferIfAllowed(ADDRESS1, ADDRESS2, 10);
+
+        // (b) token bound but engine NOT bound: the engine is not an authorized executor.
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleConditionalTransferLight tokenOnly = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        tokenOnly.bindToken(ADDRESS1);
+        assertFalse(tokenOnly.isTransferExecutor(address(ruleEngineMock)));
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleConditionalTransferLight = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleEngineMock.addRule(ruleConditionalTransferLight);
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        cmtatContract.setRuleEngine(ruleEngineMock);
-
-        // Bind the TOKEN, so `getTokenBound()` would be a usable ERC-20 for the helper.
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleConditionalTransferLight.bindToken(address(cmtatContract));
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
-        cmtatContract.grantRole(keccak256("MINTER_ROLE"), DEFAULT_ADMIN_ADDRESS);
-
-        // Even a plain mint now reverts: CMTAT -> RuleEngine -> rule.transferred, and the rule sees
-        // msg.sender == RuleEngine, which is not the bound entity.
-        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        tokenOnly.approveTransfer(ADDRESS2, ADDRESS3, 10);
+        vm.prank(address(ruleEngineMock));
         vm.expectRevert(
             abi.encodeWithSelector(
                 RuleConditionalTransferLight_TransferExecutorUnauthorized.selector, address(ruleEngineMock)
             )
         );
-        cmtatContract.mint(ADDRESS1, 100);
+        tokenOnly.transferred(ADDRESS2, ADDRESS3, 10);
     }
 
     /**
-     * @notice CTL-1: only the bound entity may consume approvals; any other caller is rejected.
+     * @notice CTL-1 (documented caveat, NOT fixed): `RuleConditionalTransferLight` keys approvals on
+     *         `(from, to, value)` with NO token dimension. A `RuleEngine` is multi-tenant, so if the
+     *         bound engine serves several tokens they all share one approval bucket: an approval
+     *         recorded for token A is consumable by a token-B transfer relayed through the same engine.
+     *
+     *         This is inherent to the single-token rule (it is why the MultiToken variant exists) and
+     *         is why `bindRuleEngine` documents "bind ONLY an engine that serves this one token".
+     *         Pinned here so the constraint is a tested property rather than a doc claim.
+     */
+    function test_CTL1_ApprovalsAreNotTokenScopedBehindAMultiTenantEngine_CurrentBehaviour() public {
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        RuleEngine engine = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS);
+        RuleConditionalTransferLight rule = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
+        rule.bindToken(ADDRESS1); // token A
+        rule.bindRuleEngine(address(engine));
+        rule.approveTransfer(ADDRESS2, ADDRESS3, 100); // intended for token A
+        vm.stopPrank();
+
+        assertEq(rule.approvedCount(ADDRESS2, ADDRESS3, 100), 1);
+
+        // The engine relays a transfer of a DIFFERENT token it also serves. The rule cannot tell,
+        // and consumes the token-A approval.
+        vm.prank(address(engine));
+        rule.transferred(ADDRESS2, ADDRESS3, 100);
+
+        assertEq(rule.approvedCount(ADDRESS2, ADDRESS3, 100), 0);
+    }
+
+    /**
+     * @notice CTL-1: only the bound entity may consume an approval.
      */
     function test_CTL1_UnboundCallerCannotConsumeApproval() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);

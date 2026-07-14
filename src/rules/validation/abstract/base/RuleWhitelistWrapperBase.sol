@@ -136,6 +136,12 @@ abstract contract RuleWhitelistWrapperBase is
 
         // Resolve only the REAL participants against the children: the zero address is a sentinel,
         // not a listed member of any child, so asking about it would always fail.
+        // Degenerate (0, 0): neither leg is a real participant, so there is nothing to screen.
+        // Handled explicitly so the wrapper and {RuleWhitelistBase} return the same answer — the two
+        // share `_detectMintBurnRestriction` precisely so they cannot drift.
+        if (isMint && isBurn) {
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
         if (isMint) {
             if (!_isListedInAnyChild(to)) {
                 return CODE_ADDRESS_TO_NOT_WHITELISTED;

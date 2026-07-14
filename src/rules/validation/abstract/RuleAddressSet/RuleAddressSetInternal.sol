@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 /* ==== OpenZeppelin === */
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RuleAddressSetInvariantStorage} from "./invariantStorage/RuleAddressSetInvariantStorage.sol";
 
 /**
  * @title Rule Address Set (Internal)
@@ -12,7 +13,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  * - Designed for internal inheritance and logic composition.
  * - Batch operations do not revert when individual entries are invalid.
  */
-abstract contract RuleAddressSetInternal {
+abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -39,12 +40,17 @@ abstract contract RuleAddressSetInternal {
      */
     function _addAddresses(address[] calldata addressesToAdd) internal returns (uint256 added, uint256 skipped) {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
-            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
-            if (addressesToAdd[i] == address(0) || !_listedAddresses.add(addressesToAdd[i])) {
-                skipped += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant. It is REJECTED
+            // rather than skipped: the batch convention skips *duplicates* (an idempotent no-op that
+            // the emitted event still describes truthfully), but silently dropping address(0) would
+            // make `AddAddresses` report a member that is not in the set — re-polluting the very
+            // off-chain view this guard exists to keep clean. Mint/burn is governed by
+            // allowMint/allowBurn, never by list membership.
+            require(addressesToAdd[i] != address(0), RuleAddressSet_ZeroAddressNotAllowed());
+            if (_listedAddresses.add(addressesToAdd[i])) {
                 added += 1;
+            } else {
+                skipped += 1;
             }
         }
     }

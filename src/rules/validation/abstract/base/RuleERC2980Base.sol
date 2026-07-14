@@ -28,8 +28,8 @@ import {IRule} from "RuleEngine/interfaces/IRule.sol";
  */
 abstract contract RuleERC2980Base is
     MetaTxModuleStandalone,
-    RuleERC2980Internal,
     RuleERC2980InvariantStorage,
+    RuleERC2980Internal,
     RuleNFTAdapter,
     IERC2980,
     IIdentityRegistryVerified

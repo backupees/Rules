@@ -161,7 +161,9 @@ Here is the list of codes used by the different rules
 | RuleWhitelist                | CODE_ADDRESS_FROM_NOT_WHITELISTED    | 21    |
 |                              | CODE_ADDRESS_TO_NOT_WHITELISTED      | 22    |
 |                              | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 23    |
-|                              | Reserved slot                        | 24-29 |
+|                              | CODE_MINT_NOT_ALLOWED                | 24    |
+|                              | CODE_BURN_NOT_ALLOWED                | 25    |
+|                              | Reserved slot                        | 26-29 |
 | RuleSanctionList             | CODE_ADDRESS_FROM_IS_SANCTIONED      | 30    |
 |                              | CODE_ADDRESS_TO_IS_SANCTIONED        | 31    |
 |                              | CODE_ADDRESS_SPENDER_IS_SANCTIONED   | 32    |
@@ -182,7 +184,8 @@ Here is the list of codes used by the different rules
 |                              | CODE_ADDRESS_TO_IS_FROZEN            | 61    |
 |                              | CODE_ADDRESS_SPENDER_IS_FROZEN       | 62    |
 |                              | CODE_ADDRESS_TO_NOT_WHITELISTED      | 63    |
-|                              | Reserved slot                        | 64-65 |
+|                              | CODE_MINT_NOT_ALLOWED                | 64    |
+|                              | CODE_BURN_NOT_ALLOWED                | 65    |
 | RuleSpenderWhitelist         | CODE_ADDRESS_SPENDER_NOT_WHITELISTED | 66    |
 |                              | Reserved slot                        | 67-69 |
 | RuleMintAllowance            | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70    |
@@ -495,8 +498,10 @@ Only whitelisted addresses may hold or receive tokens.
 - `to` is not whitelisted
 
 The rule is read-only: it only checks stored state.
-- Constructor parameter `allowMintBurn` can pre-list `address(0)` for mint/burn flows.
-- `allowMintBurn = false` keeps legacy behavior (operator adds `address(0)` manually if needed).
+- Constructor parameter `allowMintBurn` sets **both** `allowMint` and `allowBurn` — the common case. Use `setAllowMint(bool)` / `setAllowBurn(bool)` afterwards for independent control (e.g. permanently close issuance while keeping redemptions open).
+- Mint/burn permission is an **explicit flag**, never list membership of `address(0)`. The zero address can never enter the list (`addAddress(address(0))` reverts), so `isVerified(address(0))` / `contains(address(0))` stay `false`, as ERC-3643 requires.
+- The flag gates the **operation only**: a permitted mint still requires a whitelisted *recipient*; a permitted burn still requires a whitelisted *sender*.
+- Blocked mint/burn return dedicated codes `24` / `25` (not the misleading "sender not whitelisted").
 
 **Example**
 
@@ -565,12 +570,13 @@ Implements the [ERC-2980](https://eips.ethereum.org/EIPS/eip-2980) Swiss Complia
 - **Whitelist**: only whitelisted addresses may *receive* tokens. Senders do not need to be whitelisted and may freely transfer tokens they already hold.
 - **Frozenlist**: frozen addresses are completely blocked — they can neither send nor receive tokens. Additionally, a frozen address acting as a `transferFrom` spender will have the transfer rejected (code 62), even if `from` and `to` are not frozen.
 - **Priority**: frozenlist is checked first. If `from`, `to`, or `spender` is frozen, the transfer is rejected regardless of whitelist membership.
-- **Burn/redemption handling**: burns (`to == address(0)`) follow the same recipient whitelist check. Constructor parameter `allowBurn` controls whether `address(0)` is whitelisted at deployment.
-  - `allowBurn = false` (default-safe): burns are blocked with code 63.
-  - `allowBurn = true`: burns are allowed because `address(0)` is whitelisted.
+- **Mint/burn handling**: governed by the explicit `allowMint` / `allowBurn` flags, never by whitelisting `address(0)`. The zero address can never enter either list, so the **mandatory ERC-2980 getters** `whitelist(address(0))` / `frozenlist(address(0))` always return `false`.
+  - `allowMintBurn = false` (default-safe): mint is refused with code **64**, burn with code **65**.
+  - `allowMintBurn = true`: both permitted. A permitted mint still requires the recipient to be whitelisted and not frozen; a permitted burn still requires the sender not to be frozen.
+  - Independently settable afterwards via `setAllowMint(bool)` / `setAllowBurn(bool)`.
 - Constructors:
-  - `RuleERC2980(address admin, address forwarderIrrevocable, bool allowBurn)`
-  - `RuleERC2980Ownable2Step(address owner, address forwarderIrrevocable, bool allowBurn)`
+  - `RuleERC2980(address admin, address forwarderIrrevocable, bool allowMintBurn)`
+  - `RuleERC2980Ownable2Step(address owner, address forwarderIrrevocable, bool allowMintBurn)`
 
 ![surya_inheritance_RuleERC2980.sol](./doc/surya/surya_inheritance/surya_inheritance_RuleERC2980.sol.png)
 
@@ -582,6 +588,8 @@ Restriction codes:
 | `CODE_ADDRESS_TO_IS_FROZEN` | 61 | Recipient is frozen |
 | `CODE_ADDRESS_SPENDER_IS_FROZEN` | 62 | Spender is frozen |
 | `CODE_ADDRESS_TO_NOT_WHITELISTED` | 63 | Recipient is not whitelisted |
+| `CODE_MINT_NOT_ALLOWED` | 64 | Minting is disabled (`allowMint == false`) |
+| `CODE_BURN_NOT_ALLOWED` | 65 | Burning is disabled (`allowBurn == false`) |
 
 **Deviation from spec**: the ERC-2980 `Whitelistable` / `Freezable` example interfaces define single-address management functions that return `bool` and do not revert on duplicates or missing entries. This implementation reverts on invalid single-item operations, consistent with the codebase convention. Batch operations remain non-reverting.
 
@@ -621,7 +629,15 @@ The operator deploys `RuleMaxTotalSupply` with `setMaxTotalSupply(1_000_000)` an
 
 #### Identity registry
 
-If an identity registry address is set, this rule checks `isVerified` for the sender, recipient, and spender (for `transferFrom`). Zero addresses are ignored, and burns (`to == address(0)`) are always allowed so non‑verified holders can burn.
+**ERC-3643 conformant: only the RECEIVER is verified.** The specification mandates exactly one identity check — *"The receiver MUST be whitelisted on the Identity Registry and verified"* — and states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility". The **sender**, the **spender** and the **minter** are therefore **not** verified by default.
+
+Checking the sender is deliberately avoided: ERC-3643 screens only the receiver precisely so that an investor whose identity lapses can still **exit their position** by sending to a verified counterparty. Screening the sender would trap them — unable to receive *and* unable to send.
+
+Stricter screening is available as an **explicit opt-in**, never a silent default:
+- `checkSender` — also verify the sender (stricter than ERC-3643).
+- `checkSpender` — also verify the spender on `transferFrom` (stricter than ERC-3643). Mint and burn stay exempt regardless.
+
+Constructors: `RuleIdentityRegistry(address admin, address identityRegistry, bool checkSender, bool checkSpender)` — pass `false, false` for the conformant default. Both flags are settable afterwards via `setCheckSender(bool)` / `setCheckSpender(bool)`.
 
 ![surya_inheritance_RuleIdentityRegistry.sol](./doc/surya/surya_inheritance/surya_inheritance_RuleIdentityRegistry.sol.png)
 
@@ -1584,10 +1600,11 @@ Returns the number of approvals for the transfer hash.
 
 ### Manual Threat Model & Review (v0.4.0)
 
-A manual, test-backed security review of `src/` is recorded in three documents at the repository root:
+The published report is [**`CLAUDE_AUDIT.md`**](./doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) — findings, invariant verification, access-control verification, what was remediated, and the open improvement backlog. It is backed by the working deliverables at the repository root:
 
 | Document | Contents |
 |---|---|
+| [`CLAUDE_AUDIT.md`](./doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) | **The audit report.** Findings, invariant + access-control verification, remediation record, open backlog |
 | [`THREAT_MODEL.md`](./THREAT_MODEL.md) | Trust model and actors, 30 catalogued threats with IDs, data-flow diagrams, 12 invariants, reachable privileged surface |
 | [`RESULT.md`](./RESULT.md) | Findings, invariant and access-control verification, and an explicit disposition for every threat ID |
 | [`TEST_IMPROVEMENT.md`](./TEST_IMPROVEMENT.md) | Test-gap analysis and the deferred test backlog |

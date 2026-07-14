@@ -13,7 +13,7 @@ This rule restricts transfers so that only whitelisted addresses may send and re
 | `admin` | Address granted `DEFAULT_ADMIN_ROLE` (implicitly holds all roles) |
 | `forwarderIrrevocable` | ERC-2771 trusted forwarder address for meta-transactions (use `address(0)` to disable) |
 | `checkSpender_` | If `true`, `transferFrom` spender address is also verified against the whitelist |
-| `allowMintBurn` | If `true`, pre-lists `address(0)` at deployment to allow mint/burn flows without a post-deploy `addAddress(address(0))` call |
+| `allowMintBurn` | If `true`, sets **both** `allowMint` and `allowBurn`. Mint/burn permission is an explicit flag — the zero address is **never** listed. Adjust independently afterwards with `setAllowMint` / `setAllowBurn`. |
 
 ### `checkSpender` flag
 
@@ -44,6 +44,8 @@ _Diagram source: doc/img/rule-whitelist-flow.puml._
 | `CODE_ADDRESS_FROM_NOT_WHITELISTED` | 21 | Sender is not in the whitelist |
 | `CODE_ADDRESS_TO_NOT_WHITELISTED` | 22 | Recipient is not in the whitelist |
 | `CODE_ADDRESS_SPENDER_NOT_WHITELISTED` | 23 | Spender is not in the whitelist (only when `checkSpender` is enabled) |
+| `CODE_MINT_NOT_ALLOWED` | 24 | Minting is disabled (`allowMint == false`) |
+| `CODE_BURN_NOT_ALLOWED` | 25 | Burning is disabled (`allowBurn == false`) |
 
 ## Access Control
 
@@ -88,9 +90,27 @@ Enables or disables spender checks for `transferFrom`. Restricted to `DEFAULT_AD
 
 ## Notes
 
-### Zero address
+### Zero address — the mint/burn sentinel, never a list member
 
-The zero address (`address(0)`) may be added to the whitelist. This is required by CMTAT to allow minting (mints are `transfer(address(0), to, value)`) and burning (`to == address(0)`). You can either set `allowMintBurn=true` in the constructor to pre-list `address(0)`, or add it later with `addAddress(address(0))`. OpenZeppelin prevents actual ERC-20 transfers to or from the zero address, so this does not create a security issue.
+The zero address **cannot be added to the whitelist**: `addAddress(address(0))` reverts with
+`RuleAddressSet_ZeroAddressNotAllowed`, and a batch containing it reverts too.
+
+It is the ERC-20 mint/burn sentinel, not a participant. Listing it would make the standardized identity getters
+assert falsehoods — `isVerified(address(0))` and `contains(address(0))` would return `true`, contradicting ERC-3643,
+which defines `isVerified` as *"is this wallet a valid investor holding the required claims"*.
+
+Mint and burn are instead governed by explicit flags:
+
+| Flag | Effect | Blocked code |
+| --- | --- | --- |
+| `allowMint` | Permits `from == address(0)` | `24` (`CODE_MINT_NOT_ALLOWED`) |
+| `allowBurn` | Permits `to == address(0)` | `25` (`CODE_BURN_NOT_ALLOWED`) |
+
+Both are set together by the `allowMintBurn` constructor parameter and are independently settable afterwards
+(`setAllowMint` / `setAllowBurn`), so an issuer can permanently close issuance while keeping redemptions open.
+
+The flags gate the **operation only**: a permitted mint still requires a whitelisted **recipient**, and a permitted
+burn still requires a whitelisted **sender**.
 
 ### Batch vs single operations
 

@@ -83,9 +83,11 @@ contract RuleWhitelistAddTest is Test, HelperContract {
         assertEq(ruleWhitelist.listedAddressCount(), 0);
     }
 
-    /// @notice Batch add SKIPS the zero address silently (non-reverting batch convention) while
-    ///         still adding the real addresses. The sentinel never enters the list.
-    function testAddAddressesSkipsZeroAddress() public {
+    /// @notice Batch add REJECTS the zero address rather than skipping it. Skipping would make the
+    ///         emitted `AddAddresses` event report a member that is not in the set — re-polluting the
+    ///         off-chain view the sentinel guard exists to keep clean. A duplicate is skipped (the
+    ///         event still describes it truthfully); the sentinel is not.
+    function testAddAddressesRevertsOnZeroAddress() public {
         assertEq(ruleWhitelist.listedAddressCount(), 0);
         address[] memory whitelist = new address[](3);
         whitelist[0] = ADDRESS1;
@@ -93,11 +95,26 @@ contract RuleWhitelistAddTest is Test, HelperContract {
         whitelist[2] = address(0x0);
 
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        vm.expectRevert(RuleAddressSet_ZeroAddressNotAllowed.selector);
         ruleWhitelist.addAddresses(whitelist);
 
-        // The sentinel was skipped...
+        // Nothing was listed: the whole batch reverted.
+        assertEq(ruleWhitelist.listedAddressCount(), 0);
         assertFalse(ruleWhitelist.isAddressListed(address(0x0)));
-        // ...but the real addresses were added.
+    }
+
+    /// @notice A DUPLICATE is still skipped (idempotent, and the event describes it truthfully) —
+    ///         only the sentinel is rejected.
+    function testAddAddressesStillSkipsDuplicates() public {
+        assertEq(ruleWhitelist.listedAddressCount(), 0);
+        address[] memory whitelist = new address[](3);
+        whitelist[0] = ADDRESS1;
+        whitelist[1] = ADDRESS2;
+        whitelist[2] = ADDRESS1; // duplicate
+
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        ruleWhitelist.addAddresses(whitelist);
+
         assertTrue(ruleWhitelist.isAddressListed(ADDRESS1));
         assertTrue(ruleWhitelist.isAddressListed(ADDRESS2));
         assertEq(ruleWhitelist.listedAddressCount(), 2);

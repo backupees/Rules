@@ -34,6 +34,8 @@ _Diagram source: doc/img/rule-erc2980-flow.puml._
 | `CODE_ADDRESS_TO_IS_FROZEN` | 61 | Recipient is frozen |
 | `CODE_ADDRESS_SPENDER_IS_FROZEN` | 62 | Spender is frozen |
 | `CODE_ADDRESS_TO_NOT_WHITELISTED` | 63 | Recipient is not whitelisted |
+| `CODE_MINT_NOT_ALLOWED` | 64 | Minting is disabled (`allowMint == false`) |
+| `CODE_BURN_NOT_ALLOWED` | 65 | Burning is disabled (`allowBurn == false`) |
 
 ## Access Control
 
@@ -47,11 +49,21 @@ _Diagram source: doc/img/rule-erc2980-flow.puml._
 
 ## Constructor burn configuration
 
-- `RuleERC2980(address admin, address forwarderIrrevocable, bool allowBurn)`
-- `RuleERC2980Ownable2Step(address owner, address forwarderIrrevocable, bool allowBurn)`
+- `RuleERC2980(address admin, address forwarderIrrevocable, bool allowMintBurn)`
+- `RuleERC2980Ownable2Step(address owner, address forwarderIrrevocable, bool allowMintBurn)`
 
-If `allowBurn` is `true`, the constructor whitelists `address(0)` so burn/redemption transfers to `address(0)` are allowed.
-If `allowBurn` is `false`, `address(0)` is not whitelisted by default and burn/redemption transfers revert with `CODE_ADDRESS_TO_NOT_WHITELISTED` (`63`).
+`allowMintBurn` sets **both** `allowMint` and `allowBurn`; they are independently settable afterwards via
+`setAllowMint(bool)` / `setAllowBurn(bool)`.
+
+Mint/burn permission is an **explicit flag** — the constructor does **not** whitelist `address(0)`, and the zero
+address can never enter either list (`addWhitelistAddress(address(0))` / `addFrozenlistAddress(address(0))` revert).
+That keeps the **mandatory ERC-2980 getters** truthful: `whitelist(address(0))` and `frozenlist(address(0))` always
+return `false`.
+
+- `allowMintBurn = false` (default-safe): mint is refused with `CODE_MINT_NOT_ALLOWED` (`64`), burn with
+  `CODE_BURN_NOT_ALLOWED` (`65`) — dedicated codes, not the misleading "recipient not whitelisted" (`63`).
+- `allowMintBurn = true`: both permitted. A permitted mint still requires the recipient to be whitelisted and not
+  frozen; a permitted burn still requires the sender not to be frozen.
 
 
 ## Whitelist methods
@@ -62,7 +74,7 @@ Adds a single address to the whitelist. Reverts with `RuleERC2980_AddressAlready
 
 ### `addWhitelistAddresses(address[] calldata targetAddresses)`
 
-Batch-adds addresses to the whitelist. Silently skips duplicates.
+Batch-adds addresses to the whitelist. Silently skips duplicates, but **reverts** on `address(0)` (the mint/burn sentinel is never a list member — skipping it would make the emitted event report it as one).
 
 ### `removeWhitelistAddress(address targetAddress)`
 
@@ -96,7 +108,7 @@ Adds a single address to the frozenlist. Reverts with `RuleERC2980_AddressAlread
 
 ### `addFrozenlistAddresses(address[] calldata targetAddresses)`
 
-Batch-adds addresses to the frozenlist. Silently skips duplicates.
+Batch-adds addresses to the frozenlist. Silently skips duplicates, but **reverts** on `address(0)` (see above).
 
 ### `removeFrozenlistAddress(address targetAddress)`
 
@@ -130,7 +142,7 @@ Under ERC-2980, the sender is explicitly exempt from the whitelist check. An add
 
 ### Deviation from ERC-2980 example interface
 
-The ERC-2980 example `Whitelistable` and `Freezable` interfaces return `false` on duplicate/missing operations. This implementation follows the codebase convention of reverting for single-item operations, while batch operations silently skip invalid entries.
+The ERC-2980 example `Whitelistable` and `Freezable` interfaces return `false` on duplicate/missing operations. This implementation follows the codebase convention of reverting for single-item operations, while batch operations silently skip *duplicates*. The zero address is the one input a batch does **not** skip — it reverts, so the emitted event can never report a member that is not in the set.
 
 ### `isVerified` semantics
 

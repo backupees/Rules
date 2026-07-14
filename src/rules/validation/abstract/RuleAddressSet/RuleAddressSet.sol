@@ -19,8 +19,8 @@ import {IAddressList} from "../../../interfaces/IAddressList.sol";
 
 abstract contract RuleAddressSet is
     MetaTxModuleStandalone,
-    RuleAddressSetInternal,
     RuleAddressSetInvariantStorage,
+    RuleAddressSetInternal,
     IAddressList
 {
     /*//////////////////////////////////////////////////////////////

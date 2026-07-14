@@ -27,6 +27,8 @@ This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity
 | --- | --- |
 | `admin` | Address granted `DEFAULT_ADMIN_ROLE` (implicitly holds all roles) |
 | `identityRegistry_` | Address of the identity registry contract (`address(0)` to start without a registry) |
+| `checkSender_` | If `true`, ALSO verify the sender. **Stricter than ERC-3643** — pass `false` for the conformant default. Traps de-listed holders (see above). |
+| `checkSpender_` | If `true`, ALSO verify the spender on `transferFrom`. **Stricter than ERC-3643** — pass `false` for the conformant default. Mint/burn stay exempt regardless. |
 
 ### Behaviour when no registry is set
 
@@ -82,11 +84,14 @@ Returns the current identity registry address. Returns `address(0)` if none is s
 ## Transfer restriction logic
 
 - If no registry is set → all transfers pass.
-- Burns (`to == address(0)`) always pass, even if the sender is not verified.
-- For all other transfers:
-  - `from` is checked if non-zero (mints where `from == address(0)` skip the sender check).
-  - `to` is always checked.
-  - `spender` is checked in `transferFrom` if non-zero.
+- **Burns (`to == address(0)`) always pass** — ERC-3643: *"The `burn` function bypasses all checks on eligibility."*
+- For all other transfers, including **mint**:
+  - **`to` is ALWAYS checked.** This is the only check ERC-3643 mandates.
+  - `from` is checked **only if `checkSender` is enabled** (off by default — stricter than the spec).
+  - `spender` is checked **only if `checkSpender` is enabled** (off by default — stricter than the spec), and mint
+    and burn are exempt from it regardless: the minter/burner acts on its own authority, not as a delegated spender.
+    This is what lets an **unverified minter** mint to a verified recipient, exactly as ERC-3643 requires
+    (*"`mint` … only require[s] the receiver to be whitelisted and verified"*).
 
 ## Usage scenario
 

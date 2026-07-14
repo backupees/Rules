@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 /* ==== OpenZeppelin === */
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RuleERC2980InvariantStorage} from "./invariantStorage/RuleERC2980InvariantStorage.sol";
 
 /**
  * @title RuleERC2980Internal
@@ -13,7 +14,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  * - Frozenlist: frozen addresses may neither send nor receive tokens.
  * - Batch operations do not revert when individual entries are already present or absent.
  */
-abstract contract RuleERC2980Internal {
+abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -45,12 +46,13 @@ abstract contract RuleERC2980Internal {
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
-            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
-            if (addressesToAdd[i] == address(0) || !_whitelist.add(addressesToAdd[i])) {
-                skipped += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
+            // skipped, so the emitted batch event can never report it as a list member.
+            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
+            if (_whitelist.add(addressesToAdd[i])) {
                 added += 1;
+            } else {
+                skipped += 1;
             }
         }
     }
@@ -105,12 +107,13 @@ abstract contract RuleERC2980Internal {
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant: skip it silently,
-            // per the non-reverting batch convention. Mint/burn is governed by allowMint/allowBurn.
-            if (addressesToAdd[i] == address(0) || !_frozenlist.add(addressesToAdd[i])) {
-                skipped += 1;
-            } else {
+            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
+            // skipped, so the emitted batch event can never report it as a list member.
+            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
+            if (_frozenlist.add(addressesToAdd[i])) {
                 added += 1;
+            } else {
+                skipped += 1;
             }
         }
     }

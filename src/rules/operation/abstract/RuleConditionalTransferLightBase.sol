@@ -157,16 +157,21 @@ abstract contract RuleConditionalTransferLightBase is
 
     /**
      * @notice Binds the ERC-20 token this rule acts on. Reverts if a token is already bound.
-     * @dev Enforces single-token binding to prevent cross-token approval replay.
-     *      To migrate to a new token, call `unbindToken` first.
+     * @dev Only ONE token may be bound at a time. To migrate to a new token, call `unbindToken` first.
      * @dev The bound token is BOTH the ERC-20 that {approveAndTransferIfAllowed} transfers, AND an
      *      authorized caller of `transferred` (the direct-binding topology). If the rule sits behind
      *      a RuleEngine, additionally call {bindRuleEngine} so the engine may call `transferred` too.
-     * @dev WARNING: `unbindToken` does not clear `approvalCounts`. Stale approvals
-     *      from the previous token remain in storage and can be consumed after rebinding.
-     *      The operator who controls rebinding also controls approvals, so the trust
-     *      model is preserved, but integrators should be aware of this behavior.
-     *      Call {resetApproval} for each affected transfer before rebinding to discard them.
+     * @dev ⚠️ Single-token binding alone does NOT guarantee token-scoped approvals: this rule's
+     *      approvals are keyed `(from, to, value)` with no token dimension. A multi-tenant
+     *      {bindRuleEngine} target would relay several tokens into the same approval bucket — see
+     *      the warning on {bindRuleEngine}.
+     * @dev WARNING: `unbindToken` does not clear `approvalCounts`, and does not clear the bound
+     *      {ruleEngine} either. Stale approvals from the previous token remain in storage and can be
+     *      consumed after rebinding — and the previously bound engine stays authorized to consume
+     *      them until {unbindRuleEngine} is called. The operator who controls rebinding also controls
+     *      approvals, so the trust model is preserved, but integrators should be aware of this
+     *      behavior. When migrating, call {resetApproval} for each affected transfer AND
+     *      {unbindRuleEngine} before rebinding.
      * @param token The ERC-20 token to bind to this rule.
      */
     function bindToken(address token) public override onlyComplianceManager {
@@ -180,7 +185,25 @@ abstract contract RuleConditionalTransferLightBase is
      *      treated as the ERC-20 token. Bind the token with {bindToken} and the engine here, and
      *      {approveAndTransferIfAllowed} works under the RuleEngine topology.
      *      Reverts if a RuleEngine is already bound; call {unbindRuleEngine} first to migrate.
-     * @param ruleEngine_ The RuleEngine allowed to call `transferred`.
+     *
+     * @dev ⚠️ **Bind ONLY an engine that serves this one token.**
+     *      This rule's approvals are keyed `(from, to, value)` — they carry **no token dimension**.
+     *      A `RuleEngine` is multi-tenant by design (`_boundTokens` is a set), and it relays every
+     *      one of its tokens into the same `transferred(from, to, value)` hook, so the rule cannot
+     *      tell which token moved. If the bound engine serves several tokens, an approval recorded
+     *      for one of them is consumable by ANY of them:
+     *
+     *          approveTransfer(alice, bob, 100)      // intended for token A
+     *          <alice sends 100 of token B>          // -> engine -> transferred(alice, bob, 100)
+     *                                                // the token-A approval is consumed
+     *
+     *      This is inherent to the single-token rule and is why {RuleConditionalTransferLightMultiToken}
+     *      exists. Binding an engine does not change it — it only makes the topology usable, so the
+     *      constraint must be respected by the operator. If the engine is (or may become)
+     *      multi-tenant, do not use this rule.
+     *
+     * @param ruleEngine_ The RuleEngine allowed to call `transferred`. It MUST serve only the token
+     *                    bound via {bindToken}.
      */
     function bindRuleEngine(address ruleEngine_) public virtual onlyComplianceManager {
         require(ruleEngine_ != address(0), RuleConditionalTransferLight_RuleEngineAddressZeroNotAllowed());
