@@ -51,6 +51,26 @@ _Nothing yet._
 
 ## v0.4.0 - 2026-07-14
 
+### Summary
+
+Two new rule families, two standards-conformance fixes, and the outcome of a full security review.
+
+**New rules**
+- **`RuleMintAllowance`** — a per-minter mint quota. The operator sets an absolute quota (or increments/decrements it) and each mint debits the minter's allowance. It is the only rule keyed on the mint `spender`, so it requires the spender-aware CMTAT/RuleEngine callback path. Restriction code `70`.
+- **`RuleConditionalTransferLightMultiToken`** — conditional transfers with approvals keyed by `(token, from, to, value)`. **Direct-binding only:** it must not be added to a `RuleEngine`.
+
+**Breaking: two standards-conformance fixes.** Both change default behaviour and require deployer action — see *Changed* for the migration steps.
+- **`RuleIdentityRegistry` now follows ERC-3643 and verifies only the RECEIVER.** It previously screened the sender, the spender and the minter. The sender check was the damaging one: it *trapped de-listed holders*, who could neither receive nor send, when the spec checks only the receiver precisely so a lapsed investor can still exit their position. Stricter screening survives as opt-in `checkSender` / `checkSpender` flags, both defaulting to `false`.
+- **Mint/burn permission is now an explicit `allowMint` / `allowBurn` flag**, not membership of `address(0)`. Enabling mint/burn by whitelisting the zero address made mandatory getters lie — `isVerified(address(0))` and `RuleERC2980.whitelist(address(0))` both returned `true` — and made `removeAddress(address(0))` silently halt all issuance. The zero address can no longer enter any list. New codes `24`/`25` and `64`/`65` say "minting is not allowed" instead of the misleading "sender is not whitelisted".
+
+**Usability and operations**
+- `RuleConditionalTransferLight` **works behind a `RuleEngine`**: `bindToken` (the ERC-20 target) and the new `bindRuleEngine` (the authorized caller) are now separate roles, which fixes `approveAndTransferIfAllowed`.
+- Caller-explicit pre-flight views (`detectTransferRestrictionForToken` / `canTransferForToken`) so a wallet or explorer gets a truthful answer from the multi-token rule.
+- Stale-state cleanup after rebinding: `resetApproval(...)` and `clearMintAllowances(...)`.
+- Overflow-safe supply-cap views — they return code `50` instead of reverting with an arithmetic panic.
+
+**Security review.** 0 Critical/High/Medium, 2 Low, 8 Informational; the two threats that would have been High were probed and do not exist. Published as [`CLAUDE_AUDIT.md`](./doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md). Test suite grew 425 → **511 tests** (97.8% line, 97.3% branch coverage) and now includes a stateful, mutation-verified invariant suite.
+
 ### Added
 
 - `RuleConditionalTransferLight`: **split the binding into two independent roles**, so the rule works fully behind a `RuleEngine`. New `bindRuleEngine(address)` / `unbindRuleEngine()` (compliance-manager gated, emitting `RuleEngineBound` / `RuleEngineUnbound`) authorise a RuleEngine to call the transfer execution hooks, while `bindToken` continues to designate the **ERC-20 token** the rule acts on. `transferred` now accepts a call from either the bound token or the bound RuleEngine (new `isTransferExecutor(address)` view). This fixes `approveAndTransferIfAllowed`, which was previously unusable behind a RuleEngine: the single binding slot had to be *both* the ERC-20 target and the authorised caller, and behind an engine those are different addresses — binding the engine broke the helper (an engine is not an ERC-20) while binding the token left the engine unauthorised and reverted every transfer and mint. Backward compatible: existing direct-binding deployments are unaffected, and a deployment that binds the engine via `bindToken` keeps working as before (though it should migrate to use both bindings). See finding F-3.
