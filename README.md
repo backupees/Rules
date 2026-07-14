@@ -757,6 +757,7 @@ This repository is developed and tested with [Foundry](https://book.getfoundry.s
 | Gas report | `forge test --gas-report` |
 | Gas snapshot | `forge snapshot` (check only: `forge snapshot --check`) |
 | Coverage | `forge coverage` |
+| Coverage report ([`doc/coverage`](./doc/coverage/)) | `forge coverage --no-match-coverage "(script\|mocks\|test)" --report lcov && genhtml lcov.info --branch-coverage --prefix "$PWD/" --output-dir coverage` |
 | Invariant suite only | `forge test --match-path "test/invariant/*"` |
 | Format | `forge fmt` |
 | Deploy a script | `forge script script/<Deploy...>.s.sol --rpc-url <url> --account <keystore>` |
@@ -1633,22 +1634,24 @@ aderyn -x mocks --output doc/security/audits/tools/v0.4.0/aderyn-report.md
 
 #### Aderyn (v0.4.0)
 
-Static analysis with [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5. Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **No High/Medium issues; nothing to fix** — all 8 Low findings are by-design or false positives (see [feedback](./doc/security/audits/tools/v0.4.0/aderyn-report-feedback.md)). Instance counts rose vs `v0.3.0` only because `v0.4.0` adds the `RuleMintAllowance` and `RuleConditionalTransferLightMultiToken` families.
+Static analysis with [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5, re-run **2026-07-14** after the security remediation. Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **No High/Medium issues; nothing to fix** — all 9 Low findings are by-design or false positives (see [feedback](./doc/security/audits/tools/v0.4.0/aderyn-report-feedback.md)). The run initially reported 10: an `Unused Import` (dead `RuleTransferValidation` import in the two `RuleSpenderWhitelist` deployment files) was a genuine cosmetic defect and has been **fixed**.
 
 | ID | Title | Instances | Verdict |
 |---|---|---|---|
-| L-1 | Centralization Risk | 62 | By design (regulated token issuer model) |
+| L-1 | Centralization Risk | 68 | By design (regulated token issuer model) |
 | L-2 | Unspecific Solidity Pragma | 63 | By design (`^0.8.20` library; project pins solc 0.8.34) |
 | L-3 | Address State Variable Set Without Checks | 1 | False positive — zero-check enforced at public `setSanctionListOracle` |
-| L-4 | PUSH0 Opcode | 63 | By design — project targets Prague EVM |
+| L-4 | PUSH0 Opcode | 64 | By design — project targets Prague EVM |
 | L-5 | Modifier Invoked Only Once | 2 | By design — template method pattern |
-| L-6 | Empty Block | 55 | By design — `_authorize*()` hooks + required interface no-ops |
-| L-7 | Costly operations inside loop | 6 | By design — `EnumerableSet` requires one `SSTORE` per element |
-| L-8 | Unchecked Return | 13 | Mixed — majority false positives; constructor `_grantRole` intentional |
+| L-6 | Empty Block | 61 | By design — `_authorize*()` hooks + required interface no-ops |
+| L-7 | Loop Contains `require`/`revert` | 3 | **By design — recommendation rejected.** Batch adds revert on `address(0)` on purpose: skipping it made the emitted event name the sentinel as a set member |
+| L-8 | Costly operations inside loop | 7 | By design — `EnumerableSet` requires one `SSTORE` per element |
+| L-9 | Unchecked Return | 13 | Mixed — majority false positives; constructor `_grantRole` intentional |
+| — | Unused Import | 0 | **Fixed** during this run (was 2) |
 
 #### Slither (v0.4.0)
 
-Static analysis with [Slither](https://github.com/crytic/slither) 0.11.5. Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **Nothing to fix** — the two High `arbitrary-send-erc20` hits are false positives (approval-gated, allowance-checked compliance flow); see [feedback](./doc/security/audits/tools/v0.4.0/slither-report-feedback.md).
+Static analysis with [Slither](https://github.com/crytic/slither) 0.11.5, re-run **2026-07-14** after the security remediation (tally unchanged from the previous run). Full report and feedback in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/). **Nothing to fix** — the two High `arbitrary-send-erc20` hits are false positives (approval-gated, allowance-checked compliance flow); see [feedback](./doc/security/audits/tools/v0.4.0/slither-report-feedback.md).
 
 | Category | Severity | Instances | Verdict |
 |---|---|---|---|

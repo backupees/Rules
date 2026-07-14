@@ -57,6 +57,97 @@ contract MintBurnFlags is Test, HelperContract {
     }
 
     /*//////////////////////////////////////////////////////////////
+            RESTRICTION MESSAGES FOR THE NEW MINT/BURN CODES
+
+     A restriction code is only useful if `messageForTransferRestriction`
+     can explain it. The four codes added with the flags (24/25 on the
+     whitelist family, 64/65 on ERC-2980) each need a message — otherwise
+     a rejected mint reports "Unknown code", which is exactly the opaque
+     failure the dedicated codes were introduced to remove.
+    //////////////////////////////////////////////////////////////*/
+
+    function test_Messages_WhitelistFamilyExplainsMintAndBurnCodes() public {
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelist w = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+        RuleWhitelistWrapper wr = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+        vm.stopPrank();
+
+        assertEq(w.messageForTransferRestriction(CODE_MINT_NOT_ALLOWED), TEXT_MINT_NOT_ALLOWED);
+        assertEq(w.messageForTransferRestriction(CODE_BURN_NOT_ALLOWED), TEXT_BURN_NOT_ALLOWED);
+
+        // The wrapper shares `RuleWhitelistShared`, so it must answer identically.
+        assertEq(wr.messageForTransferRestriction(CODE_MINT_NOT_ALLOWED), TEXT_MINT_NOT_ALLOWED);
+        assertEq(wr.messageForTransferRestriction(CODE_BURN_NOT_ALLOWED), TEXT_BURN_NOT_ALLOWED);
+    }
+
+    function test_Messages_ERC2980ExplainsMintAndBurnCodes() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleERC2980 e = new RuleERC2980(DEFAULT_ADMIN_ADDRESS, FORWARDER, false);
+
+        assertEq(e.messageForTransferRestriction(CODE_ERC2980_MINT_NOT_ALLOWED), "Minting is not allowed");
+        assertEq(e.messageForTransferRestriction(CODE_ERC2980_BURN_NOT_ALLOWED), "Burning is not allowed");
+    }
+
+    /**
+     * @notice The message must be reachable from the code a REAL rejected mint returns.
+     * @dev Guards the pairing, not just the lookup: a test that asserts the message table in
+     *      isolation still passes if `_detectMintBurnRestriction` returns the wrong code.
+     */
+    function test_Messages_RejectedMintCodeMapsToItsOwnMessage() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelist w = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+
+        uint8 code = w.detectTransferRestriction(ZERO_ADDRESS, address(0x1234), 100);
+        assertEq(code, CODE_MINT_NOT_ALLOWED);
+        assertEq(w.messageForTransferRestriction(code), TEXT_MINT_NOT_ALLOWED);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+        DEGENERATE (from == 0 && to == 0): WRAPPER / WHITELIST PARITY
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice A (0, 0) movement is neither a mint nor a burn of anything real — nothing to screen.
+     * @dev `RuleWhitelistWrapperBase` handles this case explicitly so that it cannot drift from
+     *      `RuleWhitelistBase`. The wrapper owns no addresses, so without the explicit branch it
+     *      would try to resolve `address(0)` against its children and reject. The two must agree,
+     *      and with mint+burn BOTH enabled the agreed answer is TRANSFER_OK.
+     */
+    function test_Degenerate_ZeroToZero_WrapperAgreesWithWhitelist() public {
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelist w = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
+        RuleWhitelistWrapper wr = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
+        IRule[] memory rules = new IRule[](1);
+        rules[0] = IRule(address(w));
+        wr.setRules(rules);
+        vm.stopPrank();
+
+        assertEq(wr.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100), NO_ERROR);
+        assertEq(
+            wr.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100),
+            w.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100),
+            "wrapper and whitelist must not drift on the degenerate case"
+        );
+    }
+
+    /// @notice ...and when mint is disabled, the degenerate case is gated by the mint flag first.
+    function test_Degenerate_ZeroToZero_GatedByMintFlag() public {
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelistWrapper wr = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+        RuleWhitelist w = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+        IRule[] memory rules = new IRule[](1);
+        rules[0] = IRule(address(w));
+        wr.setRules(rules);
+        vm.stopPrank();
+
+        assertEq(wr.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100), CODE_MINT_NOT_ALLOWED);
+        assertEq(
+            wr.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100),
+            w.detectTransferRestriction(ZERO_ADDRESS, ZERO_ADDRESS, 100)
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
                     RuleWhitelist (both variants)
     //////////////////////////////////////////////////////////////*/
 

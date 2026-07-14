@@ -294,14 +294,29 @@ arity and four restriction codes were added.
 
 | | Before | After |
 |---|---|---|
-| Tests | 407 | **506** |
-| Production line coverage | 94.9% | **97.4%** |
+| Tests | 407 | **511** |
+| Production line coverage | 94.9% | **97.8%** (1 082 / 1 106) |
+| Branch coverage | not measured | **97.3%** (220 / 226) |
 | Stateful invariant tests | **0** | 4 (mutation-verified) |
 | Fuzz tests | 3 | 10 |
 
-The residual coverage shortfall is a **tooling artifact, not a gap**: the uncovered "functions" are abstract
-declarations with no body (`_transferred`, `_detectTransferRestriction`, …), overridden by every concrete rule. They
-are uncoverable by definition and no test can move the number. Coverage of *reachable* code is effectively complete.
+**Every reachable line of production code is now covered.** The 24 uncovered lines are, without exception, abstract
+declarations with no body (`_transferred`, `_detectTransferRestriction`, the `_authorize*` hooks), overridden by
+every concrete rule — uncoverable by definition, and no test can move the number.
+
+That claim is stated precisely because an earlier draft of this report asserted it *without* checking. A
+line-by-line audit of the LCOV output found **5 genuinely reachable lines that no test executed**, all of them
+introduced by the remediation itself:
+
+- the four `messageForTransferRestriction` returns for the newly-added mint/burn codes (`24`/`25` on the whitelist
+  family, `64`/`65` on ERC-2980) — a rejected mint would have reported the right *code* while the message lookup
+  for it was never exercised, which is precisely the opaque failure the dedicated codes existed to remove;
+- the wrapper's degenerate `from == 0 && to == 0` branch, added during review specifically to stop
+  `RuleWhitelistWrapper` drifting from `RuleWhitelistBase` — an anti-drift guard that nothing checked.
+
+All five are now covered (5 new tests). The lesson is worth recording: a *percentage* moving in the right direction
+concealed a real gap, because the denominator grew at the same time. The check that mattered was enumerating the
+uncovered lines and reading them, not watching the headline number.
 
 ---
 
