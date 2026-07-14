@@ -21,15 +21,56 @@ pragma solidity ^0.8.20;
  *      Computed value: `type(IERC3643ComplianceFull).interfaceId == 0x3144991c`
  */
 interface IERC3643ComplianceFull {
-    // From IERC3643ComplianceRead
-    function canTransfer(address from, address to, uint256 value) external view returns (bool isValid);
     // From IERC3643IComplianceContract
+    /**
+     * @notice Notifies the compliance contract that a transfer has occurred.
+     * @param from The address tokens were transferred from.
+     * @param to The address tokens were transferred to.
+     * @param value The amount transferred.
+     */
     function transferred(address from, address to, uint256 value) external;
     // From IERC3643Compliance (directly defined)
+    /**
+     * @notice Binds a token to the compliance contract.
+     * @param token The token address to bind.
+     */
     function bindToken(address token) external;
+    /**
+     * @notice Unbinds a token from the compliance contract.
+     * @param token The token address to unbind.
+     */
     function unbindToken(address token) external;
-    function isTokenBound(address token) external view returns (bool isBound);
-    function getTokenBound() external view returns (address token);
+    /**
+     * @notice Notifies the compliance contract that tokens have been created (minted).
+     * @param to The address that received the newly created tokens.
+     * @param value The amount created.
+     */
     function created(address to, uint256 value) external;
+    /**
+     * @notice Notifies the compliance contract that tokens have been destroyed (burned).
+     * @param from The address whose tokens were destroyed.
+     * @param value The amount destroyed.
+     */
     function destroyed(address from, uint256 value) external;
+
+    // From IERC3643ComplianceRead
+    /**
+     * @notice Checks whether a transfer is compliant.
+     * @param from The address tokens would be transferred from.
+     * @param to The address tokens would be transferred to.
+     * @param value The amount that would be transferred.
+     * @return isValid True if the transfer is compliant.
+     */
+    function canTransfer(address from, address to, uint256 value) external view returns (bool isValid);
+    /**
+     * @notice Returns whether a token is bound to the compliance contract.
+     * @param token The token address to query.
+     * @return isBound True if the token is bound.
+     */
+    function isTokenBound(address token) external view returns (bool isBound);
+    /**
+     * @notice Returns the token currently bound to the compliance contract.
+     * @return token The bound token address.
+     */
+    function getTokenBound() external view returns (address token);
 }

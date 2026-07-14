@@ -3,22 +3,33 @@ pragma solidity ^0.8.20;
 
 import {IIdentityRegistryContains} from "./IIdentityRegistry.sol";
 
+/**
+ * @title IAddressList — interface for managing and querying a set of addresses.
+ */
 interface IAddressList is IIdentityRegistryContains {
     /* ============ Events ============ */
-    /// @notice Emitted when multiple addresses are added.
-    /// @param targetAddresses The array of added addresses.
+    /**
+     * @notice Emitted when multiple addresses are added.
+     * @param targetAddresses The array of added addresses.
+     */
     event AddAddresses(address[] targetAddresses);
 
-    /// @notice Emitted when multiple addresses are removed.
-    /// @param targetAddresses The array of removed addresses.
+    /**
+     * @notice Emitted when multiple addresses are removed.
+     * @param targetAddresses The array of removed addresses.
+     */
     event RemoveAddresses(address[] targetAddresses);
 
-    /// @notice Emitted when a single address is added.
-    /// @param targetAddress The added address.
+    /**
+     * @notice Emitted when a single address is added.
+     * @param targetAddress The added address.
+     */
     event AddAddress(address indexed targetAddress);
 
-    /// @notice Emitted when a single address is removed.
-    /// @param targetAddress The removed address.
+    /**
+     * @notice Emitted when a single address is removed.
+     * @param targetAddress The removed address.
+     */
     event RemoveAddress(address indexed targetAddress);
 
     /* ============ Write ============ */

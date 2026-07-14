@@ -59,24 +59,50 @@ contract RuleWhitelist is RuleWhitelistBase, AccessControlModuleStandalone {
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts toggling the spender-check setting to holders of DEFAULT_ADMIN_ROLE.
+     */
     function _authorizeCheckSpenderManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
+    /**
+     * @notice Restricts toggling `allowMint` / `allowBurn` to holders of DEFAULT_ADMIN_ROLE.
+     */
+    function _authorizeMintBurnManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /**
+     * @notice Restricts adding addresses to the whitelist to holders of ADDRESS_LIST_ADD_ROLE.
+     */
     function _authorizeAddressListAdd() internal view virtual override onlyRole(ADDRESS_LIST_ADD_ROLE) {}
 
+    /**
+     * @notice Restricts removing addresses from the whitelist to holders of ADDRESS_LIST_REMOVE_ROLE.
+     */
     function _authorizeAddressListRemove() internal view virtual override onlyRole(ADDRESS_LIST_REMOVE_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(Context, RuleAddressSet) returns (address sender) {
         return super._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(Context, RuleAddressSet) returns (bytes calldata) {
         return super._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength() internal view virtual override(Context, RuleAddressSet) returns (uint256) {
         return super._contextSuffixLength();
     }

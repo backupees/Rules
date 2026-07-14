@@ -29,6 +29,11 @@ contract RuleMaxTotalSupply is AccessControlModuleStandalone, RuleMaxTotalSupply
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -44,5 +49,8 @@ contract RuleMaxTotalSupply is AccessControlModuleStandalone, RuleMaxTotalSupply
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts maximum total supply management to holders of DEFAULT_ADMIN_ROLE.
+     */
     function _authorizeMaxTotalSupplyManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

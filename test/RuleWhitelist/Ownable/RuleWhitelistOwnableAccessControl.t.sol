@@ -12,9 +12,14 @@ contract RuleWhitelistOwnable2StepAccessControl is OwnableAddressListTestBase {
         return (IAddressList(address(rule)), ownerAddr);
     }
 
-    function testAllowMintBurnConstructorListsZeroAddress() public {
+    /// @notice `allowMintBurn` sets the explicit flags; the zero address is never listed.
+    function testAllowMintBurnConstructorSetsFlagsAndDoesNotListZeroAddress() public {
         address ownerAddr = WHITELIST_OPERATOR_ADDRESS;
         RuleWhitelistOwnable2Step rule = new RuleWhitelistOwnable2Step(ownerAddr, ZERO_ADDRESS, true, true);
-        assertTrue(rule.isAddressListed(ZERO_ADDRESS));
+
+        assertTrue(rule.allowMint());
+        assertTrue(rule.allowBurn());
+        assertFalse(rule.isAddressListed(ZERO_ADDRESS));
+        assertFalse(rule.isVerified(ZERO_ADDRESS));
     }
 }

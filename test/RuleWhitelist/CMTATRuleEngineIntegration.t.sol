@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
-import {CMTATDeployment} from "RuleEngine/../test/utils/CMTATDeployment.sol";
+import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 import {RuleWhitelist} from "src/rules/validation/deployment/RuleWhitelist.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
 
@@ -24,9 +24,10 @@ contract CMTATRuleEngineIntegration is Test, HelperContract {
         ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock.addRule(ruleWhitelist);
-        // Allow minting: whitelist ZERO_ADDRESS (mint source) and recipient.
+        // Allow minting: set the explicit flag (the zero address is NEVER whitelisted) and
+        // whitelist the recipient, which a permitted mint still requires.
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleWhitelist.addAddress(ZERO_ADDRESS);
+        ruleWhitelist.setAllowMint(true);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleWhitelist.addAddress(ADDRESS1);
 

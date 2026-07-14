@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {CMTATStandalone} from "CMTAT/deployment/CMTATStandalone.sol";
+import {CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 
 // RuleEngine
 import {RuleEngineInvariantStorage} from "RuleEngine/modules/library/RuleEngineInvariantStorage.sol";
@@ -21,6 +21,8 @@ import {RuleConditionalTransferLight} from "src/rules/operation/RuleConditionalT
 import {
     RuleConditionalTransferLightInvariantStorage
 } from "src/rules/operation/abstract/RuleConditionalTransferLightInvariantStorage.sol";
+// RuleMintAllowance
+import {RuleMintAllowanceInvariantStorage} from "src/rules/operation/abstract/RuleMintAllowanceInvariantStorage.sol";
 import {
     RuleWhitelistInvariantStorage
 } from "src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleWhitelistInvariantStorage.sol";
@@ -39,7 +41,7 @@ import {
 } from "src/rules/validation/abstract/invariant/RuleSanctionsListInvariantStorage.sol";
 
 // utils
-import {CMTATDeployment} from "RuleEngine/../test/utils/CMTATDeployment.sol";
+import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 
 /**
  * @title Constants used by the tests
@@ -52,6 +54,7 @@ abstract contract HelperContract is
     RuleMaxTotalSupplyInvariantStorage,
     RuleIdentityRegistryInvariantStorage,
     RuleConditionalTransferLightInvariantStorage,
+    RuleMintAllowanceInvariantStorage,
     RuleEngineInvariantStorage
 {
     // Test result
@@ -87,7 +90,7 @@ abstract contract HelperContract is
 
     // CMTAT
     CMTATDeployment cmtatDeployment;
-    CMTATStandalone internal cmtatContract;
+    CMTATStandardStandalone internal cmtatContract;
 
     // RuleEngine Mock
     RuleEngine public ruleEngineMock;

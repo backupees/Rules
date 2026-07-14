@@ -27,7 +27,7 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
         ruleWhitelist = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, false);
         ruleWhitelist2 = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, false);
         ruleWhitelist3 = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, false);
-        ruleWhitelistWrapper = new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true);
+        ruleWhitelistWrapper = new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
         ruleWhitelistWrapper.addRule(ruleWhitelist);
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
@@ -42,7 +42,7 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
     function testCannotDeployContractIfAdminAddressIsZero() public {
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
         vm.expectRevert(AccessControlModuleStandalone.AccessControlModuleStandalone_AddressZeroNotAllowed.selector);
-        ruleWhitelistWrapper = new RuleWhitelistWrapper(ZERO_ADDRESS, ZERO_ADDRESS, true);
+        ruleWhitelistWrapper = new RuleWhitelistWrapper(ZERO_ADDRESS, ZERO_ADDRESS, true, true);
     }
 
     function testReturnTheRightMessageForAGivenCode() public {
@@ -67,7 +67,8 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
     }
 
     function testWrapperWithZeroRulesRejectsTransfers() public {
-        RuleWhitelistWrapper emptyWrapper = new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true);
+        RuleWhitelistWrapper emptyWrapper =
+            new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
 
         resUint8 = emptyWrapper.detectTransferRestriction(ADDRESS1, ADDRESS2, 20);
         assertEq(resUint8, CODE_ADDRESS_FROM_NOT_WHITELISTED);
@@ -335,13 +336,14 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
     }
 
     function testIsVerifiedWithNoChildRules() public {
-        RuleWhitelistWrapper emptyWrapper = new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true);
+        RuleWhitelistWrapper emptyWrapper =
+            new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
         assertFalse(emptyWrapper.isVerified(ADDRESS1));
     }
 
     function testInternalTransferredSpenderOverload() public {
         RuleWhitelistWrapperHarnessInternal wrapperHarness =
-            new RuleWhitelistWrapperHarnessInternal(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true);
+            new RuleWhitelistWrapperHarnessInternal(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
         RuleWhitelist child = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, false);
 
         vm.prank(WHITELIST_OPERATOR_ADDRESS);

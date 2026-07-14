@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2026-04-16 15:29:51</td>
+            <td class="headerValue">2026-07-14 13:44:06</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">1</td>
@@ -79,17 +79,22 @@
 <a name="8"><span class="lineNum">       8 </span>                :            :  * @notice Exposes the contract version as required by ERC-3643.</a>
 <a name="9"><span class="lineNum">       9 </span>                :            :  */</a>
 <a name="10"><span class="lineNum">      10 </span>                :            : abstract contract VersionModule is IERC3643Version {</a>
-<a name="11"><span class="lineNum">      11 </span>                :            :     string private constant VERSION = &quot;0.3.0&quot;;</a>
-<a name="12"><span class="lineNum">      12 </span>                :            : </a>
-<a name="13"><span class="lineNum">      13 </span>                :            :     /*//////////////////////////////////////////////////////////////</a>
-<a name="14"><span class="lineNum">      14 </span>                :            :                           PUBLIC FUNCTIONS</a>
-<a name="15"><span class="lineNum">      15 </span>                :            :     //////////////////////////////////////////////////////////////*/</a>
-<a name="16"><span class="lineNum">      16 </span>                :            : </a>
-<a name="17"><span class="lineNum">      17 </span>                :            :     /// @inheritdoc IERC3643Version</a>
-<a name="18"><span class="lineNum">      18 </span>                :<span class="lineCov">          7 :     function version() public view virtual override returns (string memory version_) {</span></a>
-<a name="19"><span class="lineNum">      19 </span>                :<span class="lineCov">          7 :         return VERSION;</span></a>
-<a name="20"><span class="lineNum">      20 </span>                :            :     }</a>
-<a name="21"><span class="lineNum">      21 </span>                :            : }</a>
+<a name="11"><span class="lineNum">      11 </span>                :            :     /**</a>
+<a name="12"><span class="lineNum">      12 </span>                :            :      * @notice The contract version string returned by {version}.</a>
+<a name="13"><span class="lineNum">      13 </span>                :            :      */</a>
+<a name="14"><span class="lineNum">      14 </span>                :            :     string private constant VERSION = &quot;0.4.0&quot;;</a>
+<a name="15"><span class="lineNum">      15 </span>                :            : </a>
+<a name="16"><span class="lineNum">      16 </span>                :            :     /*//////////////////////////////////////////////////////////////</a>
+<a name="17"><span class="lineNum">      17 </span>                :            :                           PUBLIC FUNCTIONS</a>
+<a name="18"><span class="lineNum">      18 </span>                :            :     //////////////////////////////////////////////////////////////*/</a>
+<a name="19"><span class="lineNum">      19 </span>                :            : </a>
+<a name="20"><span class="lineNum">      20 </span>                :            :     /**</a>
+<a name="21"><span class="lineNum">      21 </span>                :            :      * @inheritdoc IERC3643Version</a>
+<a name="22"><span class="lineNum">      22 </span>                :            :      */</a>
+<a name="23"><span class="lineNum">      23 </span>                :<span class="lineCov">          7 :     function version() public view virtual override returns (string memory version_) {</span></a>
+<a name="24"><span class="lineNum">      24 </span>                :<span class="lineCov">          7 :         return VERSION;</span></a>
+<a name="25"><span class="lineNum">      25 </span>                :            :     }</a>
+<a name="26"><span class="lineNum">      26 </span>                :            : }</a>
 </pre>
       </td>
     </tr>

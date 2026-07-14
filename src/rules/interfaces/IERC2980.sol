@@ -19,12 +19,16 @@ interface IERC2980 {
     /**
      * @dev Returns true if the address is in the frozenlist.
      * Frozen addresses cannot send or receive tokens.
+     * @param _operator The address to check.
+     * @return True if the address is in the frozenlist, otherwise false.
      */
     function frozenlist(address _operator) external view returns (bool);
 
     /**
      * @dev Returns true if the address is in the whitelist.
      * Only whitelisted addresses can receive tokens.
+     * @param _operator The address to check.
+     * @return True if the address is in the whitelist, otherwise false.
      */
     function whitelist(address _operator) external view returns (bool);
 }

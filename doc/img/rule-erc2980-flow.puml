@@ -1,0 +1,41 @@
+@startuml
+title RuleERC2980 — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleERC2980\n(frozenlist + whitelist)" as rule
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> rule : detectTransferRestrictionFrom(spender, from, to, value)
+  note right of rule
+    Frozenlist is checked FIRST and blocks
+    sender, recipient and spender.
+    Whitelist only gates the recipient
+    (senders may freely spend held tokens).
+  end note
+  alt from frozen
+    rule --> cmtat : 60 (CODE_ADDRESS_FROM_IS_FROZEN)
+  else to frozen
+    rule --> cmtat : 61 (CODE_ADDRESS_TO_IS_FROZEN)
+  else spender frozen
+    rule --> cmtat : 62 (CODE_ADDRESS_SPENDER_IS_FROZEN)
+  else to not whitelisted
+    rule --> cmtat : 63 (CODE_ADDRESS_TO_NOT_WHITELISTED)
+  else not frozen and recipient whitelisted
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

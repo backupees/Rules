@@ -26,13 +26,59 @@ abstract contract RuleConditionalTransferLightBase is
     using SafeERC20 for IERC20;
 
     /*//////////////////////////////////////////////////////////////
+                             STATE
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice RuleEngine additionally authorized to call the transfer execution hooks.
+     * @dev Binding is deliberately split into two independent roles:
+     *
+     *      - {bindToken}      — the **ERC-20 token** this rule acts on. It is the token that
+     *                           {approveAndTransferIfAllowed} calls `safeTransferFrom` on, and it may
+     *                           call `transferred` itself (direct-binding topology).
+     *      - {bindRuleEngine} — a **RuleEngine** allowed to call `transferred` on this rule. Under the
+     *                           RuleEngine topology the engine, not the token, is the caller of the
+     *                           compliance hooks.
+     *
+     *      Conflating the two was the bug: with a single slot you had to choose between authorizing
+     *      the engine (which broke {approveAndTransferIfAllowed}, since the engine is not an ERC-20)
+     *      and pointing at the token (which left the engine unauthorized, reverting every transfer).
+     *      Binding both makes the helper usable in either topology.
+     */
+    address public ruleEngine;
+
+    /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Compliance hook invoked when tokens are created (minted); consumes an approval if applicable.
+     * @param to The recipient of the created tokens.
+     * @param value The amount of tokens created.
+     */
+    function created(address to, uint256 value) external onlyBoundToken {
+        _transferred(address(0), to, value);
+    }
+
+    /**
+     * @notice Compliance hook invoked when tokens are destroyed (burned); consumes an approval if applicable.
+     * @param from The holder whose tokens are destroyed.
+     * @param value The amount of tokens destroyed.
+     */
+    function destroyed(address from, uint256 value) external onlyBoundToken {
+        _transferred(from, address(0), value);
+    }
+
+    /**
+     * @inheritdoc IRule
+     */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override(IRule) returns (bool) {
         return restrictionCode == CODE_TRANSFER_REQUEST_NOT_APPROVED;
     }
 
+    /**
+     * @inheritdoc IERC1404
+     */
     function messageForTransferRestriction(uint8 restrictionCode)
         external
         pure
@@ -45,23 +91,24 @@ abstract contract RuleConditionalTransferLightBase is
         return TEXT_CODE_NOT_FOUND;
     }
 
-    function created(address to, uint256 value) external onlyBoundToken {
-        _transferred(address(0), to, value);
-    }
-
-    function destroyed(address from, uint256 value) external onlyBoundToken {
-        _transferred(from, address(0), value);
-    }
-
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Approves and performs a transferFrom using this rule as spender.
+     * @notice Approves and performs a transferFrom on the bound ERC-20 token, using this rule as spender.
      * @dev Requires `from` to have approved this contract on the token.
      * @dev This function is only safe for tokens that call back `transferred()` during transfer.
      * @dev CEI is intentionally inverted so the approval exists for the callback.
+     * @dev Works in BOTH topologies, provided the bindings are set correctly:
+     *      - direct binding: `bindToken(token)` — the token calls back `transferred` itself;
+     *      - RuleEngine:     `bindToken(token)` AND `bindRuleEngine(engine)` — the engine calls back.
+     *      The token must be bound with {bindToken}; binding the RuleEngine there instead would make
+     *      `getTokenBound()` a non-ERC-20 and this call would revert.
+     * @param from The holder to transfer tokens from.
+     * @param to The recipient of the transfer.
+     * @param value The amount to transfer.
+     * @return True when the transfer succeeds.
      */
     function approveAndTransferIfAllowed(address from, address to, uint256 value)
         public
@@ -80,6 +127,9 @@ abstract contract RuleConditionalTransferLightBase is
         return true;
     }
 
+    /**
+     * @inheritdoc IERC3643IComplianceContract
+     */
     function transferred(address from, address to, uint256 value)
         public
         override(IERC3643IComplianceContract)
@@ -88,6 +138,9 @@ abstract contract RuleConditionalTransferLightBase is
         _transferred(from, to, value);
     }
 
+    /**
+     * @inheritdoc IRuleEngine
+     */
     function transferred(
         address,
         /* spender */
@@ -103,19 +156,85 @@ abstract contract RuleConditionalTransferLightBase is
     }
 
     /**
-     * @notice Binds a token to this rule. Reverts if a token is already bound.
-     * @dev Enforces single-token binding to prevent cross-token approval replay.
-     *      To migrate to a new token, call `unbindToken` first.
-     * @dev WARNING: `unbindToken` does not clear `approvalCounts`. Stale approvals
-     *      from the previous token remain in storage and can be consumed after rebinding.
-     *      The operator who controls rebinding also controls approvals, so the trust
-     *      model is preserved, but integrators should be aware of this behavior.
+     * @notice Binds the ERC-20 token this rule acts on. Reverts if a token is already bound.
+     * @dev Only ONE token may be bound at a time. To migrate to a new token, call `unbindToken` first.
+     * @dev The bound token is BOTH the ERC-20 that {approveAndTransferIfAllowed} transfers, AND an
+     *      authorized caller of `transferred` (the direct-binding topology). If the rule sits behind
+     *      a RuleEngine, additionally call {bindRuleEngine} so the engine may call `transferred` too.
+     * @dev WARNING: Single-token binding alone does NOT guarantee token-scoped approvals: this rule's
+     *      approvals are keyed `(from, to, value)` with no token dimension. A multi-tenant
+     *      {bindRuleEngine} target would relay several tokens into the same approval bucket — see
+     *      the warning on {bindRuleEngine}.
+     * @dev WARNING: `unbindToken` does not clear `approvalCounts`, and does not clear the bound
+     *      {ruleEngine} either. Stale approvals from the previous token remain in storage and can be
+     *      consumed after rebinding — and the previously bound engine stays authorized to consume
+     *      them until {unbindRuleEngine} is called. The operator who controls rebinding also controls
+     *      approvals, so the trust model is preserved, but integrators should be aware of this
+     *      behavior. When migrating, call {resetApproval} for each affected transfer AND
+     *      {unbindRuleEngine} before rebinding.
+     * @param token The ERC-20 token to bind to this rule.
      */
     function bindToken(address token) public override onlyComplianceManager {
         require(getTokenBound() == address(0), RuleConditionalTransferLight_TokenAlreadyBound());
         _bindToken(token);
     }
 
+    /**
+     * @notice Authorizes a RuleEngine to call this rule's transfer execution hooks.
+     * @dev Independent of {bindToken}: the engine is authorized to call `transferred`, but is never
+     *      treated as the ERC-20 token. Bind the token with {bindToken} and the engine here, and
+     *      {approveAndTransferIfAllowed} works under the RuleEngine topology.
+     *      Reverts if a RuleEngine is already bound; call {unbindRuleEngine} first to migrate.
+     *
+     * @dev WARNING: **Bind ONLY an engine that serves this one token.**
+     *      This rule's approvals are keyed `(from, to, value)` — they carry **no token dimension**.
+     *      A `RuleEngine` is multi-tenant by design (`_boundTokens` is a set), and it relays every
+     *      one of its tokens into the same `transferred(from, to, value)` hook, so the rule cannot
+     *      tell which token moved. If the bound engine serves several tokens, an approval recorded
+     *      for one of them is consumable by ANY of them:
+     *
+     *          approveTransfer(alice, bob, 100)      // intended for token A
+     *          <alice sends 100 of token B>          // -> engine -> transferred(alice, bob, 100)
+     *                                                // the token-A approval is consumed
+     *
+     *      This is inherent to the single-token rule and is why {RuleConditionalTransferLightMultiToken}
+     *      exists. Binding an engine does not change it — it only makes the topology usable, so the
+     *      constraint must be respected by the operator. If the engine is (or may become)
+     *      multi-tenant, do not use this rule.
+     *
+     * @param ruleEngine_ The RuleEngine allowed to call `transferred`. It MUST serve only the token
+     *                    bound via {bindToken}.
+     */
+    function bindRuleEngine(address ruleEngine_) public virtual onlyComplianceManager {
+        require(ruleEngine_ != address(0), RuleConditionalTransferLight_RuleEngineAddressZeroNotAllowed());
+        require(ruleEngine == address(0), RuleConditionalTransferLight_RuleEngineAlreadyBound());
+        ruleEngine = ruleEngine_;
+        emit RuleEngineBound(ruleEngine_);
+    }
+
+    /**
+     * @notice Revokes the bound RuleEngine's authorization to call the transfer execution hooks.
+     * @dev Does NOT clear `approvalCounts` — see the {bindToken} warning and {resetApproval}.
+     */
+    function unbindRuleEngine() public virtual onlyComplianceManager {
+        address previous = ruleEngine;
+        require(previous != address(0), RuleConditionalTransferLight_RuleEngineNotBound());
+        ruleEngine = address(0);
+        emit RuleEngineUnbound(previous);
+    }
+
+    /**
+     * @notice Returns whether `caller` is authorized to call this rule's transfer execution hooks.
+     * @param caller The address to check.
+     * @return True if `caller` is the bound token or the bound RuleEngine.
+     */
+    function isTransferExecutor(address caller) public view virtual returns (bool) {
+        return isTokenBound(caller) || (caller != address(0) && caller == ruleEngine);
+    }
+
+    /**
+     * @inheritdoc IERC1404
+     */
     function detectTransferRestriction(address from, address to, uint256 value)
         public
         view
@@ -132,6 +251,9 @@ abstract contract RuleConditionalTransferLightBase is
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @inheritdoc IERC1404Extend
+     */
     function detectTransferRestrictionFrom(
         address,
         /* spender */
@@ -147,6 +269,9 @@ abstract contract RuleConditionalTransferLightBase is
         return detectTransferRestriction(from, to, value);
     }
 
+    /**
+     * @inheritdoc IERC3643ComplianceRead
+     */
     function canTransfer(address from, address to, uint256 value)
         public
         view
@@ -156,6 +281,9 @@ abstract contract RuleConditionalTransferLightBase is
         return detectTransferRestriction(from, to, value) == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @inheritdoc IERC7551Compliance
+     */
     function canTransferFrom(address spender, address from, address to, uint256 value)
         public
         view
@@ -170,7 +298,14 @@ abstract contract RuleConditionalTransferLightBase is
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Authorizes transfer execution: the bound token OR the bound RuleEngine may call the
+     *         execution hooks. Both topologies are therefore supported without conflating the two
+     *         roles of the binding — see {ruleEngine}.
+     */
     function _authorizeTransferExecution() internal view override {
-        require(isTokenBound(_msgSender()), RuleConditionalTransferLight_TransferExecutorUnauthorized(_msgSender()));
+        require(
+            isTransferExecutor(_msgSender()), RuleConditionalTransferLight_TransferExecutorUnauthorized(_msgSender())
+        );
     }
 }

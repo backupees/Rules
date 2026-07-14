@@ -1,0 +1,35 @@
+@startuml
+title ERC-721 / ERC-1155 compliance (IERC7943NonFungibleComplianceExtend)
+
+actor "Operator / Holder" as caller
+participant "ERC-721 / ERC-1155\ntoken" as token
+participant "Validation rule\n(RuleNFTAdapter)" as rule
+
+caller -> token : safeTransferFrom(from, to, tokenId[, amount])
+
+note over token, rule
+  A single transferred(...) call both validates AND reverts:
+  internally it runs detectTransferRestrictionFrom and
+  require(code == TRANSFER_OK). No separate pre-check is needed
+  in the transfer path.
+end note
+
+token -> rule : transferred(spender, from, to, tokenId, value)  <i>(in the token's transfer hook)</i>
+rule -> rule : code = detectTransferRestrictionFrom(spender, from, to, value)\nrequire(code == TRANSFER_OK)
+alt restricted (code > 0)
+  rule --> token : revert
+  token --> caller : revert (whole transfer rolls back)
+else allowed (code == 0)
+  rule --> token : ok
+  token --> caller : Transfer succeeds
+end
+
+note over token, rule
+  amount / value == 1 for ERC-721. RuleNFTAdapter carries tokenId
+  but delegates to the address-based checks (from / to / spender).
+  The read-only detectTransferRestriction* / canTransfer* overloads
+  stay available for off-chain or pre-transfer queries.
+  Only validation rules implement this interface; operation rules
+  (e.g. RuleConditionalTransferLight) and RuleMaxTotalSupply are ERC-20 only.
+end note
+@enduml

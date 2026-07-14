@@ -10,7 +10,7 @@ import {RuleIdentityRegistry} from "src/rules/validation/deployment/RuleIdentity
 contract RuleIdentityRegistryAccessControlRoleMembers is AccessControlEnumerableTestBase {
     function _deployAccessControl() internal override returns (IAccessControlEnumerableLike, address) {
         address adminAddr = DEFAULT_ADMIN_ADDRESS;
-        RuleIdentityRegistry rule = new RuleIdentityRegistry(adminAddr, ADDRESS1);
+        RuleIdentityRegistry rule = new RuleIdentityRegistry(adminAddr, ADDRESS1, false, false);
         return (IAccessControlEnumerableLike(address(rule)), adminAddr);
     }
 

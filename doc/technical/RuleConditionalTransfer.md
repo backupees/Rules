@@ -69,11 +69,19 @@ To perform the transfer, the token holder has to `approve` the rule to spend tok
 
 ### Graph
 
-![surya_graph_Blacklist](../surya/surya_graph/surya_graph_RuleConditionalTransfer.sol.png)
+![surya_graph_RuleConditionalTransferLight](../surya/surya_graph/surya_graph_RuleConditionalTransferLight.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleWhitelistWrapper.sol](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransfer.sol.png)
+![surya_inheritance_RuleConditionalTransferLight](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLight.sol.png)
+
+### Flow with a CMTAT token
+
+The sequence below shows the full *Vinkulierung* workflow: a holder requests a transfer, an operator approves it, and the CMTAT token (with this rule configured in its RuleEngine) validates the approved request and marks it executed. The optional `AUTOMATIC_TRANSFER` path where the rule performs the transfer on approval is also shown.
+
+![RuleConditionalTransfer flow with a CMTAT token](../img/rule-conditional-transfer-flow.png)
+
+_Diagram source: doc/img/rule-conditional-transfer-flow.puml._
 
 ### Workflow
 
@@ -167,7 +175,7 @@ The default admin is the address put in argument(`admin`) inside the constructor
 
 ### Graph
 
-![surya_graph_Whitelist](../surya/surya_graph/surya_graph_RuleConditionalTransfer.sol.png)
+![surya_graph_RuleConditionalTransferLight](../surya/surya_graph/surya_graph_RuleConditionalTransferLight.sol.png)
 
 
 

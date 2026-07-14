@@ -1,0 +1,159 @@
+// SPDX-License-Identifier: MPL-2.0
+pragma solidity ^0.8.20;
+
+import {Test} from "forge-std/Test.sol";
+import {HelperContract} from "../HelperContract.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {RuleInterfaceId} from "RuleEngine/modules/library/RuleInterfaceId.sol";
+
+import {AddressListInterfaceId} from "src/rules/interfaces/library/AddressListInterfaceId.sol";
+import {IAddressListInterfaceIdHelper, IAddressListAllFunctions} from "src/mocks/IAddressListInterfaceIdHelper.sol";
+import {IIdentityRegistryContains} from "src/rules/interfaces/IIdentityRegistry.sol";
+
+import {RuleWhitelist} from "src/rules/validation/deployment/RuleWhitelist.sol";
+import {RuleWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleWhitelistOwnable2Step.sol";
+import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
+import {RuleBlacklistOwnable2Step} from "src/rules/validation/deployment/RuleBlacklistOwnable2Step.sol";
+import {RuleSpenderWhitelist} from "src/rules/validation/deployment/RuleSpenderWhitelist.sol";
+import {RuleSpenderWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleSpenderWhitelistOwnable2Step.sol";
+import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelistWrapper.sol";
+import {RuleMaxTotalSupply} from "src/rules/validation/deployment/RuleMaxTotalSupply.sol";
+import {TotalSupplyMock} from "src/mocks/TotalSupplyMock.sol";
+
+/**
+ * @title AddressListInterfaceIdTest
+ * @notice Verifies the pre-computed {AddressListInterfaceId} constant and its advertisement.
+ * @dev First step of improvement I-4: every rule that implements {IAddressList} must advertise it
+ *      via ERC-165, so that `RuleWhitelistWrapper` can later interface-check its child rules
+ *      (threat `WW-2`, finding F-5).
+ */
+contract AddressListInterfaceIdTest is Test, HelperContract {
+    address private constant FORWARDER = address(0);
+
+    IAddressListInterfaceIdHelper private helper;
+
+    function setUp() public {
+        helper = new IAddressListInterfaceIdHelper();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        THE CONSTANT ITSELF
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice The library constant equals the XOR of every selector in the IAddressList hierarchy.
+     */
+    function test_ConstantMatchesFlattenedInterfaceId() public view {
+        assertEq(
+            AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID,
+            type(IAddressListAllFunctions).interfaceId,
+            "constant does not match the flattened hierarchy"
+        );
+        assertEq(AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID, bytes4(0x5d10e182));
+    }
+
+    /**
+     * @notice Guards the reason the flat-helper pattern is required: `type(IAddressList).interfaceId`
+     *         omits `contains(address)`, inherited from `IIdentityRegistryContains`, so it must NOT
+     *         be used for the ERC-165 check.
+     */
+    function test_NaiveInterfaceIdIsWrongAndMustNotBeUsed() public view {
+        bytes4 naive = helper.getIAddressListInterfaceId();
+        bytes4 full = AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID;
+
+        assertTrue(naive != full, "naive id unexpectedly equals the full id");
+        // The difference is exactly the inherited selector, `contains(address)`.
+        assertEq(naive ^ full, helper.getIIdentityRegistryContainsInterfaceId());
+        assertEq(naive ^ full, IIdentityRegistryContains.contains.selector);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    RULES THAT MUST ADVERTISE IT
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Every rule backed by an address set advertises IAddressList (AccessControl variants).
+     */
+    function test_AddressSetRulesAdvertiseIAddressList() public {
+        bytes4 id = AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID;
+
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        assertTrue(
+            new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false).supportsInterface(id), "RuleWhitelist"
+        );
+        assertTrue(new RuleBlacklist(DEFAULT_ADMIN_ADDRESS, FORWARDER).supportsInterface(id), "RuleBlacklist");
+        assertTrue(
+            new RuleSpenderWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER).supportsInterface(id), "RuleSpenderWhitelist"
+        );
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Same for the Ownable2Step variants — the advertisement lives in the shared base,
+     *         so both access-control flavours must agree.
+     */
+    function test_AddressSetRulesOwnable2StepAdvertiseIAddressList() public {
+        bytes4 id = AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID;
+
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        assertTrue(
+            new RuleWhitelistOwnable2Step(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false).supportsInterface(id),
+            "RuleWhitelistOwnable2Step"
+        );
+        assertTrue(
+            new RuleBlacklistOwnable2Step(DEFAULT_ADMIN_ADDRESS, FORWARDER).supportsInterface(id),
+            "RuleBlacklistOwnable2Step"
+        );
+        assertTrue(
+            new RuleSpenderWhitelistOwnable2Step(DEFAULT_ADMIN_ADDRESS, FORWARDER).supportsInterface(id),
+            "RuleSpenderWhitelistOwnable2Step"
+        );
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Advertising IAddressList must not break the existing ERC-165 advertisements.
+     */
+    function test_AdvertisementDoesNotBreakExistingInterfaces() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelist rule = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, false);
+
+        assertTrue(rule.supportsInterface(type(IERC165).interfaceId), "IERC165");
+        assertTrue(rule.supportsInterface(RuleInterfaceId.IRULE_INTERFACE_ID), "IRule");
+        assertFalse(rule.supportsInterface(bytes4(0xdeadbeef)), "unknown interface");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    RULES THAT MUST *NOT* ADVERTISE IT
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice A rule with no address set must not claim IAddressList — this is precisely the case
+     *         the wrapper's future `_checkRule` guard (I-4) needs to reject.
+     */
+    function test_NonAddressListRuleDoesNotAdvertiseIt() public {
+        TotalSupplyMock token = new TotalSupplyMock();
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleMaxTotalSupply rule = new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, address(token), 1000);
+
+        assertFalse(
+            rule.supportsInterface(AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID),
+            "RuleMaxTotalSupply must not claim IAddressList"
+        );
+    }
+
+    /**
+     * @notice `RuleWhitelistWrapper` aggregates child address lists but exposes no address set of its
+     *         own (no `addAddress`/`areAddressesListed`), so it correctly does NOT advertise
+     *         IAddressList — meaning a wrapper cannot be nested as a child of another wrapper.
+     */
+    function test_WrapperDoesNotAdvertiseIAddressList() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        RuleWhitelistWrapper wrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, FORWARDER, false, true);
+
+        assertFalse(
+            wrapper.supportsInterface(AddressListInterfaceId.IADDRESS_LIST_INTERFACE_ID),
+            "wrapper is not itself an address list"
+        );
+    }
+}

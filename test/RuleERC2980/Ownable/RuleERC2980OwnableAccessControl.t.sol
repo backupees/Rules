@@ -133,8 +133,12 @@ contract RuleERC2980OwnableAccessControl is Test, HelperContract {
         rule.addFrozenlistAddresses(addrs);
     }
 
-    function testAllowBurnConstructorWhitelistsZeroAddress() public {
+    /// @notice `allowMintBurn` permits burning via the explicit flag, without listing the sentinel.
+    function testAllowMintBurnConstructorSetsFlagsAndDoesNotListZeroAddress() public {
         RuleERC2980Ownable2Step burnEnabled = new RuleERC2980Ownable2Step(OWNER, ZERO_ADDRESS, true);
-        assertTrue(burnEnabled.isWhitelisted(ZERO_ADDRESS));
+        assertTrue(burnEnabled.allowMint());
+        assertTrue(burnEnabled.allowBurn());
+        assertFalse(burnEnabled.isWhitelisted(ZERO_ADDRESS));
+        assertFalse(burnEnabled.whitelist(ZERO_ADDRESS));
     }
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {CMTATStandalone} from "CMTAT/deployment/CMTATStandalone.sol";
+import {CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
 import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
 import {RuleSanctionsList} from "src/rules/validation/deployment/RuleSanctionsList.sol";
@@ -39,7 +39,7 @@ contract DeployCMTATWithBlacklistAndSanctionsListTest is
     uint8 constant TRANSFER_OK = 0;
     uint256 constant INITIAL_BALANCE = 100;
 
-    CMTATStandalone token;
+    CMTATStandardStandalone token;
     RuleEngine ruleEngine;
     RuleBlacklist ruleBlacklist;
     RuleSanctionsList ruleSanctionsList;
@@ -255,8 +255,9 @@ contract DeployCMTATWithBlacklistAndSanctionsListTest is
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                RuleBlacklist_InvalidTransfer.selector,
+                RuleBlacklist_InvalidTransferFrom.selector,
                 address(ruleBlacklist),
+                ADMIN,
                 address(0),
                 ADDRESS3,
                 amount,

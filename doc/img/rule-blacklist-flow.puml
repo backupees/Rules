@@ -1,0 +1,38 @@
+@startuml
+title RuleBlacklist — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleBlacklist\n(blocked addresses)" as rule
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> rule : detectTransferRestrictionFrom(spender, from, to, value)
+  note right of rule
+    isBlacklisted(from)?
+    isBlacklisted(to)?
+    isBlacklisted(spender)?  (transferFrom)
+  end note
+  alt from blacklisted
+    rule --> cmtat : 36 (CODE_ADDRESS_FROM_IS_BLACKLISTED)
+  else to blacklisted
+    rule --> cmtat : 37 (CODE_ADDRESS_TO_IS_BLACKLISTED)
+  else spender blacklisted
+    rule --> cmtat : 38 (CODE_ADDRESS_SPENDER_IS_BLACKLISTED)
+  else none blacklisted
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

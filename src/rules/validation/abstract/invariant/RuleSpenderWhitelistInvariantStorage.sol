@@ -3,9 +3,18 @@ pragma solidity ^0.8.20;
 
 import {RuleSharedInvariantStorage} from "./RuleSharedInvariantStorage.sol";
 
+/**
+ * @title RuleSpenderWhitelistInvariantStorage — constants and error for the spender-whitelist rule.
+ */
 abstract contract RuleSpenderWhitelistInvariantStorage is RuleSharedInvariantStorage {
     // It is very important that each rule uses an unique code
+    /**
+     * @notice Restriction code returned when the spender is not whitelisted.
+     */
     uint8 public constant CODE_ADDRESS_SPENDER_NOT_WHITELISTED = 66;
+    /**
+     * @notice Restriction message returned when the spender is not whitelisted.
+     */
     string constant TEXT_ADDRESS_SPENDER_NOT_WHITELISTED = "SpenderWhitelist: Spender is not whitelisted";
 
     error RuleSpenderWhitelist_InvalidTransferFrom(

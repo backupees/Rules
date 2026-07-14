@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
+/**
+ * @title ITransferContext — transfer context structs and post-transfer hooks.
+ */
 interface ITransferContext {
     /**
      * @notice Transfer context for unified rule entrypoints.
@@ -41,7 +44,15 @@ interface ITransferContext {
         bytes data;
     }
 
+    /**
+     * @notice Notifies the rule of an executed multi-token transfer.
+     * @param ctx The multi-token transfer context describing the transfer.
+     */
     function transferred(MultiTokenTransferContext calldata ctx) external;
 
+    /**
+     * @notice Notifies the rule of an executed fungible transfer.
+     * @param ctx The fungible transfer context describing the transfer.
+     */
     function transferred(FungibleTransferContext calldata ctx) external;
 }

@@ -64,10 +64,50 @@ contract RuleWhitelistTest is Test, HelperContract {
         assertEq(resBool, true);
     }
 
-    function testAllowMintBurnConstructorListsZeroAddress() public {
+    /// @notice `allowMintBurn` sets the explicit flags and NEVER lists the zero address, so the
+    ///         standardized identity getters stay truthful (ERC-3643: `isVerified` means
+    ///         "valid investor holding the required claims"; the zero address is neither).
+    function testAllowMintBurnConstructorSetsFlagsAndDoesNotListZeroAddress() public {
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        RuleWhitelist burnEnabledRule = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
-        assertTrue(burnEnabledRule.isAddressListed(ZERO_ADDRESS));
+        RuleWhitelist mintBurnEnabled = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);
+
+        assertTrue(mintBurnEnabled.allowMint());
+        assertTrue(mintBurnEnabled.allowBurn());
+
+        // The sentinel is NOT a list member, and the getters say so.
+        assertFalse(mintBurnEnabled.isAddressListed(ZERO_ADDRESS));
+        assertFalse(mintBurnEnabled.isVerified(ZERO_ADDRESS));
+        assertFalse(mintBurnEnabled.contains(ZERO_ADDRESS));
+        assertEq(mintBurnEnabled.listedAddressCount(), 0);
+    }
+
+    /// @notice With `allowMintBurn = false` the operations are refused with dedicated codes.
+    function testMintBurnDisabledReturnsDedicatedCodes() public {
+        vm.startPrank(WHITELIST_OPERATOR_ADDRESS);
+        RuleWhitelist noMintBurn = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, false, false);
+        noMintBurn.addAddress(ADDRESS1);
+        vm.stopPrank();
+
+        assertFalse(noMintBurn.allowMint());
+        assertFalse(noMintBurn.allowBurn());
+        assertEq(noMintBurn.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 10), CODE_MINT_NOT_ALLOWED);
+        assertEq(noMintBurn.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 10), CODE_BURN_NOT_ALLOWED);
+    }
+
+    /// @notice The flags are independently settable at runtime (e.g. close issuance, keep redemptions).
+    function testAllowMintAndAllowBurnAreIndependentlySettable() public {
+        vm.startPrank(WHITELIST_OPERATOR_ADDRESS);
+        RuleWhitelist rule = new RuleWhitelist(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, false, true);
+        rule.addAddress(ADDRESS1);
+
+        // Permanently close issuance, still allow redemption.
+        rule.setAllowMint(false);
+        vm.stopPrank();
+
+        assertFalse(rule.allowMint());
+        assertTrue(rule.allowBurn());
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 10), CODE_MINT_NOT_ALLOWED);
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 10), TRANSFER_OK);
     }
 
     function testContainsReflectsListingStatus() public {

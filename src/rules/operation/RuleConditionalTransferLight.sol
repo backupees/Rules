@@ -10,13 +10,18 @@ import {IERC7551Compliance} from "CMTAT/interfaces/tokenization/draft-IERC7551.s
 import {IERC3643ComplianceFull} from "../../mocks/IERC3643ComplianceFull.sol";
 import {AccessControlModuleStandalone} from "../../modules/AccessControlModuleStandalone.sol";
 import {RuleConditionalTransferLightBase} from "./abstract/RuleConditionalTransferLightBase.sol";
+import {ERC3643ComplianceRolesStorage} from "RuleEngine/modules/library/ERC3643ComplianceRolesStorage.sol";
 
 /**
  * @title ConditionalTransferLight
  * @dev Requires operator approval for each transfer. Same transfer (from, to, value)
  *      can be approved multiple times to allow repeated transfers.
  */
-contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleConditionalTransferLightBase {
+contract RuleConditionalTransferLight is
+    AccessControlModuleStandalone,
+    RuleConditionalTransferLightBase,
+    ERC3643ComplianceRolesStorage
+{
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -30,6 +35,9 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @inheritdoc IERC165
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -39,8 +47,7 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
     {
         return interfaceId == RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID
             || interfaceId == ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID
-            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID
-            || interfaceId == type(IERC7551Compliance).interfaceId
+            || interfaceId == RuleInterfaceId.IRULE_INTERFACE_ID || interfaceId == type(IERC7551Compliance).interfaceId
             || interfaceId == type(IERC3643ComplianceFull).interfaceId
             || AccessControlEnumerable.supportsInterface(interfaceId);
     }
@@ -49,7 +56,24 @@ contract RuleConditionalTransferLight is AccessControlModuleStandalone, RuleCond
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
+    function _onlyComplianceManager() internal view virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
+
+    /**
+     * @notice Reverts unless the caller holds `OPERATOR_ROLE`.
+     */
     function _authorizeTransferApproval() internal view virtual override onlyRole(OPERATOR_ROLE) {}
 
-    function _onlyComplianceManager() internal virtual override onlyRole(COMPLIANCE_MANAGER_ROLE) {}
+    /**
+     * @notice Reverts unless the caller holds `COMPLIANCE_MANAGER_ROLE`.
+     */
+    function _authorizeComplianceBindingChange(address)
+        internal
+        view
+        virtual
+        override
+        onlyRole(COMPLIANCE_MANAGER_ROLE)
+    {}
 }

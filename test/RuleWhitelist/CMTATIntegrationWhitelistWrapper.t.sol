@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
-import {CMTATDeployment} from "RuleEngine/../test/utils/CMTATDeployment.sol";
+import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 import {RuleWhitelist} from "src/rules/validation/deployment/RuleWhitelist.sol";
 import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelistWrapper.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
@@ -27,7 +27,7 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
         ruleWhitelist = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true, false);
         ruleWhitelist2 = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true, false);
         ruleWhitelist3 = new RuleWhitelist(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true, false);
-        ruleWhitelistWrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true);
+        ruleWhitelistWrapper = new RuleWhitelistWrapper(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, true, true);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleWhitelistWrapper.addRule(ruleWhitelist);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
@@ -59,7 +59,7 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
     function testCannotDeployContractIfAdminAddressIsZero() public {
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
         vm.expectRevert(AccessControlModuleStandalone.AccessControlModuleStandalone_AddressZeroNotAllowed.selector);
-        ruleWhitelistWrapper = new RuleWhitelistWrapper(ZERO_ADDRESS, ZERO_ADDRESS, true);
+        ruleWhitelistWrapper = new RuleWhitelistWrapper(ZERO_ADDRESS, ZERO_ADDRESS, true, true);
     }
 
     /**
@@ -272,14 +272,17 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
 
     function testCanMint() public {
         // Arrange
-        // Add address zero to the whitelist
+        // Permit minting via the explicit flag on the WRAPPER (the zero address is never whitelisted)
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleWhitelist.addAddress(ZERO_ADDRESS);
+        ruleWhitelistWrapper.setAllowMint(true);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleWhitelist.addAddress(ADDRESS1);
-        // Arrange - Assert
-        resBool = ruleWhitelist.isAddressListed(ZERO_ADDRESS);
-        assertEq(resBool, true);
+        // Arrange - Assert: the sentinel is NOT listed in the child; the WRAPPER's explicit flag is
+        // what permits the mint, and the recipient must still be listed in some child.
+        assertFalse(ruleWhitelist.isAddressListed(ZERO_ADDRESS));
+        assertTrue(ruleWhitelistWrapper.allowMint());
+        assertTrue(ruleWhitelistWrapper.isVerified(ADDRESS1));
+        assertFalse(ruleWhitelistWrapper.isVerified(ZERO_ADDRESS));
 
         // Act
         vm.prank(DEFAULT_ADMIN_ADDRESS);

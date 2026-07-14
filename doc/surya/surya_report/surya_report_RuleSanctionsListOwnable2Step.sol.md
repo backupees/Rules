@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleSanctionsListOwnable2Step.sol | 8e57be4539873118b38e561331a5daa212bc68f3 |
+| ./rules/validation/deployment/RuleSanctionsListOwnable2Step.sol | 0885c8f3fd637c7131ce04cc5a736b9acb60c616 |
 
 
 ### Contracts Description Table
@@ -15,9 +15,10 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleSanctionsListOwnable2Step** | Implementation | RuleSanctionsListBase, Ownable2Step |||
+| **RuleSanctionsListOwnable2Step** | Implementation | RuleSanctionsListBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleSanctionsListBase Ownable |
 | └ | _authorizeSanctionListManager | Internal 🔒 |   | onlyOwner |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

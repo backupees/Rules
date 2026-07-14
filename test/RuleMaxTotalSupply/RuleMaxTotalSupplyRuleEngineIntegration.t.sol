@@ -61,18 +61,19 @@ contract RuleMaxTotalSupplyRuleEngineIntegration is Test, HelperContract {
         assertEq(resBool, false);
     }
 
+    /// @notice Full-domain fuzz: `value`, `currentSupply` and `maxSupply` roam the entire uint256
+    ///         range, including the region where `currentSupply + value` overflows. The view must
+    ///         return a code and never revert (regression guard for the overflow fix).
     function testFuzz_MaxTotalSupplyBounds(uint256 currentSupply, uint256 value, uint256 maxSupply) public {
-        currentSupply = bound(currentSupply, 0, type(uint256).max - 1);
-        value = bound(value, 0, type(uint256).max - currentSupply);
-        maxSupply = bound(maxSupply, 0, type(uint256).max);
-
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleMaxTotalSupply.setMaxTotalSupply(maxSupply);
 
         token.setTotalSupply(currentSupply);
         resUint8 = ruleEngineMock.detectTransferRestriction(address(0), ADDRESS1, value);
 
-        if (currentSupply + value > maxSupply) {
+        // Overflow-safe reference computation, mirroring the rule's own logic.
+        bool exceeds = currentSupply > maxSupply || value > maxSupply - currentSupply;
+        if (exceeds) {
             assertEq(resUint8, CODE_MAX_TOTAL_SUPPLY_EXCEEDED);
         } else {
             assertEq(resUint8, TRANSFER_OK);

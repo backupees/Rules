@@ -17,16 +17,89 @@ import {ITransferContext} from "../../../interfaces/ITransferContext.sol";
  * @dev Delegates tokenId overloads to RuleTransferValidation's internal hooks.
  */
 abstract contract RuleNFTAdapter is RuleTransferValidation, IERC7943NonFungibleComplianceExtend, ITransferContext {
+    /**
+     * @notice Selector of the ERC-3643 compliance `transferred` hook.
+     */
     bytes4 internal constant TRANSFERRED_SELECTOR_ERC3643 = IERC3643IComplianceContract.transferred.selector;
+    /**
+     * @notice Selector of the RuleEngine `transferred` hook.
+     */
     bytes4 internal constant TRANSFERRED_SELECTOR_RULE_ENGINE = IRuleEngine.transferred.selector;
+    /**
+     * @notice Selector of the ERC-7943 `transferred(from,to,tokenId,value)` hook.
+     */
     bytes4 internal constant TRANSFERRED_SELECTOR_ERC7943 =
         bytes4(keccak256("transferred(address,address,uint256,uint256)"));
+    /**
+     * @notice Selector of the ERC-7943 `transferred(spender,from,to,tokenId,value)` hook.
+     */
     bytes4 internal constant TRANSFERRED_SELECTOR_ERC7943_FROM =
         bytes4(keccak256("transferred(address,address,address,uint256,uint256)"));
 
     /*//////////////////////////////////////////////////////////////
+                        EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @inheritdoc ITransferContext
+     */
+    function transferred(MultiTokenTransferContext calldata ctx) external virtual override {
+        if (ctx.sender != address(0) && ctx.sender != ctx.from) {
+            _transferredFrom(ctx.sender, ctx.from, ctx.to, ctx.value);
+        } else {
+            _transferred(ctx.from, ctx.to, ctx.value);
+        }
+    }
+
+    /**
+     * @inheritdoc ITransferContext
+     */
+    function transferred(FungibleTransferContext calldata ctx) external virtual override {
+        if (ctx.sender != address(0) && ctx.sender != ctx.from) {
+            _transferredFrom(ctx.sender, ctx.from, ctx.to, ctx.value);
+        } else {
+            _transferred(ctx.from, ctx.to, ctx.value);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @inheritdoc IERC7943NonFungibleComplianceExtend
+     */
+    function transferred(
+        address from,
+        address to,
+        uint256,
+        /* tokenId */
+        uint256 value
+    )
+        public
+        virtual
+        override(IERC7943NonFungibleComplianceExtend)
+    {
+        _transferred(from, to, value);
+    }
+
+    /**
+     * @inheritdoc IERC7943NonFungibleComplianceExtend
+     */
+    function transferred(
+        address spender,
+        address from,
+        address to,
+        uint256,
+        /* tokenId */
+        uint256 value
+    )
+        public
+        virtual
+        override(IERC7943NonFungibleComplianceExtend)
+    {
+        _transferredFrom(spender, from, to, value);
+    }
 
     /**
      * @inheritdoc IERC7943NonFungibleComplianceExtend
@@ -57,7 +130,13 @@ abstract contract RuleNFTAdapter is RuleTransferValidation, IERC7943NonFungibleC
         uint256,
         /* tokenId */
         uint256 value
-    ) public view virtual override(IERC7943NonFungibleComplianceExtend) returns (uint8) {
+    )
+        public
+        view
+        virtual
+        override(IERC7943NonFungibleComplianceExtend)
+        returns (uint8)
+    {
         return _detectTransferRestrictionFrom(spender, from, to, value);
     }
 
@@ -100,74 +179,24 @@ abstract contract RuleNFTAdapter is RuleTransferValidation, IERC7943NonFungibleC
             == uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
-    /**
-     * @inheritdoc IERC7943NonFungibleComplianceExtend
-     */
-    function transferred(
-        address from,
-        address to,
-        uint256,
-        /* tokenId */
-        uint256 value
-    )
-        public
-        virtual
-        override(IERC7943NonFungibleComplianceExtend)
-    {
-        _transferred(from, to, value);
-    }
-
-    /**
-     * @inheritdoc IERC7943NonFungibleComplianceExtend
-     */
-    function transferred(
-        address spender,
-        address from,
-        address to,
-        uint256,
-        /* tokenId */
-        uint256 value
-    )
-        public
-        virtual
-        override(IERC7943NonFungibleComplianceExtend)
-    {
-        _transferredFrom(spender, from, to, value);
-    }
-
-    /**
-     * @inheritdoc ITransferContext
-     */
-    function transferred(MultiTokenTransferContext calldata ctx) external virtual override {
-        if (ctx.sender != address(0) && ctx.sender != ctx.from) {
-            _transferredFrom(ctx.sender, ctx.from, ctx.to, ctx.value);
-        } else {
-            _transferred(ctx.from, ctx.to, ctx.value);
-        }
-    }
-
-    /**
-     * @inheritdoc ITransferContext
-     */
-    function transferred(FungibleTransferContext calldata ctx) external virtual override {
-        if (ctx.sender != address(0) && ctx.sender != ctx.from) {
-            _transferredFrom(ctx.sender, ctx.from, ctx.to, ctx.value);
-        } else {
-            _transferred(ctx.from, ctx.to, ctx.value);
-        }
-    }
-
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Internal hook for post-transfer validation or state updates.
+     * @param from Address tokens are transferred from.
+     * @param to Address tokens are transferred to.
+     * @param value Amount transferred.
      */
     function _transferred(address from, address to, uint256 value) internal virtual;
 
     /**
      * @notice Internal hook for post-transfer validation or state updates (spender-aware).
+     * @param spender Address executing the transfer on behalf of `from`.
+     * @param from Address tokens are transferred from.
+     * @param to Address tokens are transferred to.
+     * @param value Amount transferred.
      */
     function _transferredFrom(address spender, address from, address to, uint256 value) internal virtual;
 }

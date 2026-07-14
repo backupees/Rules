@@ -7,6 +7,9 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
+/**
+ * @title AccessControlModuleStandalone — base RBAC module where the default admin implicitly holds all roles.
+ */
 abstract contract AccessControlModuleStandalone is AccessControlEnumerable {
     error AccessControlModuleStandalone_AddressZeroNotAllowed();
 
@@ -37,7 +40,8 @@ abstract contract AccessControlModuleStandalone is AccessControlEnumerable {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Returns `true` if `account` has been granted `role`.
+     * @inheritdoc IAccessControl
+     * @dev The default admin is treated as holding every role.
      */
     function hasRole(bytes32 role, address account)
         public

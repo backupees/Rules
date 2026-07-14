@@ -21,6 +21,7 @@ contract RuleSanctionsList is AccessControlModuleStandalone, RuleSanctionsListBa
     /**
      * @param admin Address of the contract (Access Control)
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
+     * @param sanctionContractOracle_ Chainalysis sanctions oracle used to screen addresses
      */
     constructor(address admin, address forwarderIrrevocable, ISanctionsList sanctionContractOracle_)
         AccessControlModuleStandalone(admin)
@@ -31,6 +32,11 @@ contract RuleSanctionsList is AccessControlModuleStandalone, RuleSanctionsListBa
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Indicates whether this contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -46,20 +52,35 @@ contract RuleSanctionsList is AccessControlModuleStandalone, RuleSanctionsListBa
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Restricts sanctions list management to holders of SANCTIONLIST_ROLE.
+     */
     function _authorizeSanctionListManager() internal view virtual override onlyRole(SANCTIONLIST_ROLE) {}
 
     /*//////////////////////////////////////////////////////////////
                            INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.
+     * @return sender The address of the message sender.
+     */
     function _msgSender() internal view virtual override(ERC2771Context, Context) returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
+    /**
+     * @notice Returns the message calldata, accounting for meta-transaction (ERC-2771) context.
+     * @return The message calldata.
+     */
     function _msgData() internal view virtual override(ERC2771Context, Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
+    /**
+     * @notice Returns the length of the context suffix appended by the forwarder.
+     * @return The context suffix length in bytes.
+     */
     function _contextSuffixLength() internal view virtual override(ERC2771Context, Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();
     }

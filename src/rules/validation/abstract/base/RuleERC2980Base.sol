@@ -28,8 +28,8 @@ import {IRule} from "RuleEngine/interfaces/IRule.sol";
  */
 abstract contract RuleERC2980Base is
     MetaTxModuleStandalone,
-    RuleERC2980Internal,
     RuleERC2980InvariantStorage,
+    RuleERC2980Internal,
     RuleNFTAdapter,
     IERC2980,
     IIdentityRegistryVerified
@@ -38,16 +38,44 @@ abstract contract RuleERC2980Base is
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address forwarderIrrevocable, bool allowBurn) MetaTxModuleStandalone(forwarderIrrevocable) {
-        if (allowBurn) {
-            _addWhitelistAddress(address(0));
-            emit AddWhitelistAddress(address(0));
-        }
+    /**
+     * @notice Whether this rule permits minting (`from == address(0)`).
+     * @dev Mint/burn permission is an EXPLICIT flag, never whitelist membership of `address(0)`.
+     *      The zero address is the ERC-20 sentinel, not a participant: whitelisting it made the
+     *      MANDATORY ERC-2980 getter `whitelist(address(0))` return `true`, a spec violation.
+     *      A permitted mint still requires the RECIPIENT to be whitelisted and not frozen.
+     */
+    bool public allowMint;
+
+    /**
+     * @notice Whether this rule permits burning (`to == address(0)`).
+     * @dev See {allowMint}. A permitted burn still requires the SENDER not to be frozen.
+     */
+    bool public allowBurn;
+
+    /**
+     * @notice Initializes the rule.
+     * @dev `allowMintBurn` sets BOTH {allowMint} and {allowBurn} — the common case, since mint and
+     *      burn are normally permitted. Use {setAllowMint} / {setAllowBurn} afterwards for
+     *      independent control (e.g. to permanently close issuance while still allowing redemptions).
+     * @param forwarderIrrevocable Trusted ERC-2771 forwarder address, set permanently at deployment.
+     * @param allowMintBurn When true, permits both minting and burning.
+     */
+    constructor(address forwarderIrrevocable, bool allowMintBurn) MetaTxModuleStandalone(forwarderIrrevocable) {
+        allowMint = allowMintBurn;
+        allowBurn = allowMintBurn;
+        emit AllowMintUpdated(allowMintBurn);
+        emit AllowBurnUpdated(allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
+
+    modifier onlyMintBurnManager() {
+        _authorizeMintBurnManager();
+        _;
+    }
 
     modifier onlyWhitelistAdd() {
         _authorizeWhitelistAdd();
@@ -69,11 +97,6 @@ abstract contract RuleERC2980Base is
         _;
     }
 
-    function _authorizeWhitelistAdd() internal view virtual;
-    function _authorizeWhitelistRemove() internal view virtual;
-    function _authorizeFrozenlistAdd() internal view virtual;
-    function _authorizeFrozenlistRemove() internal view virtual;
-
     /*//////////////////////////////////////////////////////////////
                        WHITELIST MANAGEMENT
     //////////////////////////////////////////////////////////////*/
@@ -81,6 +104,7 @@ abstract contract RuleERC2980Base is
     /**
      * @notice Adds multiple addresses to the whitelist.
      * @dev Does not revert if an address is already listed.
+     * @param targetAddresses Addresses to add to the whitelist.
      */
     function addWhitelistAddresses(address[] calldata targetAddresses) public onlyWhitelistAdd {
         _addWhitelistAddresses(targetAddresses);
@@ -90,6 +114,7 @@ abstract contract RuleERC2980Base is
     /**
      * @notice Removes multiple addresses from the whitelist.
      * @dev Does not revert if an address is not listed.
+     * @param targetAddresses Addresses to remove from the whitelist.
      */
     function removeWhitelistAddresses(address[] calldata targetAddresses) public onlyWhitelistRemove {
         _removeWhitelistAddresses(targetAddresses);
@@ -103,9 +128,11 @@ abstract contract RuleERC2980Base is
      * Deviation from ERC-2980 `Whitelistable` example interface: the spec's `addAddressToWhitelist`
      * returns `false` on duplicates instead of reverting. This implementation follows the codebase
      * convention of reverting on invalid single-item operations.
+     * @param targetAddress Address to add to the whitelist.
      */
     function addWhitelistAddress(address targetAddress) public onlyWhitelistAdd {
-        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyListed());
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
+        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
         _addWhitelistAddress(targetAddress);
         emit AddWhitelistAddress(targetAddress);
     }
@@ -117,9 +144,10 @@ abstract contract RuleERC2980Base is
      * Deviation from ERC-2980 `Whitelistable` example interface: the spec's `removeAddressFromWhitelist`
      * returns `false` when not found instead of reverting. This implementation follows the codebase
      * convention of reverting on invalid single-item operations.
+     * @param targetAddress Address to remove from the whitelist.
      */
     function removeWhitelistAddress(address targetAddress) public onlyWhitelistRemove {
-        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotFound());
+        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotWhitelisted());
         _removeWhitelistAddress(targetAddress);
         emit RemoveWhitelistAddress(targetAddress);
     }
@@ -131,6 +159,7 @@ abstract contract RuleERC2980Base is
     /**
      * @notice Adds multiple addresses to the frozenlist.
      * @dev Does not revert if an address is already listed.
+     * @param targetAddresses Addresses to add to the frozenlist.
      */
     function addFrozenlistAddresses(address[] calldata targetAddresses) public onlyFrozenlistAdd {
         _addFrozenlistAddresses(targetAddresses);
@@ -140,6 +169,7 @@ abstract contract RuleERC2980Base is
     /**
      * @notice Removes multiple addresses from the frozenlist.
      * @dev Does not revert if an address is not listed.
+     * @param targetAddresses Addresses to remove from the frozenlist.
      */
     function removeFrozenlistAddresses(address[] calldata targetAddresses) public onlyFrozenlistRemove {
         _removeFrozenlistAddresses(targetAddresses);
@@ -153,9 +183,11 @@ abstract contract RuleERC2980Base is
      * Deviation from ERC-2980 `Freezable` example interface: the spec's `addAddressToFrozenlist`
      * returns `false` on duplicates instead of reverting. This implementation follows the codebase
      * convention of reverting on invalid single-item operations.
+     * @param targetAddress Address to add to the frozenlist.
      */
     function addFrozenlistAddress(address targetAddress) public onlyFrozenlistAdd {
-        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyListed());
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
+        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyFrozen());
         _addFrozenlistAddress(targetAddress);
         emit AddFrozenlistAddress(targetAddress);
     }
@@ -167,9 +199,10 @@ abstract contract RuleERC2980Base is
      * Deviation from ERC-2980 `Freezable` example interface: the spec's `removeAddressFromFrozenlist`
      * returns `false` when not found instead of reverting. This implementation follows the codebase
      * convention of reverting on invalid single-item operations.
+     * @param targetAddress Address to remove from the frozenlist.
      */
     function removeFrozenlistAddress(address targetAddress) public onlyFrozenlistRemove {
-        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFound());
+        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFrozen());
         _removeFrozenlistAddress(targetAddress);
         emit RemoveFrozenlistAddress(targetAddress);
     }
@@ -178,6 +211,27 @@ abstract contract RuleERC2980Base is
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Enables or disables minting through this rule.
+     * @param value The new value of the `allowMint` flag.
+     */
+    function setAllowMint(bool value) public virtual onlyMintBurnManager {
+        allowMint = value;
+        emit AllowMintUpdated(value);
+    }
+
+    /**
+     * @notice Enables or disables burning through this rule.
+     * @param value The new value of the `allowBurn` flag.
+     */
+    function setAllowBurn(bool value) public virtual onlyMintBurnManager {
+        allowBurn = value;
+        emit AllowBurnUpdated(value);
+    }
+
+    /**
+     * @inheritdoc IERC3643IComplianceContract
+     */
     function transferred(address from, address to, uint256 value)
         public
         view
@@ -187,6 +241,9 @@ abstract contract RuleERC2980Base is
         _transferred(from, to, value);
     }
 
+    /**
+     * @inheritdoc IRuleEngine
+     */
     function transferred(address spender, address from, address to, uint256 value)
         public
         view
@@ -196,6 +253,9 @@ abstract contract RuleERC2980Base is
         _transferredFrom(spender, from, to, value);
     }
 
+    /**
+     * @inheritdoc IRule
+     */
     function canReturnTransferRestrictionCode(uint8 restrictionCode)
         public
         pure
@@ -204,9 +264,13 @@ abstract contract RuleERC2980Base is
         returns (bool)
     {
         return restrictionCode == CODE_ADDRESS_FROM_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_IS_FROZEN
-            || restrictionCode == CODE_ADDRESS_SPENDER_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED;
+            || restrictionCode == CODE_ADDRESS_SPENDER_IS_FROZEN || restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED
+            || restrictionCode == CODE_MINT_NOT_ALLOWED || restrictionCode == CODE_BURN_NOT_ALLOWED;
     }
 
+    /**
+     * @inheritdoc IERC1404
+     */
     function messageForTransferRestriction(uint8 restrictionCode)
         public
         pure
@@ -222,17 +286,25 @@ abstract contract RuleERC2980Base is
             return TEXT_ADDRESS_SPENDER_IS_FROZEN;
         } else if (restrictionCode == CODE_ADDRESS_TO_NOT_WHITELISTED) {
             return TEXT_ADDRESS_TO_NOT_WHITELISTED;
+        } else if (restrictionCode == CODE_MINT_NOT_ALLOWED) {
+            return TEXT_MINT_NOT_ALLOWED;
+        } else if (restrictionCode == CODE_BURN_NOT_ALLOWED) {
+            return TEXT_BURN_NOT_ALLOWED;
         } else {
             return TEXT_CODE_NOT_FOUND;
         }
     }
 
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
         return RuleTransferValidation.supportsInterface(interfaceId);
     }
 
     /**
      * @notice Returns the number of whitelisted addresses.
+     * @return The count of addresses currently in the whitelist.
      */
     function whitelistAddressCount() public view returns (uint256) {
         return _whitelistCount();
@@ -240,6 +312,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Returns true if the address is in the whitelist.
+     * @param targetAddress Address to check.
+     * @return True if the address is whitelisted.
      */
     function isWhitelisted(address targetAddress) public view returns (bool) {
         return _isWhitelisted(targetAddress);
@@ -247,6 +321,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice ERC-2980 getter: returns true if the address is whitelisted.
+     * @param _operator Address to check.
+     * @return True if the address is whitelisted.
      */
     function whitelist(address _operator) public view virtual override(IERC2980) returns (bool) {
         return _isWhitelisted(_operator);
@@ -256,6 +332,8 @@ abstract contract RuleERC2980Base is
      * @notice Returns true if the address is whitelisted (identity-verified).
      * @dev Reflects whitelist membership only. Frozen status is intentionally excluded:
      * freezing is a temporary enforcement action and does not revoke identity verification.
+     * @param targetAddress Address to check.
+     * @return True if the address is whitelisted.
      */
     function isVerified(address targetAddress) public view virtual override(IIdentityRegistryVerified) returns (bool) {
         return _isWhitelisted(targetAddress);
@@ -263,6 +341,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Checks multiple addresses for whitelist membership.
+     * @param targetAddresses Addresses to check.
+     * @return results Array of booleans, true where the corresponding address is whitelisted.
      */
     function areWhitelisted(address[] memory targetAddresses) public view returns (bool[] memory results) {
         results = new bool[](targetAddresses.length);
@@ -273,6 +353,7 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Returns the number of frozen addresses.
+     * @return The count of addresses currently in the frozenlist.
      */
     function frozenlistAddressCount() public view returns (uint256) {
         return _frozenlistCount();
@@ -280,6 +361,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Returns true if the address is in the frozenlist.
+     * @param targetAddress Address to check.
+     * @return True if the address is frozen.
      */
     function isFrozen(address targetAddress) public view returns (bool) {
         return _isFrozen(targetAddress);
@@ -287,6 +370,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice ERC-2980 getter: returns true if the address is frozen.
+     * @param _operator Address to check.
+     * @return True if the address is frozen.
      */
     function frozenlist(address _operator) public view virtual override(IERC2980) returns (bool) {
         return _isFrozen(_operator);
@@ -294,6 +379,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Checks multiple addresses for frozenlist membership.
+     * @param targetAddresses Addresses to check.
+     * @return results Array of booleans, true where the corresponding address is frozen.
      */
     function areFrozen(address[] memory targetAddresses) public view returns (bool[] memory results) {
         results = new bool[](targetAddresses.length);
@@ -306,6 +393,31 @@ abstract contract RuleERC2980Base is
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Authorization hook invoked before toggling `allowMint` / `allowBurn`.
+     */
+    function _authorizeMintBurnManager() internal view virtual;
+
+    /**
+     * @notice Authorization hook invoked before adding addresses to the whitelist.
+     */
+    function _authorizeWhitelistAdd() internal view virtual;
+    /**
+     * @notice Authorization hook invoked before removing addresses from the whitelist.
+     */
+    function _authorizeWhitelistRemove() internal view virtual;
+    /**
+     * @notice Authorization hook invoked before adding addresses to the frozenlist.
+     */
+    function _authorizeFrozenlistAdd() internal view virtual;
+    /**
+     * @notice Authorization hook invoked before removing addresses from the frozenlist.
+     */
+    function _authorizeFrozenlistRemove() internal view virtual;
+
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function _detectTransferRestriction(
         address from,
         address to,
@@ -317,19 +429,34 @@ abstract contract RuleERC2980Base is
         override
         returns (uint8)
     {
-        // Frozenlist check has priority
-        if (_isFrozen(from)) {
+        bool isMint = from == address(0);
+        bool isBurn = to == address(0);
+
+        // Gate the mint/burn OPERATION explicitly, rather than by whitelisting the zero address.
+        if (isMint && !allowMint) {
+            return CODE_MINT_NOT_ALLOWED;
+        }
+        if (isBurn && !allowBurn) {
+            return CODE_BURN_NOT_ALLOWED;
+        }
+
+        // Frozenlist check has priority — but only for REAL participants.
+        if (!isMint && _isFrozen(from)) {
             return CODE_ADDRESS_FROM_IS_FROZEN;
-        } else if (_isFrozen(to)) {
+        }
+        if (!isBurn && _isFrozen(to)) {
             return CODE_ADDRESS_TO_IS_FROZEN;
         }
-        // Whitelist check: only the recipient must be whitelisted
-        if (!_isWhitelisted(to)) {
+        // Whitelist check: only the recipient must be whitelisted (ERC-2980); no recipient on a burn.
+        if (!isBurn && !_isWhitelisted(to)) {
             return CODE_ADDRESS_TO_NOT_WHITELISTED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
@@ -343,6 +470,9 @@ abstract contract RuleERC2980Base is
         return _detectTransferRestriction(from, to, value);
     }
 
+    /**
+     * @inheritdoc RuleNFTAdapter
+     */
     function _transferred(address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestriction(from, to, value);
         require(
@@ -351,6 +481,9 @@ abstract contract RuleERC2980Base is
         );
     }
 
+    /**
+     * @inheritdoc RuleNFTAdapter
+     */
     function _transferredFrom(address spender, address from, address to, uint256 value) internal view virtual override {
         uint8 code = _detectTransferRestrictionFrom(spender, from, to, value);
         require(
@@ -359,14 +492,23 @@ abstract contract RuleERC2980Base is
         );
     }
 
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _msgSender() internal view virtual override(ERC2771Context) returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _msgData() internal view virtual override(ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
+    /**
+     * @inheritdoc ERC2771Context
+     */
     function _contextSuffixLength() internal view virtual override(ERC2771Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();
     }

@@ -1,0 +1,42 @@
+@startuml
+title RuleConditionalTransferLightMultiToken — transfer flow with a CMTAT token (operation rule)
+
+actor "Operator" as op
+actor "Holder / Spender" as caller
+participant "CMTAT token\n(one of several bound)" as cmtat
+participant "RuleEngine" as engine
+participant "RuleConditionalTransferLightMultiToken\napprovalCounts[hash(token,from,to,value)]" as rule
+
+== Phase 1: approval (token-scoped) ==
+op -> rule : approveTransfer(token, from, to, value)
+rule -> rule : approvalCounts[hash(token,...)]++ \n(state change)
+note right of rule
+  Approval key includes the token address,
+  so one token cannot consume another
+  token's approvals.
+end note
+
+== Phase 2: the transfer ==
+caller -> cmtat : transfer(to, value) / transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestriction[From](... from, to, value)
+  engine -> rule : detectTransferRestriction[From](...)  <i>token = msg.sender context</i>
+  note right of rule : approvalCounts[hash(token,from,to,value)] > 0 ?
+  alt no approval for (token, from, to, value)
+    rule --> cmtat : 46 (CODE_TRANSFER_REQUEST_NOT_APPROVED)
+  else approval exists
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(46)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)
+  rule -> rule : require(count != 0); approvalCounts[hash(token,...)]-- \n(consume one approval)
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

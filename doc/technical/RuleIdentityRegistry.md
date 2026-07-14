@@ -2,7 +2,22 @@
 
 [TOC]
 
-This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity Registry to verify that transfer participants are registered and verified. When an identity registry is configured, the sender, recipient, and spender (in `transferFrom`) are all checked via `isVerified()`.
+This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity Registry to verify that transfer participants are registered and verified.
+
+> ## ✅ ERC-3643 conformant: only the RECEIVER is verified
+>
+> The specification mandates exactly one identity check:
+>
+> - *"The **receiver** MUST be whitelisted on the Identity Registry and verified"* (§ Transfer)
+> - *"`transferFrom` **works the same way**"* — receiver only
+> - *"`mint` and `forcedTransfer` **only require the receiver** to be whitelisted and verified"*
+> - *"The `burn` function **bypasses all checks** on eligibility"*
+>
+> The **sender**, the **spender** and the **minter** are therefore **not** verified by default.
+>
+> **Why the sender is deliberately not checked:** ERC-3643 screens only the receiver precisely so that an investor whose identity lapses (expired claim, revoked identity) can still **exit their position** by sending to a verified counterparty. Screening the sender would trap them — unable to receive *and* unable to send.
+>
+> Stricter screening is available as an **explicit opt-in** (`checkSender`, `checkSpender`), never as a silent default.
 
 ## Configuration
 
@@ -12,6 +27,8 @@ This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity
 | --- | --- |
 | `admin` | Address granted `DEFAULT_ADMIN_ROLE` (implicitly holds all roles) |
 | `identityRegistry_` | Address of the identity registry contract (`address(0)` to start without a registry) |
+| `checkSender_` | If `true`, ALSO verify the sender. **Stricter than ERC-3643** — pass `false` for the conformant default. Traps de-listed holders (see above). |
+| `checkSpender_` | If `true`, ALSO verify the spender on `transferFrom`. **Stricter than ERC-3643** — pass `false` for the conformant default. Mint/burn stay exempt regardless. |
 
 ### Behaviour when no registry is set
 
@@ -26,6 +43,14 @@ If no identity registry is configured (`address(0)`), all transfers pass this ru
 ### Inheritance
 
 ![surya_inheritance_RuleIdentityRegistry](../surya/surya_inheritance/surya_inheritance_RuleIdentityRegistry.sol.png)
+
+### Flow with a CMTAT token
+
+The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer, including the ERC-3643 identity registry `isVerified` lookups and the no-registry pass-through case.
+
+![RuleIdentityRegistry flow with a CMTAT token](../img/rule-identity-registry-flow.png)
+
+_Diagram source: doc/img/rule-identity-registry-flow.puml._
 
 ## Restriction codes
 
@@ -59,11 +84,14 @@ Returns the current identity registry address. Returns `address(0)` if none is s
 ## Transfer restriction logic
 
 - If no registry is set → all transfers pass.
-- Burns (`to == address(0)`) always pass, even if the sender is not verified.
-- For all other transfers:
-  - `from` is checked if non-zero (mints where `from == address(0)` skip the sender check).
-  - `to` is always checked.
-  - `spender` is checked in `transferFrom` if non-zero.
+- **Burns (`to == address(0)`) always pass** — ERC-3643: *"The `burn` function bypasses all checks on eligibility."*
+- For all other transfers, including **mint**:
+  - **`to` is ALWAYS checked.** This is the only check ERC-3643 mandates.
+  - `from` is checked **only if `checkSender` is enabled** (off by default — stricter than the spec).
+  - `spender` is checked **only if `checkSpender` is enabled** (off by default — stricter than the spec), and mint
+    and burn are exempt from it regardless: the minter/burner acts on its own authority, not as a delegated spender.
+    This is what lets an **unverified minter** mint to a verified recipient, exactly as ERC-3643 requires
+    (*"`mint` … only require[s] the receiver to be whitelisted and verified"*).
 
 ## Usage scenario
 

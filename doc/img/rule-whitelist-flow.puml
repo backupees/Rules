@@ -1,0 +1,38 @@
+@startuml
+title RuleWhitelist — transfer flow with a CMTAT token
+
+actor "Spender / Holder" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleWhitelist\n(from/to whitelist,\noptional checkSpender)" as rule
+
+caller -> cmtat : transferFrom(from, to, value)
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(spender, from, to, value)
+  engine -> rule : detectTransferRestrictionFrom(spender, from, to, value)
+  note right of rule
+    isWhitelisted(from)?
+    isWhitelisted(to)?
+    if checkSpender: isWhitelisted(spender)?
+  end note
+  alt from not whitelisted
+    rule --> cmtat : 21 (CODE_ADDRESS_FROM_NOT_WHITELISTED)
+  else to not whitelisted
+    rule --> cmtat : 22 (CODE_ADDRESS_TO_NOT_WHITELISTED)
+  else spender not whitelisted (checkSpender on)
+    rule --> cmtat : 23 (CODE_ADDRESS_SPENDER_NOT_WHITELISTED)
+  else all whitelisted
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(code)
+else code == 0
+  cmtat -> cmtat : _update: move balances
+  cmtat -> engine : transferred(spender, from, to, value)
+  engine -> rule : transferred(...)  <i>no state change</i>
+  cmtat --> caller : Transfer(from, to, value)
+end
+@enduml

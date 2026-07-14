@@ -43,43 +43,6 @@ interface IERC7943NonFungibleCompliance {
  */
 interface IERC7943NonFungibleComplianceExtend is IERC7943NonFungibleCompliance {
     /**
-     * @notice Returns a transfer-restriction code describing why a transfer is blocked.
-     * @dev
-     *  - MUST NOT modify state.
-     *  - MUST return `0` when the transfer is allowed.
-     *  - Non-zero codes SHOULD follow the ERC-1404 or RuleEngine restriction-code conventions.
-     *
-     * @param from The address currently holding the token.
-     * @param to The address intended to receive the token.
-     * @param tokenId The ERC-721/1155 token ID being checked.
-     * @param amount The amount being transferred (always `1` for ERC-721).
-     * @return code A restriction code: `0` for success, otherwise an implementation-defined error code.
-     */
-    function detectTransferRestriction(address from, address to, uint256 tokenId, uint256 amount)
-        external
-        view
-        returns (uint8 code);
-
-    /**
-     * @notice Returns a transfer-restriction code for transfers triggered by a spender.
-     * @dev
-     *  Similar to `detectTransferRestriction`, but includes the spender performing the transfer.
-     *  - MUST NOT modify state.
-     *  - MUST return `0` when transfer is allowed.
-     *
-     * @param spender The caller executing the transfer (owner, operator, or approved address).
-     * @param from The current owner of the token.
-     * @param to The intended recipient.
-     * @param tokenId The token ID being checked.
-     * @param value The amount being transferred (always `1` for ERC-721).
-     * @return code A restriction code: `0` for allowed, otherwise a non-zero restriction identifier.
-     */
-    function detectTransferRestrictionFrom(address spender, address from, address to, uint256 tokenId, uint256 value)
-        external
-        view
-        returns (uint8 code);
-
-    /**
      * @notice Determines whether a spender-initiated transfer is allowed.
      * @dev
      *  - MUST NOT modify state.
@@ -124,4 +87,41 @@ interface IERC7943NonFungibleComplianceExtend is IERC7943NonFungibleCompliance {
      * @param value The transfer amount (always `1` for ERC-721).
      */
     function transferred(address spender, address from, address to, uint256 tokenId, uint256 value) external;
+
+    /**
+     * @notice Returns a transfer-restriction code describing why a transfer is blocked.
+     * @dev
+     *  - MUST NOT modify state.
+     *  - MUST return `0` when the transfer is allowed.
+     *  - Non-zero codes SHOULD follow the ERC-1404 or RuleEngine restriction-code conventions.
+     *
+     * @param from The address currently holding the token.
+     * @param to The address intended to receive the token.
+     * @param tokenId The ERC-721/1155 token ID being checked.
+     * @param amount The amount being transferred (always `1` for ERC-721).
+     * @return code A restriction code: `0` for success, otherwise an implementation-defined error code.
+     */
+    function detectTransferRestriction(address from, address to, uint256 tokenId, uint256 amount)
+        external
+        view
+        returns (uint8 code);
+
+    /**
+     * @notice Returns a transfer-restriction code for transfers triggered by a spender.
+     * @dev
+     *  Similar to `detectTransferRestriction`, but includes the spender performing the transfer.
+     *  - MUST NOT modify state.
+     *  - MUST return `0` when transfer is allowed.
+     *
+     * @param spender The caller executing the transfer (owner, operator, or approved address).
+     * @param from The current owner of the token.
+     * @param to The intended recipient.
+     * @param tokenId The token ID being checked.
+     * @param value The amount being transferred (always `1` for ERC-721).
+     * @return code A restriction code: `0` for allowed, otherwise a non-zero restriction identifier.
+     */
+    function detectTransferRestrictionFrom(address spender, address from, address to, uint256 tokenId, uint256 value)
+        external
+        view
+        returns (uint8 code);
 }

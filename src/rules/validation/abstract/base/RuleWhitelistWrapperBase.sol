@@ -26,10 +26,19 @@ abstract contract RuleWhitelistWrapperBase is
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
     /**
+     * @notice Deploys the whitelist wrapper base.
+     * @dev The wrapper holds no addresses of its own — it ORs its child rules. It therefore needs its
+     *      OWN mint/burn flags: the children no longer list `address(0)`, so without these a mint
+     *      would resolve `from` as unlisted and be rejected.
      * @param forwarderIrrevocable Address of the forwarder, required for the gasless support
+     * @param checkSpender_ Whether to also verify the spender on delegated transfers.
+     * @param allowMintBurn When true, permits both minting and burning.
      */
-    constructor(address forwarderIrrevocable, bool checkSpender_) MetaTxModuleStandalone(forwarderIrrevocable) {
+    constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
+        MetaTxModuleStandalone(forwarderIrrevocable)
+    {
         checkSpender = checkSpender_;
+        _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -40,8 +49,6 @@ abstract contract RuleWhitelistWrapperBase is
         _authorizeCheckSpenderManager();
         _;
     }
-
-    function _authorizeCheckSpenderManager() internal virtual;
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
@@ -60,19 +67,18 @@ abstract contract RuleWhitelistWrapperBase is
         emit CheckSpenderUpdated(value);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(RuleTransferValidation)
-        returns (bool)
-    {
+    /**
+     * @inheritdoc RuleTransferValidation
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(RuleTransferValidation) returns (bool) {
         return RuleTransferValidation.supportsInterface(interfaceId);
     }
 
     /**
      * @notice Returns true if the address is listed in at least one child whitelist rule.
      * @dev Delegates to the same child-rule scan used by transfer restriction checks.
+     * @param targetAddress The address to check across all child whitelist rules.
+     * @return True if the address is listed in at least one child rule.
      */
     function isVerified(address targetAddress) public view virtual override(IIdentityRegistryVerified) returns (bool) {
         address[] memory targets = new address[](1);
@@ -84,6 +90,22 @@ abstract contract RuleWhitelistWrapperBase is
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Internal helper to update the `checkSpender` flag.
+     * @param value New flag value.
+     */
+    function _setCheckSpender(bool value) internal virtual {
+        checkSpender = value;
+    }
+
+    /**
+     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
+     *      Declaring it `view` makes that a compiler-enforced invariant rather than a convention.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Go through all the whitelist rules to know if a restriction exists on the transfer
@@ -103,6 +125,36 @@ abstract contract RuleWhitelistWrapperBase is
         override
         returns (uint8)
     {
+        // Gate the mint/burn OPERATION explicitly, before consulting any child rule.
+        uint8 mintBurnCode = _detectMintBurnRestriction(from, to);
+        if (mintBurnCode != uint8(REJECTED_CODE_BASE.TRANSFER_OK)) {
+            return mintBurnCode;
+        }
+
+        bool isMint = from == address(0);
+        bool isBurn = to == address(0);
+
+        // Resolve only the REAL participants against the children: the zero address is a sentinel,
+        // not a listed member of any child, so asking about it would always fail.
+        // Degenerate (0, 0): neither leg is a real participant, so there is nothing to screen.
+        // Handled explicitly so the wrapper and {RuleWhitelistBase} return the same answer — the two
+        // share `_detectMintBurnRestriction` precisely so they cannot drift.
+        if (isMint && isBurn) {
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+        if (isMint) {
+            if (!_isListedInAnyChild(to)) {
+                return CODE_ADDRESS_TO_NOT_WHITELISTED;
+            }
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+        if (isBurn) {
+            if (!_isListedInAnyChild(from)) {
+                return CODE_ADDRESS_FROM_NOT_WHITELISTED;
+            }
+            return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+
         address[] memory targetAddress = new address[](2);
         targetAddress[0] = from;
         targetAddress[1] = to;
@@ -117,6 +169,25 @@ abstract contract RuleWhitelistWrapperBase is
         }
     }
 
+    /**
+     * @notice Returns true when `targetAddress` is listed in at least one child rule.
+     * @param targetAddress The address to resolve across the children.
+     * @return True if listed in any child.
+     */
+    function _isListedInAnyChild(address targetAddress) internal view virtual returns (bool) {
+        address[] memory targets = new address[](1);
+        targets[0] = targetAddress;
+        return _detectTransferRestrictionForTargets(targets)[0];
+    }
+
+    /**
+     * @notice Go through all the whitelist rules to know if a delegated transfer is restricted.
+     * @param spender The delegated spender address.
+     * @param from The origin address.
+     * @param to The destination address.
+     * @param value The amount transferred.
+     * @return The restriction code or REJECTED_CODE_BASE.TRANSFER_OK.
+     */
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
@@ -124,7 +195,9 @@ abstract contract RuleWhitelistWrapperBase is
         override
         returns (uint8)
     {
-        if (!checkSpender) {
+        // Mint (from == address(0)) and burn (to == address(0)) are exempt from the spender check:
+        // the minter/burner acts on its own authority, not as a delegated ERC-20 spender.
+        if (!checkSpender || from == address(0) || to == address(0)) {
             return _detectTransferRestriction(from, to, value);
         }
 
@@ -148,6 +221,12 @@ abstract contract RuleWhitelistWrapperBase is
 
     // ERC-7943 tokenId overloads are provided by {RuleNFTAdapter} via RuleWhitelistShared.
 
+    /**
+     * @notice Reverts if a direct transfer is blocked by any child whitelist rule.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferred(address from, address to, uint256 value)
         internal
         view
@@ -157,6 +236,13 @@ abstract contract RuleWhitelistWrapperBase is
         RuleWhitelistShared._transferred(from, to, value);
     }
 
+    /**
+     * @notice Reverts if a delegated transfer is blocked by any child whitelist rule.
+     * @param spender The delegated spender address.
+     * @param from The sender address.
+     * @param to The recipient address.
+     * @param value The amount transferred.
+     */
     function _transferred(address spender, address from, address to, uint256 value)
         internal
         view
@@ -204,20 +290,13 @@ abstract contract RuleWhitelistWrapperBase is
         return result;
     }
 
-    /**
-     * @notice Internal helper to update the `checkSpender` flag.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-    }
-
     /*//////////////////////////////////////////////////////////////
                            ERC-2771
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return sender The effective message sender, unwrapped from the meta-transaction if present.
      */
     function _msgSender() internal view virtual override(ERC2771Context) returns (address sender) {
         return ERC2771Context._msgSender();
@@ -225,6 +304,7 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return The effective calldata, unwrapped from the meta-transaction if present.
      */
     function _msgData() internal view virtual override(ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
@@ -232,6 +312,7 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @dev This surcharge is not necessary if you do not use the MetaTxModule
+     * @return The length of the ERC-2771 context suffix appended to calldata.
      */
     function _contextSuffixLength() internal view virtual override(ERC2771Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();

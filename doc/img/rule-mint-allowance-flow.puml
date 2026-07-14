@@ -1,0 +1,35 @@
+@startuml
+title RuleMintAllowance — mint flow with a CMTAT token (operation rule)
+
+actor "Minter\n(spender)" as caller
+participant "CMTAT token" as cmtat
+participant "RuleEngine" as engine
+participant "RuleMintAllowance\n(per-minter quota)" as rule
+
+caller -> cmtat : mint(to, value)   <i>(from == address(0))</i>
+
+group Validation (read-only)
+  cmtat -> engine : detectTransferRestrictionFrom(minter, address(0), to, value)
+  engine -> rule : detectTransferRestrictionFrom(minter, address(0), to, value)
+  note right of rule
+    Only mints are gated. Needs the minter
+    (spender-aware path); the 3-arg
+    detectTransferRestriction always returns OK.
+  end note
+  alt allowance[minter] < value
+    rule --> cmtat : 70 (CODE_MINTER_ALLOWANCE_EXCEEDED)
+  else allowance[minter] >= value
+    rule --> cmtat : 0 (TRANSFER_OK)
+  end
+end
+
+alt restriction code != 0
+  cmtat --> caller : revert CMTAT_InvalidTransfer(70)
+else code == 0
+  cmtat -> cmtat : _update: mint value to `to`
+  cmtat -> engine : transferred(minter, address(0), to, value)
+  engine -> rule : transferred(minter, address(0), to, value)
+  rule -> rule : <b>allowance[minter] -= value</b>\n(state change)
+  cmtat --> caller : Transfer(address(0), to, value)
+end
+@enduml

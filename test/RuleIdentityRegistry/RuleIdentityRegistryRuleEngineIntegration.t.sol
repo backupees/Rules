@@ -20,18 +20,31 @@ contract RuleIdentityRegistryRuleEngineIntegration is Test, HelperContract {
         ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS);
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
-        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry));
+        ruleIdentityRegistry = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, address(registry), false, false);
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         ruleEngineMock.addRule(ruleIdentityRegistry);
     }
 
-    function testDetectRestrictionWhenNotVerified() public {
+    /// @notice ERC-3643 mandates verifying only the RECEIVER, so an unverified recipient is what
+    ///         blocks the transfer — not the sender.
+    function testDetectRestrictionWhenReceiverNotVerified() public {
         uint256 amount = 10;
         resUint8 = ruleEngineMock.detectTransferRestriction(ADDRESS1, ADDRESS2, amount);
-        assertEq(resUint8, CODE_ADDRESS_FROM_NOT_VERIFIED);
+        assertEq(resUint8, CODE_ADDRESS_TO_NOT_VERIFIED);
         resBool = ruleEngineMock.canTransfer(ADDRESS1, ADDRESS2, amount);
         assertEq(resBool, false);
+    }
+
+    /// @notice A verified receiver is sufficient: the sender need NOT be verified (ERC-3643).
+    ///         This is what lets a de-listed holder exit their position.
+    function testUnverifiedSenderCanStillExitToAVerifiedReceiver() public {
+        uint256 amount = 10;
+        registry.setVerified(ADDRESS2, true); // receiver only
+
+        resUint8 = ruleEngineMock.detectTransferRestriction(ADDRESS1, ADDRESS2, amount);
+        assertEq(resUint8, TRANSFER_OK);
+        assertTrue(ruleEngineMock.canTransfer(ADDRESS1, ADDRESS2, amount));
     }
 
     function testDetectRestrictionWhenVerified() public {
@@ -45,21 +58,33 @@ contract RuleIdentityRegistryRuleEngineIntegration is Test, HelperContract {
         assertEq(resBool, true);
     }
 
-    function testDetectRestrictionFromWithSpender() public {
+    /// @notice ERC-3643: "`transferFrom` works the same way" — the SPENDER need not be verified.
+    function testDetectRestrictionFromWithUnverifiedSpenderIsAllowed() public {
+        uint256 amount = 10;
+        registry.setVerified(ADDRESS1, true);
+        registry.setVerified(ADDRESS2, true);
+        // ADDRESS3 (spender) is NOT verified.
+
+        resUint8 = ruleEngineMock.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount);
+        assertEq(resUint8, TRANSFER_OK);
+        assertTrue(ruleEngineMock.canTransferFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount));
+    }
+
+    /// @notice The stricter spender check remains available as an explicit opt-in.
+    function testSpenderCheckCanBeOptedIn() public {
         uint256 amount = 10;
         registry.setVerified(ADDRESS1, true);
         registry.setVerified(ADDRESS2, true);
 
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleIdentityRegistry.setCheckSpender(true);
+
         resUint8 = ruleEngineMock.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount);
         assertEq(resUint8, CODE_ADDRESS_SPENDER_NOT_VERIFIED);
-        resBool = ruleEngineMock.canTransferFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount);
-        assertEq(resBool, false);
 
         registry.setVerified(ADDRESS3, true);
         resUint8 = ruleEngineMock.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount);
         assertEq(resUint8, TRANSFER_OK);
-        resBool = ruleEngineMock.canTransferFrom(ADDRESS3, ADDRESS1, ADDRESS2, amount);
-        assertEq(resBool, true);
     }
 
     function testClearIdentityRegistryDisablesChecks() public {

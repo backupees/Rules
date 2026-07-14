@@ -193,6 +193,23 @@ contract RuleSanctionlistTest is Test, HelperContract {
         ruleSanctionList.transferred(ADDRESS1, ADDRESS2, 0, 20);
     }
 
+    function testRemoveFromSanctionsListUnblocksTransfer() public {
+        // Arrange: ATTACKER is sanctioned in setUp, so the rule blocks the transfer
+        assertEq(sanctionlistOracle.isSanctioned(ATTACKER), true);
+        resUint8 = ruleSanctionList.detectTransferRestriction(ATTACKER, ADDRESS2, 20);
+        assertEq(resUint8, CODE_ADDRESS_FROM_IS_SANCTIONED);
+
+        // Act: remove ATTACKER from the sanctions list
+        sanctionlistOracle.removeFromSanctionsList(ATTACKER);
+
+        // Assert: no longer sanctioned and the transfer now passes
+        assertEq(sanctionlistOracle.isSanctioned(ATTACKER), false);
+        resUint8 = ruleSanctionList.detectTransferRestriction(ATTACKER, ADDRESS2, 20);
+        assertEq(resUint8, NO_ERROR);
+        // No revert
+        ruleSanctionList.transferred(ATTACKER, ADDRESS2, 20);
+    }
+
     function testDetectTransferRestrictionWitSpenderOk() public {
         // Act
         resUint8 = ruleSanctionList.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ADDRESS2, 20);
