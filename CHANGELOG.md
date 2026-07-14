@@ -53,7 +53,7 @@ _Nothing yet._
 
 ### Summary
 
-Two new rule families, two standards-conformance fixes, and the outcome of a full security review.
+Two new rule families, two standards-conformance fixes, and hardening from an internal review.
 
 **New rules**
 - **`RuleMintAllowance`** — a per-minter mint quota. The operator sets an absolute quota (or increments/decrements it) and each mint debits the minter's allowance. It is the only rule keyed on the mint `spender`, so it requires the spender-aware CMTAT/RuleEngine callback path. Restriction code `70`.
@@ -69,7 +69,7 @@ Two new rule families, two standards-conformance fixes, and the outcome of a ful
 - Stale-state cleanup after rebinding: `resetApproval(...)` and `clearMintAllowances(...)`.
 - Overflow-safe supply-cap views — they return code `50` instead of reverting with an arithmetic panic.
 
-**Security review.** 0 Critical/High/Medium, 2 Low, 8 Informational; the two threats that would have been High were probed and do not exist. Published as [`CLAUDE_AUDIT.md`](./doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md). Test suite grew 425 → **511 tests** (97.8% line, 97.3% branch coverage) and now includes a stateful, mutation-verified invariant suite.
+**Internal review.** An AI-assisted, test-backed review of `src/` reported 0 Critical/High/Medium, 2 Low and 8 Informational findings; see [`CLAUDE_AUDIT.md`](./doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md). This is **not** a formal third-party audit, and the project has not had one. Test suite grew 425 → **511 tests** (97.8% line, 97.3% branch coverage) and now includes a stateful, mutation-verified invariant suite.
 
 ### Added
 
