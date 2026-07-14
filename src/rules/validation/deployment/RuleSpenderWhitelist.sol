@@ -6,7 +6,6 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {AccessControlModuleStandalone} from "../../../modules/AccessControlModuleStandalone.sol";
 import {RuleSpenderWhitelistBase} from "../abstract/base/RuleSpenderWhitelistBase.sol";
 import {RuleAddressSet} from "../abstract/RuleAddressSet/RuleAddressSet.sol";
-import {RuleTransferValidation} from "../abstract/core/RuleTransferValidation.sol";
 
 /**
  * @title RuleSpenderWhitelist

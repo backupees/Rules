@@ -2,8 +2,15 @@
 
 Report version: `v0.4.0`
 Slither report: [slither-report.md](./slither-report.md)
-Tool: Slither 0.11.5 · Scope: production contracts only (**mocks excluded**)
-Feedback date: 2026-07-08
+Tool: Slither 0.11.5 · Scope: production contracts only (**mocks excluded**) · 168 contracts, 101 detectors, 36 results
+Feedback date: 2026-07-14 (re-run after the v0.4.0 security remediation)
+
+**Delta from the 2026-07-08 run: none.** Same tool version, same scope, and the detector tally is identical
+(2 High · 6 Medium · 16 Low · 12 Informational, 36 results). The security remediation landed in this release —
+ERC-3643 conformance in `RuleIdentityRegistry`, the explicit `allowMint` / `allowBurn` flags, the
+`bindToken` / `bindRuleEngine` split, the overflow-safe supply-cap views — introduced **no new Slither finding and
+resolved none**, which is expected: every finding below is a false positive or a by-design pattern, so none of them
+was ever tracking a real defect that a fix could clear. The triage below therefore stands unchanged.
 
 Verdicts:
 

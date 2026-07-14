@@ -14,19 +14,26 @@
 | Date | Type | Tool / Source | Version | Reports |
 |---|---|---|---|---|
 | 2026-07 | AI-assisted review | Claude (Anthropic) + custom security-audit skills | v0.4.0 | [**CLAUDE_AUDIT.md**](./tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) |
-| 2026-07-08 | Static analysis | Slither 0.11.5 | v0.4.0 | [report](./tools/v0.4.0/slither-report.md) · [feedback](./tools/v0.4.0/slither-report-feedback.md) |
-| 2026-07-08 | Static analysis | Aderyn 0.6.5 | v0.4.0 | [report](./tools/v0.4.0/aderyn-report.md) · [feedback](./tools/v0.4.0/aderyn-report-feedback.md) |
+| 2026-07-14 | Static analysis | Slither 0.11.5 | v0.4.0 | [report](./tools/v0.4.0/slither-report.md) · [feedback](./tools/v0.4.0/slither-report-feedback.md) |
+| 2026-07-14 | Static analysis | Aderyn 0.6.5 | v0.4.0 | [report](./tools/v0.4.0/aderyn-report.md) · [feedback](./tools/v0.4.0/aderyn-report-feedback.md) |
 | 2026-04-16 | Static analysis | Slither / Aderyn | v0.3.0 | [slither](./tools/v0.3.0/slither-report.md) · [aderyn](./tools/v0.3.0/aderyn-report.md) |
 | 2026-03-16 | AI-assisted review | Wake Arena (Ackee) | v0.2.0 | [tools/v0.2.0](./tools/v0.2.0/) |
 
 ## Static-analysis results (v0.4.0)
 
+Both tools were **re-run on 2026-07-14**, after the security remediation landed. Counts below are from that run.
+
 | Tool | High | Medium | Low | Info | Relevant to fix? |
 |---|---|---|---|---|---|
 | Slither 0.11.5 | 2 | 6 | 16 | 12 | **No** — all false-positive or by-design ([feedback](./tools/v0.4.0/slither-report-feedback.md)) |
-| Aderyn 0.6.5 | 0 | 0 | 8 findings | 0 | **No** — all Low, by-design or false-positive ([feedback](./tools/v0.4.0/aderyn-report-feedback.md)) |
+| Aderyn 0.6.5 | 0 | 0 | 9 findings | 0 | **No** — all Low, by-design or false-positive ([feedback](./tools/v0.4.0/aderyn-report-feedback.md)) |
 
-**Result: nothing to fix in `v0.4.0`.** The two High-severity Slither `arbitrary-send-erc20` hits are false positives — `approveAndTransferIfAllowed` (light + multi-token variants) is gated by `onlyTransferApprover`, a recorded approval, an allowance check, and a bound token. All other findings are accepted by design (centralization, unspecific pragma, PUSH0, template-method modifiers/empty blocks, `EnumerableSet` loop cost, spec-aligned naming) or tool limitations (`unused-return`/`unused-state`, per-contract analysis). Instance counts rose vs `v0.3.0` only because `v0.4.0` adds the `RuleMintAllowance` and `RuleConditionalTransferLightMultiToken` families; no new category appeared.
+**Result: nothing to fix in `v0.4.0`.** The two High-severity Slither `arbitrary-send-erc20` hits are false positives — `approveAndTransferIfAllowed` (light + multi-token variants) is gated by `onlyTransferApprover`, a recorded approval, an allowance check, and a bound token. All other findings are accepted by design (centralization, unspecific pragma, PUSH0, template-method modifiers/empty blocks, `EnumerableSet` loop cost, spec-aligned naming) or tool limitations (`unused-return`/`unused-state`, per-contract analysis).
+
+Slither's tally is **unchanged** from the pre-remediation run. Aderyn moved 8 → 10 Low, of which one was real and was fixed, leaving 9:
+
+- **L-7 `Loop Contains require/revert` (new, 3 instances)** — batch adds now revert on `address(0)` instead of skipping it. Aderyn recommends "forgive on fail and continue", which is exactly the behaviour this release removed: a silent skip left the emitted `AddAddresses` event naming the sentinel as a set member when it was not. **The recommendation is deliberately rejected; do not act on it.**
+- **`Unused Import` (2 instances) — found and FIXED during this run.** A dead `RuleTransferValidation` import in the two `RuleSpenderWhitelist` deployment files (pre-existing, not a regression). It was the only actionable item across both tools; both imports were removed, the build is clean, 506 tests pass, and a re-run confirms the finding is gone.
 
 ## AI-assisted review results (v0.4.0)
 

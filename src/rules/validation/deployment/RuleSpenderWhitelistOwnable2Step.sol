@@ -5,7 +5,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {Ownable2StepERC165Module} from "../../../modules/Ownable2StepERC165Module.sol";
-import {RuleTransferValidation} from "../abstract/core/RuleTransferValidation.sol";
 import {RuleSpenderWhitelistBase} from "../abstract/base/RuleSpenderWhitelistBase.sol";
 import {RuleAddressSet} from "../abstract/RuleAddressSet/RuleAddressSet.sol";
 
