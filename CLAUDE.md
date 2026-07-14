@@ -122,6 +122,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 - Do not create git commits; provide commit messages only when requested.
 - Always run full tests (`forge test`) after any code modification, including lint-driven or mechanical refactors, before reporting completion.
 - Use `require(condition, CustomError(...))` for custom errors; avoid direct `revert CustomError(...)`.
+- **No emoji in code comments or NatSpec.** Use a plain word marker instead: `WARNING:`, `NOTE:`, `IMPORTANT:`. Emoji render inconsistently across editors, terminals, `forge doc` output and diffs; they are not searchable (`grep WARNING` finds the marker, `grep ⚠️` depends on the shell); and they encode as multi-byte sequences that can be silently mangled by tooling. This applies to `src/`, `test/` and `script/`. Markdown documentation may use emoji freely — the restriction is Solidity comments only.
 - `AGENTS.md` and `CLAUDE.md` are identical — always update both together.
 - Always update README.md with the latest change
 - New rule or features implemented: create/update technical documentation in `doc/technical`, update README, create/update test (target: 100% of code coverage), update CHANGELOG.md. Code coverage, run `forge coverage --report summary`

@@ -161,7 +161,7 @@ abstract contract RuleConditionalTransferLightBase is
      * @dev The bound token is BOTH the ERC-20 that {approveAndTransferIfAllowed} transfers, AND an
      *      authorized caller of `transferred` (the direct-binding topology). If the rule sits behind
      *      a RuleEngine, additionally call {bindRuleEngine} so the engine may call `transferred` too.
-     * @dev ⚠️ Single-token binding alone does NOT guarantee token-scoped approvals: this rule's
+     * @dev WARNING: Single-token binding alone does NOT guarantee token-scoped approvals: this rule's
      *      approvals are keyed `(from, to, value)` with no token dimension. A multi-tenant
      *      {bindRuleEngine} target would relay several tokens into the same approval bucket — see
      *      the warning on {bindRuleEngine}.
@@ -186,7 +186,7 @@ abstract contract RuleConditionalTransferLightBase is
      *      {approveAndTransferIfAllowed} works under the RuleEngine topology.
      *      Reverts if a RuleEngine is already bound; call {unbindRuleEngine} first to migrate.
      *
-     * @dev ⚠️ **Bind ONLY an engine that serves this one token.**
+     * @dev WARNING: **Bind ONLY an engine that serves this one token.**
      *      This rule's approvals are keyed `(from, to, value)` — they carry **no token dimension**.
      *      A `RuleEngine` is multi-tenant by design (`_boundTokens` is a set), and it relays every
      *      one of its tokens into the same `transferred(from, to, value)` hook, so the rule cannot
