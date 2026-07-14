@@ -68,13 +68,13 @@ contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Restricts adding addresses to the whitelist to holders of WHITELIST_ADD_ROLE.
-     */
-    /**
      * @notice Restricts toggling `allowMint` / `allowBurn` to holders of DEFAULT_ADMIN_ROLE.
      */
     function _authorizeMintBurnManager() internal view virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
+    /**
+     * @notice Restricts adding addresses to the whitelist to holders of WHITELIST_ADD_ROLE.
+     */
     function _authorizeWhitelistAdd() internal view virtual override onlyRole(WHITELIST_ADD_ROLE) {}
 
     /**

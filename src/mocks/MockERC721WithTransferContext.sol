@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ITransferContext} from "src/rules/interfaces/ITransferContext.sol";
+import {ITransferContext} from "../rules/interfaces/ITransferContext.sol";
 
 /**
  * @title MockERC721WithTransferContext — ERC721 mock that notifies a transfer-context rule

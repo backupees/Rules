@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
+import {ISanctionsList} from "../rules/interfaces/ISanctionsList.sol";
 
 /**
  * @title SanctionListOracle — test double for a Chainalysis-style sanctions oracle

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
-import {RuleSanctionsListOwnable2Step} from "src/rules/validation/deployment/RuleSanctionsListOwnable2Step.sol";
+import {ISanctionsList} from "../../rules/interfaces/ISanctionsList.sol";
+import {RuleSanctionsListOwnable2Step} from "../../rules/validation/deployment/RuleSanctionsListOwnable2Step.sol";
 
 /**
  * @title RuleSanctionsListOwnable2StepHarness — test harness exposing RuleSanctionsListOwnable2Step internals

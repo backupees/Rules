@@ -314,39 +314,6 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
     }
 
     /**
-     * @notice Computes the restriction code for a transfer of `token`, independently of the caller.
-     * @dev Single source of truth for the read path: {detectTransferRestriction} feeds it
-     *      `_msgSender()`, while {detectTransferRestrictionForToken} feeds it an explicit token, so
-     *      the two can never disagree. Mints and burns are exempt; an unbound token has no
-     *      consumable approvals and is therefore always restricted (fail-closed).
-     * @param token The token the transfer applies to.
-     * @param from The sender of the transfer.
-     * @param to The recipient of the transfer.
-     * @param value The amount of the transfer.
-     * @return The restriction code, or TRANSFER_OK when an approval exists.
-     */
-    function _detectTransferRestrictionForToken(address token, address from, address to, uint256 value)
-        internal
-        view
-        virtual
-        returns (uint8)
-    {
-        if (from == address(0) || to == address(0)) {
-            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
-        }
-
-        if (!isTokenBound(token)) {
-            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
-        }
-
-        if (approvalCounts[_transferHash(token, from, to, value)] == 0) {
-            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
-        }
-
-        return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
-    }
-
-    /**
      * @notice Authorizes changes to compliance binding: restricted to the compliance manager.
      * @dev NOT `view`, unlike every other access-control hook in this codebase. This is structural,
      *      not an oversight: the implementation delegates to `_onlyComplianceManager()`, which
@@ -413,6 +380,39 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
         approvalCounts[transferHash] = count - 1;
         emit TransferExecuted(token, from, to, value, approvalCounts[transferHash]);
+    }
+
+    /**
+     * @notice Computes the restriction code for a transfer of `token`, independently of the caller.
+     * @dev Single source of truth for the read path: {detectTransferRestriction} feeds it
+     *      `_msgSender()`, while {detectTransferRestrictionForToken} feeds it an explicit token, so
+     *      the two can never disagree. Mints and burns are exempt; an unbound token has no
+     *      consumable approvals and is therefore always restricted (fail-closed).
+     * @param token The token the transfer applies to.
+     * @param from The sender of the transfer.
+     * @param to The recipient of the transfer.
+     * @param value The amount of the transfer.
+     * @return The restriction code, or TRANSFER_OK when an approval exists.
+     */
+    function _detectTransferRestrictionForToken(address token, address from, address to, uint256 value)
+        internal
+        view
+        virtual
+        returns (uint8)
+    {
+        if (from == address(0) || to == address(0)) {
+            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
+        }
+
+        if (!isTokenBound(token)) {
+            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
+        }
+
+        if (approvalCounts[_transferHash(token, from, to, value)] == 0) {
+            return CODE_TRANSFER_REQUEST_NOT_APPROVED;
+        }
+
+        return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
 
     /**

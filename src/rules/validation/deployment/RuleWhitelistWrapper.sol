@@ -65,6 +65,30 @@ contract RuleWhitelistWrapper is
     }
 
     /*//////////////////////////////////////////////////////////////
+                        INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Grants `role` to `account`, keeping role enumeration in sync.
+     * @param role Role identifier to grant.
+     * @param account Address receiving the role.
+     * @return True if the role was newly granted.
+     */
+    function _grantRole(bytes32 role, address account) internal virtual override returns (bool) {
+        return AccessControlEnumerable._grantRole(role, account);
+    }
+
+    /**
+     * @notice Revokes `role` from `account`, keeping role enumeration in sync.
+     * @param role Role identifier to revoke.
+     * @param account Address losing the role.
+     * @return True if the role was previously held and is now revoked.
+     */
+    function _revokeRole(bytes32 role, address account) internal virtual override returns (bool) {
+        return AccessControlEnumerable._revokeRole(role, account);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
@@ -88,30 +112,6 @@ contract RuleWhitelistWrapper is
      * @notice Restricts rules-limit management to holders of RULES_MANAGEMENT_ROLE.
      */
     function _onlyRulesLimitManager() internal view virtual override onlyRole(RULES_MANAGEMENT_ROLE) {}
-
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Grants `role` to `account`, keeping role enumeration in sync.
-     * @param role Role identifier to grant.
-     * @param account Address receiving the role.
-     * @return True if the role was newly granted.
-     */
-    function _grantRole(bytes32 role, address account) internal virtual override returns (bool) {
-        return AccessControlEnumerable._grantRole(role, account);
-    }
-
-    /**
-     * @notice Revokes `role` from `account`, keeping role enumeration in sync.
-     * @param role Role identifier to revoke.
-     * @param account Address losing the role.
-     * @return True if the role was previously held and is now revoked.
-     */
-    function _revokeRole(bytes32 role, address account) internal virtual override returns (bool) {
-        return AccessControlEnumerable._revokeRole(role, account);
-    }
 
     /**
      * @notice Returns the message sender, accounting for meta-transaction (ERC-2771) context.

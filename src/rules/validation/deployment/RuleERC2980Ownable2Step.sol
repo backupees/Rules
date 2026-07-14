@@ -51,13 +51,13 @@ contract RuleERC2980Ownable2Step is RuleERC2980Base, Ownable2Step, Ownable2StepE
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Restricts adding addresses to the whitelist to the contract owner.
-     */
-    /**
      * @notice Restricts toggling `allowMint` / `allowBurn` to the contract owner.
      */
     function _authorizeMintBurnManager() internal view virtual override onlyOwner {}
 
+    /**
+     * @notice Restricts adding addresses to the whitelist to the contract owner.
+     */
     function _authorizeWhitelistAdd() internal view virtual override onlyOwner {}
 
     /**

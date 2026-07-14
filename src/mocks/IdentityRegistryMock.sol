@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {IIdentityRegistryVerified} from "src/rules/interfaces/IIdentityRegistry.sol";
+import {IIdentityRegistryVerified} from "../rules/interfaces/IIdentityRegistry.sol";
 
 /**
  * @title IdentityRegistryMock — test double for an ERC-3643 identity registry

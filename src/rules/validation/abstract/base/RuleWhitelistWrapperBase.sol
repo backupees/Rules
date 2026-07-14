@@ -92,20 +92,20 @@ abstract contract RuleWhitelistWrapperBase is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
-     *      Declaring it `view` makes that a compiler-enforced invariant rather than a convention.
-     */
-    function _authorizeCheckSpenderManager() internal view virtual;
-
-    /**
      * @notice Internal helper to update the `checkSpender` flag.
      * @param value New flag value.
      */
     function _setCheckSpender(bool value) internal virtual {
         checkSpender = value;
     }
+
+    /**
+     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
+     *      Declaring it `view` makes that a compiler-enforced invariant rather than a convention.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Go through all the whitelist rules to know if a restriction exists on the transfer

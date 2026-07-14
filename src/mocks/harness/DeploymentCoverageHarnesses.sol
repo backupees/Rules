@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
-import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
-import {RuleWhitelist} from "src/rules/validation/deployment/RuleWhitelist.sol";
-import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelistWrapper.sol";
-import {RuleERC2980} from "src/rules/validation/deployment/RuleERC2980.sol";
-import {RuleSanctionsList} from "src/rules/validation/deployment/RuleSanctionsList.sol";
-import {RuleBlacklistOwnable2Step} from "src/rules/validation/deployment/RuleBlacklistOwnable2Step.sol";
-import {RuleWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleWhitelistOwnable2Step.sol";
-import {RuleWhitelistWrapperOwnable2Step} from "src/rules/validation/deployment/RuleWhitelistWrapperOwnable2Step.sol";
-import {RuleERC2980Ownable2Step} from "src/rules/validation/deployment/RuleERC2980Ownable2Step.sol";
+import {ISanctionsList} from "../../rules/interfaces/ISanctionsList.sol";
+import {RuleBlacklist} from "../../rules/validation/deployment/RuleBlacklist.sol";
+import {RuleWhitelist} from "../../rules/validation/deployment/RuleWhitelist.sol";
+import {RuleWhitelistWrapper} from "../../rules/validation/deployment/RuleWhitelistWrapper.sol";
+import {RuleERC2980} from "../../rules/validation/deployment/RuleERC2980.sol";
+import {RuleSanctionsList} from "../../rules/validation/deployment/RuleSanctionsList.sol";
+import {RuleBlacklistOwnable2Step} from "../../rules/validation/deployment/RuleBlacklistOwnable2Step.sol";
+import {RuleWhitelistOwnable2Step} from "../../rules/validation/deployment/RuleWhitelistOwnable2Step.sol";
+import {RuleWhitelistWrapperOwnable2Step} from "../../rules/validation/deployment/RuleWhitelistWrapperOwnable2Step.sol";
+import {RuleERC2980Ownable2Step} from "../../rules/validation/deployment/RuleERC2980Ownable2Step.sol";
 
 /**
  * @title RuleBlacklistHarness — test harness exposing RuleBlacklist internals
@@ -85,6 +85,7 @@ contract RuleWhitelistWrapperHarness is RuleWhitelistWrapper {
      * @param admin Address granted the admin role
      * @param forwarderIrrevocable Trusted ERC-2771 forwarder address
      * @param checkSpender_ Whether the spender is also checked against the whitelist
+     * @param allowMintBurn Whether minting and burning are permitted (sets both flags)
      */
     constructor(address admin, address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleWhitelistWrapper(admin, forwarderIrrevocable, checkSpender_, allowMintBurn)
@@ -238,6 +239,7 @@ contract RuleWhitelistWrapperOwnable2StepHarness is RuleWhitelistWrapperOwnable2
      * @param owner Address set as the contract owner
      * @param forwarderIrrevocable Trusted ERC-2771 forwarder address
      * @param checkSpender_ Whether the spender is also checked against the whitelist
+     * @param allowMintBurn Whether minting and burning are permitted (sets both flags)
      */
     constructor(address owner, address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleWhitelistWrapperOwnable2Step(owner, forwarderIrrevocable, checkSpender_, allowMintBurn)

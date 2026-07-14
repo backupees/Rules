@@ -67,24 +67,6 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     }
 
     /**
-     * @notice Enables or disables minting through this rule.
-     * @param value The new value of the `allowMint` flag.
-     */
-    function setAllowMint(bool value) public virtual onlyMintBurnManager {
-        allowMint = value;
-        emit AllowMintUpdated(value);
-    }
-
-    /**
-     * @notice Enables or disables burning through this rule.
-     * @param value The new value of the `allowBurn` flag.
-     */
-    function setAllowBurn(bool value) public virtual onlyMintBurnManager {
-        allowBurn = value;
-        emit AllowBurnUpdated(value);
-    }
-
-    /**
      * @notice Returns the human-readable message corresponding to a restriction code.
      * @dev
      * Returns a descriptive text that explains why a transfer was restricted.
@@ -115,6 +97,24 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Enables or disables minting through this rule.
+     * @param value The new value of the `allowMint` flag.
+     */
+    function setAllowMint(bool value) public virtual onlyMintBurnManager {
+        allowMint = value;
+        emit AllowMintUpdated(value);
+    }
+
+    /**
+     * @notice Enables or disables burning through this rule.
+     * @param value The new value of the `allowBurn` flag.
+     */
+    function setAllowBurn(bool value) public virtual onlyMintBurnManager {
+        allowBurn = value;
+        emit AllowBurnUpdated(value);
+    }
 
     /**
      * @notice ERC-3643 hook called when a transfer occurs.

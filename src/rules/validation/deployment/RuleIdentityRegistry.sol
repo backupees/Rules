@@ -18,8 +18,15 @@ contract RuleIdentityRegistry is AccessControlModuleStandalone, RuleIdentityRegi
 
     /**
      * @notice Deploys the rule, sets the admin and the ERC-3643 identity registry.
+     * @dev Pass `false, false` for the ERC-3643-conformant default: the spec requires only the
+     *      RECEIVER to be verified. The two flags below are stricter-than-spec opt-ins.
      * @param admin Address that receives the default admin role.
      * @param identityRegistry_ Address of the ERC-3643 identity registry to query.
+     * @param checkSender_ When true, also require the sender to be verified. Stricter than
+     *        ERC-3643, and it traps de-listed holders: a holder whose identity lapses can no
+     *        longer exit their position. Defaults to false.
+     * @param checkSpender_ When true, also require the `transferFrom` spender to be verified.
+     *        Mint and burn stay exempt from this check. Defaults to false.
      */
     constructor(address admin, address identityRegistry_, bool checkSender_, bool checkSpender_)
         AccessControlModuleStandalone(admin)
