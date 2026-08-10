@@ -175,7 +175,8 @@ Here is the list of codes used by the different rules
 | RuleConditionalTransferLight | CODE_TRANSFER_REQUEST_NOT_APPROVED   | 46    |
 |                              | Reserved slot                        | 47-49 |
 | RuleMaxTotalSupply           | CODE_MAX_TOTAL_SUPPLY_EXCEEDED       | 50    |
-|                              | Reserved slot                        | 51-54 |
+|                              | CODE_SUPPLY_ORACLE_UNAVAILABLE       | 51    |
+|                              | Reserved slot                        | 52-54 |
 | RuleIdentityRegistry         | CODE_ADDRESS_FROM_NOT_VERIFIED       | 55    |
 |                              | CODE_ADDRESS_TO_NOT_VERIFIED         | 56    |
 |                              | CODE_ADDRESS_SPENDER_NOT_VERIFIED    | 57    |
@@ -449,7 +450,7 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 #### RuleMaxTotalSupply
 
-- `RuleMaxTotalSupply`: trusts the configured `tokenContract` to return an accurate `totalSupply()`.
+- `RuleMaxTotalSupply`: trusts the configured `tokenContract` to report an **accurate** `totalSupply()`, but not to stay callable — a reverting or codeless token yields code 51 instead of breaking the MUST-NOT-revert views. Configuration rejects a non-contract token and probes that `totalSupply()` is callable.
 - `RuleMaxTotalSupply`: does not allow clearing the token contract; disable the rule by removing it from the RuleEngine or token.
 
 #### RuleChainlinkPoR

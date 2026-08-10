@@ -60,6 +60,11 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
   - **Documented:** one instance protects one token. The rule reads `totalSupply()` from its configured `tokenContract` rather than from the token that triggered the check, and has no binding to enforce the pairing — sharing an instance across RuleEngines silently evaluates both tokens against the first one's supply and feed. Same exposure as `RuleMaxTotalSupply`; see [One instance per protected token](./doc/technical/RuleChainlinkPoR.md#one-instance-per-protected-token).
 - `AggregatorV3Interface` and `IDecimals` in `src/rules/interfaces/`, so the library reads Chainlink feeds without taking a dependency on the Chainlink contracts package.
 
+### Changed
+
+- **`RuleMaxTotalSupply` now validates its token contract and guards the supply read** (same hardening as `RuleChainlinkPoR`, threat `EXT-4`). The constructor and `setTokenContract` reject a non-contract address (`RuleMaxTotalSupply_TokenIsNotAContract`) and probe that `totalSupply()` is callable (`RuleMaxTotalSupply_TokenTotalSupplyUnavailable`). At run time a token that reverts or has lost its code yields the new restriction code `51` (`CODE_SUPPLY_ORACLE_UNAVAILABLE`) instead of reverting the ERC-1404 / ERC-3643 views, which MUST NOT revert.
+  - **Migration:** deployments that passed a placeholder or non-contract address as `tokenContract` now revert at construction. This only rejects configurations that could never have worked — the previous behaviour was to accept them and then revert on every restriction check. Integrators switching on restriction codes should handle `51`, which can only appear where the view previously threw.
+
 ### Documentation
 
 - New [`doc/technical/RuleChainlinkPoR.md`](./doc/technical/RuleChainlinkPoR.md), including a point-by-point comparison against Chainlink's `SecureMintPolicy 1.2.0` (vendored at `lib/chainlink-ace/`); `RULE_SEMANTICS.md` and `README.md` updated with the new rule.

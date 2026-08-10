@@ -21,6 +21,93 @@ contract RuleMaxTotalSupplyUnit is Test, HelperContract {
         new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, 100);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                  TOKEN CONTRACT VALIDITY (F-2 REGRESSION)
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice A non-contract token is rejected by an explicit check, not by the compiler's
+     *         uncatchable extcodesize revert that the `totalSupply()` probe would produce.
+     */
+    function testConstructor_RevertsOnNonContractToken() public {
+        vm.expectRevert(abi.encodeWithSelector(RuleMaxTotalSupply_TokenIsNotAContract.selector, ADDRESS1));
+        new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, ADDRESS1, 100);
+    }
+
+    function testSetTokenContract_RevertsOnNonContract() public {
+        vm.expectRevert(abi.encodeWithSelector(RuleMaxTotalSupply_TokenIsNotAContract.selector, ADDRESS1));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenContract(ADDRESS1);
+    }
+
+    /**
+     * @notice `totalSupply()` is mandatory: a contract without it is rejected at configuration
+     *         rather than silently bricking the read path later.
+     */
+    function testConstructor_RevertsWhenTotalSupplyMissing() public {
+        NoTotalSupplyMock noSupply = new NoTotalSupplyMock();
+        vm.expectRevert(
+            abi.encodeWithSelector(RuleMaxTotalSupply_TokenTotalSupplyUnavailable.selector, address(noSupply))
+        );
+        new RuleMaxTotalSupply(DEFAULT_ADMIN_ADDRESS, address(noSupply), 100);
+    }
+
+    function testSetTokenContract_RevertsWhenTotalSupplyMissing() public {
+        NoTotalSupplyMock noSupply = new NoTotalSupplyMock();
+        vm.expectRevert(
+            abi.encodeWithSelector(RuleMaxTotalSupply_TokenTotalSupplyUnavailable.selector, address(noSupply))
+        );
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenContract(address(noSupply));
+    }
+
+    /**
+     * @notice If the token breaks AFTER configuration the read path must still return a code:
+     *         the ERC-1404 / ERC-3643 views MUST NOT revert.
+     */
+    function testRevertingTotalSupplyYieldsACodeNotARevert() public {
+        RevertingTotalSupplyMock breakable = new RevertingTotalSupplyMock();
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenContract(address(breakable));
+        breakable.setRevertOnTotalSupply(true);
+
+        assertEq(
+            rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_SUPPLY_ORACLE_UNAVAILABLE, "must not revert"
+        );
+        assertFalse(rule.canTransfer(ZERO_ADDRESS, ADDRESS1, 1));
+        assertEq(
+            rule.detectTransferRestrictionFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS1, 1), CODE_SUPPLY_ORACLE_UNAVAILABLE
+        );
+
+        // Transfers and burns never read the supply, so they are unaffected.
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 1), TRANSFER_OK);
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 1), TRANSFER_OK);
+    }
+
+    function testCodelessTokenYieldsACodeNotARevert() public {
+        vm.etch(address(token), "");
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_SUPPLY_ORACLE_UNAVAILABLE);
+    }
+
+    function testTransferred_RevertsWithTheSupplyOracleCode() public {
+        RevertingTotalSupplyMock breakable = new RevertingTotalSupplyMock();
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenContract(address(breakable));
+        breakable.setRevertOnTotalSupply(true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RuleMaxTotalSupply_InvalidTransfer.selector,
+                address(rule),
+                ZERO_ADDRESS,
+                ADDRESS1,
+                1,
+                CODE_SUPPLY_ORACLE_UNAVAILABLE
+            )
+        );
+        rule.transferred(ZERO_ADDRESS, ADDRESS1, 1);
+    }
+
     function testSetTokenContract_RevertsOnZero() public {
         vm.expectRevert(RuleMaxTotalSupply_TokenAddressZeroNotAllowed.selector);
         vm.prank(DEFAULT_ADMIN_ADDRESS);
@@ -100,11 +187,40 @@ contract RuleMaxTotalSupplyUnit is Test, HelperContract {
 
     function testCanReturnTransferRestrictionCode() public view {
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_MAX_TOTAL_SUPPLY_EXCEEDED));
+        assertTrue(rule.canReturnTransferRestrictionCode(CODE_SUPPLY_ORACLE_UNAVAILABLE));
         assertFalse(rule.canReturnTransferRestrictionCode(CODE_NONEXISTENT));
     }
 
     function testMessageForTransferRestriction() public view {
         assertEq(rule.messageForTransferRestriction(CODE_MAX_TOTAL_SUPPLY_EXCEEDED), TEXT_MAX_TOTAL_SUPPLY_EXCEEDED);
+        assertEq(rule.messageForTransferRestriction(CODE_SUPPLY_ORACLE_UNAVAILABLE), TEXT_SUPPLY_ORACLE_UNAVAILABLE);
         assertEq(rule.messageForTransferRestriction(CODE_NONEXISTENT), TEXT_CODE_NOT_FOUND);
     }
+}
+
+/**
+ * @notice Has code but no `totalSupply()`: the shape that previously passed configuration and then
+ *         reverted the read path.
+ */
+contract NoTotalSupplyMock {
+    // Intentionally empty: it has code, but no `totalSupply()` to call.
+
+    }
+
+/**
+ * @notice A token whose `totalSupply()` can be made to revert after configuration.
+ */
+contract RevertingTotalSupplyMock {
+    bool private _shouldRevert;
+
+    function setRevertOnTotalSupply(bool shouldRevert) external {
+        _shouldRevert = shouldRevert;
+    }
+
+    function totalSupply() external view returns (uint256) {
+        require(!_shouldRevert, RevertingTotalSupplyMock_Unavailable());
+        return 0;
+    }
+
+    error RevertingTotalSupplyMock_Unavailable();
 }

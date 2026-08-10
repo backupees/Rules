@@ -15,6 +15,7 @@ import {RuleERC2980Ownable2Step} from "src/rules/validation/deployment/RuleERC29
 import {RuleSanctionsListOwnable2Step} from "src/rules/validation/deployment/RuleSanctionsListOwnable2Step.sol";
 import {RuleIdentityRegistryOwnable2Step} from "src/rules/validation/deployment/RuleIdentityRegistryOwnable2Step.sol";
 import {RuleMaxTotalSupplyOwnable2Step} from "src/rules/validation/deployment/RuleMaxTotalSupplyOwnable2Step.sol";
+import {TotalSupplyMock} from "src/mocks/TotalSupplyMock.sol";
 import {
     RuleConditionalTransferLightOwnable2Step
 } from "src/rules/operation/RuleConditionalTransferLightOwnable2Step.sol";
@@ -36,7 +37,8 @@ contract Ownable2StepERC165SupportTest is Test {
             new RuleSanctionsListOwnable2Step(OWNER, address(0), ISanctionsList(address(0)));
         RuleIdentityRegistryOwnable2Step identity =
             new RuleIdentityRegistryOwnable2Step(OWNER, address(0), false, false);
-        RuleMaxTotalSupplyOwnable2Step maxSupply = new RuleMaxTotalSupplyOwnable2Step(OWNER, address(1), 1);
+        RuleMaxTotalSupplyOwnable2Step maxSupply =
+            new RuleMaxTotalSupplyOwnable2Step(OWNER, address(new TotalSupplyMock()), 1);
         RuleConditionalTransferLightOwnable2Step conditional = new RuleConditionalTransferLightOwnable2Step(OWNER);
         RuleConditionalTransferLightMultiTokenOwnable2Step conditionalMulti =
             new RuleConditionalTransferLightMultiTokenOwnable2Step(OWNER);

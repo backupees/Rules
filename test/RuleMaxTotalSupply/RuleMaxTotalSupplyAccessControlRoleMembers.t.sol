@@ -6,11 +6,12 @@ import {
     IAccessControlEnumerableLike
 } from "../utils/AccessControlEnumerableTestBase.sol";
 import {RuleMaxTotalSupply} from "src/rules/validation/deployment/RuleMaxTotalSupply.sol";
+import {TotalSupplyMock} from "src/mocks/TotalSupplyMock.sol";
 
 contract RuleMaxTotalSupplyAccessControlRoleMembers is AccessControlEnumerableTestBase {
     function _deployAccessControl() internal override returns (IAccessControlEnumerableLike, address) {
         address adminAddr = DEFAULT_ADMIN_ADDRESS;
-        RuleMaxTotalSupply rule = new RuleMaxTotalSupply(adminAddr, ADDRESS1, 1000);
+        RuleMaxTotalSupply rule = new RuleMaxTotalSupply(adminAddr, address(new TotalSupplyMock()), 1000);
         return (IAccessControlEnumerableLike(address(rule)), adminAddr);
     }
 

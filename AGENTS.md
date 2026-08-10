@@ -104,7 +104,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 | RuleSanctionsList | 30–32 |
 | RuleBlacklist | 36–38 |
 | RuleConditionalTransferLight / …MultiToken | 46 |
-| RuleMaxTotalSupply | 50 |
+| RuleMaxTotalSupply | 50, 51 (total supply unavailable) |
 | RuleIdentityRegistry | 55–57 |
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
@@ -143,5 +143,5 @@ Gotchas worth knowing before you change anything:
 - `RuleWhitelistWrapper` does not ERC-165-check its child rules (unlike `RuleEngineBase._checkRule`); a non-`IAddressList` child bricks the scan.
 - `RuleChainlinkPoR` reads the feed's `decimals()` **live on every check** and deliberately does NOT cache it. Caching saves ~2,900 gas per mint but lets an aggregator migration that changes decimals mis-scale the reserves by `10 ** delta` with no on-chain signal — in the overstating direction that is unlimited unbacked minting. Both feed calls share the `code.length` guard (Solidity's extcodesize revert on a `try` to a codeless address is uncatchable) and `MAX_FEED_DECIMALS` is re-checked at read time, not just at configuration. Do not "optimise" this back into a cache.
 - `RuleChainlinkPoR` (and `RuleMaxTotalSupply`) protect **one token per instance** with no on-chain guard: they read `totalSupply()` from the configured `tokenContract`, never from the token that triggered the check, and behind a RuleEngine they cannot learn that identity. One instance added to two RuleEngines evaluates both tokens against the first one's supply and feed — silently over-minting or freezing the second. Chainlink's `SecureMintPolicy` blocks this with `onInstall`/`PolicyAlreadyBound`; adding an equivalent here would mean making a stateless validation rule bindable, which is a library-wide decision. Documented, not fixed.
-- `RuleChainlinkPoR` guards `tokenContract.totalSupply()` with a code-length check plus `try/catch`, returning code 78 rather than reverting. `RuleMaxTotalSupply` calls it unguarded — do not copy that pattern here; the ERC-1404 views MUST NOT revert. `decimals()` stays optional on the token, `totalSupply()` is mandatory and probed at configuration.
+- `RuleChainlinkPoR` and `RuleMaxTotalSupply` both guard `tokenContract.totalSupply()` with a code-length check plus `try/catch`, returning a restriction code (78 and 51 respectively) rather than reverting, and both validate the token at configuration (non-zero, has code, `totalSupply()` callable). The ERC-1404 views MUST NOT revert — never call `totalSupply()` unguarded on a read path. `decimals()` stays optional on the token; `totalSupply()` is mandatory. The two rules use *different* constant names for the same idea (`CODE_TOTAL_SUPPLY_UNAVAILABLE` vs `CODE_SUPPLY_ORACLE_UNAVAILABLE`) because `HelperContract` inherits both invariant-storage contracts and identical identifiers would clash.
 - `RuleChainlinkPoR` accepts `tokenDecimals == 0`. Chainlink's `SecureMintPolicy` requires 1–18, but CMTAT equity tokens report 0 decimals, so the lower bound was dropped. Do not re-add it.

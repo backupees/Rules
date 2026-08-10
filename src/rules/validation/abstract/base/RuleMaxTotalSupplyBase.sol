@@ -14,7 +14,9 @@ import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
  */
 abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotalSupplyInvariantStorage {
     /**
-     * @dev tokenContract is trusted to return a correct totalSupply.
+     * @dev tokenContract is trusted to report an *accurate* totalSupply -- nothing on-chain can
+     * verify that -- but it is NOT trusted to stay callable: a reverting or codeless token yields
+     * {CODE_SUPPLY_ORACLE_UNAVAILABLE} instead of reverting the MUST-NOT-revert views.
      */
     ITotalSupply public tokenContract;
     /**
@@ -32,7 +34,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @param maxTotalSupply_ Maximum total supply allowed.
      */
     constructor(address tokenContract_, uint256 maxTotalSupply_) {
-        require(tokenContract_ != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
+        _validateTokenContract(tokenContract_);
         tokenContract = ITotalSupply(tokenContract_);
         maxTotalSupply = maxTotalSupply_;
     }
@@ -47,7 +49,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @return True if `restrictionCode` is the max-total-supply-exceeded code.
      */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override returns (bool) {
-        return restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED;
+        return restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED || restrictionCode == CODE_SUPPLY_ORACLE_UNAVAILABLE;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -68,7 +70,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @param newTokenContract New token contract address; must not be the zero address.
      */
     function setTokenContract(address newTokenContract) public onlyMaxTotalSupplyManager {
-        require(newTokenContract != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
+        _validateTokenContract(newTokenContract);
         tokenContract = ITotalSupply(newTokenContract);
         emit TokenContractUpdated(newTokenContract);
     }
@@ -98,6 +100,8 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     {
         if (restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED) {
             return TEXT_MAX_TOTAL_SUPPLY_EXCEEDED;
+        } else if (restrictionCode == CODE_SUPPLY_ORACLE_UNAVAILABLE) {
+            return TEXT_SUPPLY_ORACLE_UNAVAILABLE;
         }
         return TEXT_CODE_NOT_FOUND;
     }
@@ -121,6 +125,45 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Validates a candidate token contract before it is stored.
+     * @dev `totalSupply()` is mandatory -- the cap check cannot work without it -- so it is probed
+     * here, turning what would otherwise be a silent read-path failure into a named configuration
+     * error. The code-length check is explicit rather than relying on the uncatchable extcodesize
+     * revert that the probe would incidentally produce.
+     * @param candidate The token contract to validate.
+     */
+    function _validateTokenContract(address candidate) internal view virtual {
+        require(candidate != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
+        require(candidate.code.length != 0, RuleMaxTotalSupply_TokenIsNotAContract(candidate));
+        try ITotalSupply(candidate).totalSupply() returns (uint256) {}
+        catch {
+            revert RuleMaxTotalSupply_TokenTotalSupplyUnavailable(candidate);
+        }
+    }
+
+    /**
+     * @notice Reads the tracked token's current total supply.
+     * @dev Guarded so the ERC-1404 read path stays revert-free even if the token breaks after
+     * configuration -- a proxy upgraded to something that reverts, or a pausable implementation
+     * that reverts while paused. Configuration already probes `totalSupply()`, so reaching the
+     * failure branch means the token changed behaviour since.
+     * @return available True when the supply could be read.
+     * @return supply The total supply; meaningless when `available` is false.
+     */
+    function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
+        ITotalSupply token = tokenContract;
+        // A `try` on a codeless address reverts uncatchably, so check for code first.
+        if (address(token).code.length == 0) {
+            return (false, 0);
+        }
+        try token.totalSupply() returns (uint256 totalSupply_) {
+            return (true, totalSupply_);
+        } catch {
+            return (false, 0);
+        }
+    }
+
+    /**
      * @inheritdoc RuleTransferValidation
      */
     function _detectTransferRestriction(
@@ -135,7 +178,10 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
         returns (uint8)
     {
         if (from == address(0)) {
-            uint256 currentSupply = tokenContract.totalSupply();
+            (bool supplyAvailable, uint256 currentSupply) = _currentSupply();
+            if (!supplyAvailable) {
+                return CODE_SUPPLY_ORACLE_UNAVAILABLE;
+            }
             // Overflow-safe: `currentSupply + value` could exceed uint256 and this is a
             // MUST-NOT-revert ERC-1404/ERC-3643 view, so compare against the remaining headroom.
             if (currentSupply > maxTotalSupply || value > maxTotalSupply - currentSupply) {
