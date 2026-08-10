@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {HelperContract} from "../HelperContract.sol";
 import {ERC3643TokenMock} from "src/mocks/ERC3643TokenMock.sol";
+import {OnchainIdMock} from "src/mocks/OnchainIdMock.sol";
 import {IdentityRegistryWhitelist} from "src/registry/IdentityRegistryWhitelist.sol";
 import {
     IdentityRegistryWhitelistInvariantStorage
@@ -27,6 +28,7 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
 
     IdentityRegistryWhitelist private registry;
     ERC3643TokenMock private token;
+    OnchainIdMock private investorOnchainId;
     bytes32 private registrarRole;
 
     function setUp() public {
@@ -34,6 +36,8 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
         registry = new IdentityRegistryWhitelist(DEFAULT_ADMIN_ADDRESS);
 
         token = new ERC3643TokenMock(IIdentityRegistryERC3643(address(registry)), AGENT);
+        // The registry no longer answers `keyHasPurpose`; recovery uses a real ERC-734 identity.
+        investorOnchainId = new OnchainIdMock();
         // Hoisted: an external call in an argument position would consume the vm.prank below.
         registrarRole = registry.IDENTITY_REGISTRAR_ROLE();
 
@@ -182,36 +186,36 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice The registry is passed as `_investorOnchainID`, so `keyHasPurpose` resolves against
-     *         the whitelist. The new wallet must already be registered for the key to resolve.
+     * @notice The replacement wallet is whitelisted BY THE TOKEN during recovery, exactly as in
+     *         stock ERC-3643 — it must not be pre-registered, or step 3 would hit the duplicate
+     *         guard. The ONCHAINID vouching for the wallet is supplied by the agent.
      */
     function testRecoveryAddress_MovesThePositionToTheNewWallet() public {
         vm.prank(AGENT);
         token.mint(INVESTOR, 100);
 
-        vm.prank(AGENT);
-        registry.registerIdentity(NEW_WALLET, address(0), COUNTRY_CH);
+        investorOnchainId.addWalletKey(NEW_WALLET, 1);
+        assertFalse(registry.isVerified(NEW_WALLET), "not pre-registered");
 
         vm.prank(AGENT);
-        assertTrue(token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry)));
+        assertTrue(token.recoveryAddress(INVESTOR, NEW_WALLET, address(investorOnchainId)));
 
         assertEq(token.balanceOf(NEW_WALLET), 100, "position moved");
         assertEq(token.balanceOf(INVESTOR), 0);
         assertFalse(registry.isVerified(INVESTOR), "lost wallet de-registered by the token");
-        assertTrue(registry.isVerified(NEW_WALLET), "new wallet still registered");
+        assertTrue(registry.isVerified(NEW_WALLET), "new wallet registered by the token");
     }
 
     /**
-     * @notice The documented ordering constraint: an unregistered new wallet makes `keyHasPurpose`
-     *         return false, so recovery reverts. Register the replacement wallet first.
+     * @notice Recovery is gated on the ONCHAINID vouching for the replacement wallet.
      */
-    function testRecoveryAddress_RevertsWhenNewWalletNotRegisteredFirst() public {
+    function testRecoveryAddress_RevertsWhenIdentityDoesNotVouchForTheWallet() public {
         vm.prank(AGENT);
         token.mint(INVESTOR, 100);
 
         vm.prank(AGENT);
         vm.expectRevert("Recovery not possible");
-        token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry));
+        token.recoveryAddress(INVESTOR, NEW_WALLET, address(investorOnchainId));
     }
 
     /**
@@ -221,15 +225,14 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
     function testRecoveryAddress_RevertsWhenTokenLacksTheRegistrarRole() public {
         vm.prank(AGENT);
         token.mint(INVESTOR, 100);
-        vm.prank(AGENT);
-        registry.registerIdentity(NEW_WALLET, address(0), COUNTRY_CH);
+        investorOnchainId.addWalletKey(NEW_WALLET, 1);
 
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         registry.revokeRole(registrarRole, address(token));
 
         vm.prank(AGENT);
         vm.expectRevert();
-        token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry));
+        token.recoveryAddress(INVESTOR, NEW_WALLET, address(investorOnchainId));
     }
 
     /**
@@ -241,13 +244,12 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
     function testRecoveryAddress_SucceedsWithNoIdentityDataTracked() public {
         vm.prank(AGENT);
         token.mint(INVESTOR, 100);
-        vm.prank(AGENT);
-        registry.registerIdentity(NEW_WALLET, address(0), COUNTRY_CH);
+        investorOnchainId.addWalletKey(NEW_WALLET, 1);
 
         assertEq(registry.investorCountry(INVESTOR), 0, "no country tracked");
 
         vm.prank(AGENT);
-        assertTrue(token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry)));
+        assertTrue(token.recoveryAddress(INVESTOR, NEW_WALLET, address(investorOnchainId)));
 
         assertEq(token.balanceOf(NEW_WALLET), 100);
         assertEq(registry.investorCountry(NEW_WALLET), 0, "still none after recovery");

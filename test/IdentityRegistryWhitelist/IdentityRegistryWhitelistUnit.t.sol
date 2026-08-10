@@ -43,17 +43,17 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
     }
 
     /**
-     * @notice Re-registration is a no-op, not an error. Required so `recoveryAddress` can register
-     *         a wallet the whitelist already contains.
+     * @notice Duplicate registration reverts, matching ERC-3643's reference registry.
      */
-    function testRegisterIdentity_IsIdempotent() public {
+    function testRegisterIdentity_RejectsDuplicates() public {
         vm.prank(REGISTRAR);
         registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
+
+        vm.expectRevert(RuleAddressSet_AddressAlreadyListed.selector);
         vm.prank(REGISTRAR);
         registry.registerIdentity(ADDRESS1, ADDRESS2, 250);
 
-        assertTrue(registry.isVerified(ADDRESS1));
-        assertEq(registry.registeredIdentityCount(), 1, "no duplicate entry");
+        assertEq(registry.registeredIdentityCount(), 1);
     }
 
     /**
@@ -118,57 +118,5 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
         vm.expectRevert();
         vm.prank(ATTACKER);
         registry.deleteIdentity(ADDRESS1);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            KEY HAS PURPOSE
-    //////////////////////////////////////////////////////////////*/
-
-    function testKeyHasPurpose_TracksRegistration() public {
-        bytes32 key = keccak256(abi.encode(ADDRESS1));
-        assertFalse(registry.keyHasPurpose(key, 1), "unregistered");
-
-        vm.prank(REGISTRAR);
-        registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
-        assertTrue(registry.keyHasPurpose(key, 1), "registered");
-
-        vm.prank(REGISTRAR);
-        registry.deleteIdentity(ADDRESS1);
-        assertFalse(registry.keyHasPurpose(key, 1), "reverse index cleared on delete");
-    }
-
-    /**
-     * @notice An unresolvable key maps to `address(0)`, which is never registered — fail-closed.
-     */
-    function testKeyHasPurpose_UnknownKeyIsRejected() public view {
-        assertFalse(registry.keyHasPurpose(keccak256("not a wallet key"), 1));
-        assertFalse(registry.keyHasPurpose(bytes32(0), 1));
-    }
-
-    /**
-     * @notice The purpose argument is ignored: this is not a real ERC-734 identity. Pinned so the
-     *         limitation is visible in the test suite, not only in the docs.
-     */
-    function testKeyHasPurpose_IgnoresThePurposeArgument() public {
-        vm.prank(REGISTRAR);
-        registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
-
-        bytes32 key = keccak256(abi.encode(ADDRESS1));
-        assertTrue(registry.keyHasPurpose(key, 1), "MANAGEMENT");
-        assertTrue(registry.keyHasPurpose(key, 2), "ACTION - same answer");
-        assertTrue(registry.keyHasPurpose(key, type(uint256).max), "any purpose - same answer");
-    }
-
-    /**
-     * @notice The key derivation must match `Token.recoveryAddress` exactly, or recovery silently
-     *         fails for every wallet.
-     */
-    function testKeyHasPurpose_UsesTheErc3643KeyDerivation() public {
-        vm.prank(REGISTRAR);
-        registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
-
-        // keccak256(abi.encode(addr)) — NOT abi.encodePacked.
-        assertTrue(registry.keyHasPurpose(keccak256(abi.encode(ADDRESS1)), 1));
-        assertFalse(registry.keyHasPurpose(keccak256(abi.encodePacked(ADDRESS1)), 1));
     }
 }

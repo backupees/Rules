@@ -15,11 +15,6 @@ abstract contract IdentityRegistryWhitelistInvariantStorage {
      */
     bytes32 public constant IDENTITY_REGISTRAR_ROLE = keccak256("IDENTITY_REGISTRAR_ROLE");
 
-    /**
-     * @notice The ERC-734 purpose ERC-3643 checks in `recoveryAddress` (MANAGEMENT).
-     */
-    uint256 public constant ERC734_PURPOSE_MANAGEMENT = 1;
-
     /* ============ Events ============ */
 
     /**

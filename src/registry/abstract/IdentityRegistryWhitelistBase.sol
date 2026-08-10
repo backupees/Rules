@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {RuleAddressSetInternal} from "../../rules/validation/abstract/RuleAddressSet/RuleAddressSetInternal.sol";
 import {IdentityRegistryWhitelistInvariantStorage} from "./IdentityRegistryWhitelistInvariantStorage.sol";
-import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.sol";
+import {IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.sol";
 
 /**
  * @title IdentityRegistryWhitelistBase
@@ -14,17 +14,14 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
  * `registerIdentity` whitelists a wallet, `deleteIdentity` removes it, and `isVerified` answers the
  * whitelist question the token asks on every inbound transfer.
  *
- * ## Serving as the ONCHAINID for `recoveryAddress`
- * `Token.recoveryAddress(lostWallet, newWallet, investorOnchainID)` calls
- * `keyHasPurpose(keccak256(abi.encode(newWallet)), 1)` on the **caller-supplied**
- * `investorOnchainID`, not on anything the registry returns. Passing this contract's own address as
- * `investorOnchainID` therefore routes that check here, and {keyHasPurpose} answers it from the
- * whitelist -- no ONCHAINID deployment is needed anywhere.
- *
- * The key is a hash, so it cannot be inverted. A reverse index `wallet-key -> wallet` is written by
- * {registerIdentity} and cleared by {deleteIdentity}, which is what makes the lookup possible. The
- * consequence is documented in the technical doc: **the new wallet must already be registered
- * before `recoveryAddress` is called**.
+ * ## It is only a whitelist
+ * There is no ERC-734 surface here. An earlier revision implemented `keyHasPurpose` so the registry
+ * could be passed as `_investorOnchainID` to `recoveryAddress`; it was removed because it bought
+ * nothing. `Token.recoveryAddress` calls `keyHasPurpose` on the address the **agent supplies**,
+ * without cross-checking it against the registry, so an agent who wants to skip that gate simply
+ * passes a different contract. It was convenience for an honest agent, not a control -- and it cost
+ * a reverse index plus two behavioural divergences from the reference registry. Supply a real
+ * ONCHAINID (or any ERC-734 contract) as `_investorOnchainID` instead.
  *
  * ## Where the whitelist comes from
  * The address set is not re-implemented here: this contract inherits {RuleAddressSetInternal}, the
@@ -32,11 +29,10 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
  * layout and the zero-address guard are shared code rather than a second implementation. No
  * separate whitelist contract is deployed -- the registry *is* the list.
  *
- * Only the `internal` layer is inherited, deliberately. Inheriting the public `RuleAddressSet` API
- * would expose `addAddress` / `removeAddress` as a second write path, and those functions are not
- * `virtual`, so they could not be overridden to maintain the {keyHasPurpose} reverse index -- a
- * wallet added that way would be verified but unrecoverable. Routing every write through
- * {registerIdentity} / {deleteIdentity} keeps the index and the set inseparable by construction.
+ * Only the `internal` layer is inherited, so the registry exposes exactly one write API -- the
+ * ERC-3643 one -- rather than two overlapping ones. The public `RuleAddressSet` surface would add
+ * `addAddress` / `removeAddress` alongside {registerIdentity} / {deleteIdentity}, with two sets of
+ * roles and events describing the same state change.
  *
  * ## No identity state is kept
  * This contract stores **no identity data at all** -- no ONCHAINID, no country, no claims. Its only
@@ -48,15 +44,8 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
 abstract contract IdentityRegistryWhitelistBase is
     RuleAddressSetInternal,
     IIdentityRegistryERC3643,
-    IERC734KeyHasPurpose,
     IdentityRegistryWhitelistInvariantStorage
 {
-    /**
-     * @dev `keccak256(abi.encode(wallet)) -> wallet`, the reverse index that makes {keyHasPurpose}
-     * possible. Kept exactly in step with {_registered}.
-     */
-    mapping(bytes32 walletKey => address wallet) private _walletOfKey;
-
     /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -66,14 +55,8 @@ abstract contract IdentityRegistryWhitelistBase is
      * @dev Adds the wallet to the whitelist. `_identity` is echoed in {IdentityRegistered} for
      * off-chain traceability and `_country` is ignored entirely -- neither is stored.
      *
-     * Reverts only on the zero address. Re-registering an already-registered wallet is a no-op, not
-     * an error.
-     *
-     * IMPORTANT: this is a deliberate divergence from ERC-3643's reference registry, which reverts
-     * with "address stored already". It is forced by answering {keyHasPurpose} from the whitelist:
-     * `recoveryAddress` requires `keyHasPurpose(key(newWallet), 1)` to be true *before* it calls
-     * `registerIdentity(newWallet, ...)`, so the new wallet must already be registered -- and a
-     * duplicate-rejecting `registerIdentity` would then abort every recovery. See the technical doc.
+     * Reverts on the zero address and on an already-registered wallet, matching ERC-3643's
+     * reference registry (which reverts with "address stored already").
      */
     function registerIdentity(
         address _userAddress,
@@ -85,13 +68,11 @@ abstract contract IdentityRegistryWhitelistBase is
         override
         onlyIdentityRegistrar
     {
-        // Same guard, same error as the whitelist rules: the zero address is the mint/burn
+        // Same guards, same errors as the whitelist rules: the zero address is the mint/burn
         // sentinel and must never be listed, or `isVerified(address(0))` would return true.
         require(_userAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        // `_addAddress` is a no-op for an already-listed wallet, and with no identity state to
-        // refresh, that makes re-registration idempotent for free.
+        require(!_isAddressListed(_userAddress), RuleAddressSet_AddressAlreadyListed());
         _addAddress(_userAddress);
-        _walletOfKey[_walletKey(_userAddress)] = _userAddress;
         emit IdentityRegistered(_userAddress, _identity);
     }
 
@@ -102,7 +83,6 @@ abstract contract IdentityRegistryWhitelistBase is
     function deleteIdentity(address _userAddress) external virtual override onlyIdentityRegistrar {
         require(_isAddressListed(_userAddress), RuleAddressSet_AddressNotFound());
         _removeAddress(_userAddress);
-        delete _walletOfKey[_walletKey(_userAddress)];
         emit IdentityRemoved(_userAddress);
     }
 
@@ -148,30 +128,6 @@ abstract contract IdentityRegistryWhitelistBase is
         return 0;
     }
 
-    /**
-     * @inheritdoc IERC734KeyHasPurpose
-     * @dev Answers from the whitelist: a key resolves to its wallet through the reverse index, and
-     * the result is that wallet's {isVerified}. An unknown key maps to `address(0)`, which is never
-     * registered, so unknown keys are rejected -- fail-closed.
-     *
-     * WARNING: this contract is not a real ERC-734 identity. It holds no keys and no claims, and
-     * `_purpose` is **ignored**: any purpose returns the same whitelist answer. It exists solely so
-     * the registry can be passed as `_investorOnchainID` to `recoveryAddress`. See the technical
-     * doc before relying on it for anything else.
-     */
-    function keyHasPurpose(
-        bytes32 _key,
-        uint256 /* _purpose */
-    )
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return isVerified(_walletOfKey[_key]);
-    }
-
     /*//////////////////////////////////////////////////////////////
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
@@ -190,23 +146,4 @@ abstract contract IdentityRegistryWhitelistBase is
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Derives the ERC-734 key ERC-3643 uses for a wallet.
-     * @dev Must match `Token.recoveryAddress` exactly: `keccak256(abi.encode(_newWallet))`.
-     * @param wallet The wallet to derive the key for.
-     * @return key The wallet key.
-     */
-    function _walletKey(address wallet) internal pure virtual returns (bytes32 key) {
-        // Linter suggestion (`asm-keccak256`): hash in assembly to avoid the abi.encode allocation.
-        // `mstore` of an address writes it left-padded into a 32-byte word, which IS `abi.encode`,
-        // so this is byte-identical to `keccak256(abi.encode(wallet))`. Scratch space (0x00-0x3f)
-        // is reserved by Solidity for exactly this. The equivalence is pinned by
-        // `testKeyHasPurpose_UsesTheErc3643KeyDerivation`, which also asserts the encodePacked
-        // form does NOT match -- getting this wrong would silently break every recovery.
-        assembly ("memory-safe") {
-            mstore(0x00, wallet)
-            key := keccak256(0x00, 0x20)
-        }
-    }
 }

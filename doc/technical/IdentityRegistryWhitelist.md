@@ -6,6 +6,12 @@
 
 > **This is not a compliance rule.** It implements no `IRule` surface, has no restriction codes, and **must not be added to a `RuleEngine`**. It sits on the token's *identity registry* slot, not its *compliance* slot. Do not confuse it with [`RuleIdentityRegistry`](./RuleIdentityRegistry.md), which is the mirror image: a compliance rule that *consults* an external identity registry. This contract *is* the registry.
 
+### Where the whitelist comes from
+
+The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal` — the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.
+
+Only the `internal` layer is inherited, and that is deliberate. Inheriting the public `RuleAddressSet` API would expose `addAddress` / `removeAddress` as a second write path — and those functions are **not `virtual`**, so they could not be overridden to maintain the `keyHasPurpose` reverse index. A wallet added through that path would be verified but permanently unrecoverable. Routing every write through `registerIdentity` / `deleteIdentity` keeps the set and the index inseparable by construction.
+
 The design goal is a **wrapper, not a registry**: it adapts the calls an ERC-3643 token makes onto a plain whitelist, and keeps **no identity state whatsoever** — no ONCHAINID, no country, no claims. `registerIdentity`'s `_identity` and `_country` arguments exist so the ERC-3643 signature matches; both are discarded. Verification means exactly one thing: is this wallet on the whitelist.
 
 ## Which ERC-3643 functions call the registry, and how
@@ -19,9 +25,9 @@ Transcribed from the reference `Token.sol` (vendored at `lib/ERC-3643/contracts/
 | `forcedTransfer(from, to, amount)` | `isVerified(_to)` | Before moving value | Reverts `"Transfer not possible"` |
 | `mint(to, amount)` | `isVerified(_to)` | Before minting | Reverts `"Identity is not verified."` |
 | `burn(user, amount)` | **none** | — | Burn never consults the registry |
-| `recoveryAddress(lost, new, onchainID)` | `keyHasPurpose` on `onchainID`, then `investorCountry(lost)`, `registerIdentity(new, …)`, `deleteIdentity(lost)` | See sequence below | Reverts `"Recovery not possible"` if `keyHasPurpose` is false |
+| `recoveryAddress(lost, new, onchainID)` | `investorCountry(lost)`, `registerIdentity(new, …)`, `deleteIdentity(lost)` | See sequence below | Reverts `"Recovery not possible"` if the supplied ONCHAINID does not vouch for the wallet |
 
-Every one of those calls is answered from the whitelist. `investorCountry` is the only one with nothing to answer from, and it returns a constant 0.
+Every one of those calls is answered from the whitelist. `investorCountry` is the only one with nothing to answer from, and it returns a constant 0. `recoveryAddress` also calls `keyHasPurpose`, but **not on the registry** — see below.
 
 Two consequences worth internalising:
 
@@ -32,14 +38,17 @@ Two consequences worth internalising:
 
 ```
 1. keyHasPurpose(keccak256(abi.encode(newWallet)), 1)  ── on the CALLER-SUPPLIED onchainID
-   └─ false ⇒ revert "Recovery not possible"
+   └─ false ⇒ revert "Recovery not possible"           ── NOT the registry: see below
 2. investorCountry(lostWallet)                          ── always 0 here; discarded in step 3
-3. registerIdentity(newWallet, onchainID, country)      ── called BY THE TOKEN
+3. registerIdentity(newWallet, onchainID, country)      ── called BY THE TOKEN; new wallet must
+                                                           NOT already be registered
 4. forcedTransfer(lostWallet, newWallet, balance)       ── re-enters isVerified(newWallet)
 5. deleteIdentity(lostWallet)                           ── called BY THE TOKEN
 ```
 
-Step 1 is the subtle one: the token calls `keyHasPurpose` on the `_investorOnchainID` **argument it was given**, not on anything the registry returns. Passing this registry's own address as that argument routes the check here, which is what removes the ONCHAINID dependency.
+**Step 1 does not involve this registry.** Supply the investor's ONCHAINID — or any ERC-734 contract — as `_investorOnchainID`.
+
+An earlier revision implemented `keyHasPurpose` here so the registry could be passed as that argument, removing the ONCHAINID dependency entirely. It was **removed**, because it bought nothing: `Token.recoveryAddress` calls `keyHasPurpose` on the address the agent supplies and never cross-checks it against the registry (`Token.sol:303-305`), so an agent who wants to skip the gate simply passes a different contract. It was convenience for an honest agent, not a control — and it cost a reverse index plus two behavioural divergences from the reference registry, both of which are now gone.
 
 Steps 3 and 5 mean **the token itself is a caller of the registry's write functions**, which drives the access-control setup below.
 
@@ -54,11 +63,10 @@ registry.grantRole(role, operator);        // maintains the whitelist
 registry.grantRole(role, address(token));  // REQUIRED for recoveryAddress
 ```
 
-Then, to recover a wallet:
+Then, to recover a wallet — the replacement wallet is registered **by the token**, so do not pre-register it:
 
 ```solidity
-registry.registerIdentity(newWallet, address(0), 0);                // must come FIRST
-token.recoveryAddress(lostWallet, newWallet, address(registry));    // registry as the onchainID
+token.recoveryAddress(lostWallet, newWallet, investorOnchainId);    // a real ERC-734 identity
 ```
 
 ## Access Control
@@ -78,7 +86,7 @@ token.recoveryAddress(lostWallet, newWallet, address(registry));    // registry 
 
 Adds a wallet to the whitelist. `_identity` is echoed in `IdentityRegistered` for off-chain traceability; `_country` is ignored entirely. **Neither is stored.** Reverts on the zero address. Restricted to `IDENTITY_REGISTRAR_ROLE`.
 
-**Idempotent**: re-registering an already-registered wallet is a no-op, not an error. See [Limitation 2](#2-registeridentity-is-idempotent-diverging-from-the-reference-registry).
+Reverts on an already-registered wallet, matching the reference registry's `"address stored already"`.
 
 ### `deleteIdentity(address _userAddress)`
 
@@ -92,32 +100,21 @@ Whitelist membership. **`isVerified(address(0))` is always `false`** — the zer
 
 **Always returns 0.** No country is stored. The function exists only because `recoveryAddress` calls it — omitting it would make every recovery revert — and the 0 it returns is handed straight back into `registerIdentity`, which ignores it. See [Limitation 3](#3-no-identity-data-is-kept).
 
-### `keyHasPurpose(bytes32 _key, uint256 _purpose) → bool`
+### `registeredIdentityCount() → uint256`
 
-Resolves `_key` to a wallet through the reverse index and returns that wallet's `isVerified`. `_purpose` is **ignored**. See [Limitation 1](#1-keyhaspurpose-is-not-a-real-erc-734-identity).
-
-### `registeredIdentities() → address[]` / `registeredIdentityCount() → uint256`
-
-Enumeration helpers for off-chain auditing. `registeredIdentities` is unbounded — do not call it from another contract.
+How many wallets are registered. There is deliberately no full enumeration getter, matching `RuleWhitelist` and `RuleBlacklist`, which expose a count but not the member list.
 
 ## Limitations
 
-### 1. `keyHasPurpose` is not a real ERC-734 identity
+### 1. No ERC-734 surface: `recoveryAddress` needs a real ONCHAINID
 
-This contract holds **no keys and no claims**. `keyHasPurpose` exists for one reason: so the registry can be passed as `_investorOnchainID` to `recoveryAddress`.
+The registry implements no ERC-734 function, so `recoveryAddress` must be given an actual identity contract as `_investorOnchainID`. A deployment that has no ONCHAINID infrastructure must supply some ERC-734-compatible contract for recovery, or forgo `recoveryAddress` entirely — `forcedTransfer` plus a manual `registerIdentity` / `deleteIdentity` pair achieves the same end state under registrar control.
 
-- **`_purpose` is ignored.** Purpose 1 (MANAGEMENT), purpose 2 (ACTION) and any other value all return the same whitelist answer. A caller that genuinely needs ERC-734 purpose semantics will be misled.
-- **The key must be resolvable.** `_key` is `keccak256(abi.encode(wallet))`, a hash that cannot be inverted, so the contract maintains a reverse index `key → wallet`, written by `registerIdentity` and cleared by `deleteIdentity`. **A key for a wallet that was never registered resolves to `address(0)`, which is never verified — so it returns `false`.** That is fail-closed, but it produces the ordering constraint below.
-- **Consequence: the new wallet must be registered *before* `recoveryAddress` is called.** In stock ERC-3643 the new wallet is *not* pre-registered — its ONCHAINID vouches for it. Here the whitelist is the only source of truth, so the replacement wallet must already be on it.
-- The key derivation must match `Token.recoveryAddress` exactly (`abi.encode`, not `abi.encodePacked`); this is pinned by a test.
+This is a deliberate narrowing. Answering `keyHasPurpose` from the whitelist was implemented and then removed: it added no security (the agent chooses which contract is called) while forcing the registry to keep a hash-to-wallet reverse index and to accept duplicate registrations. Trading a real limitation for an imaginary guarantee was the wrong trade.
 
-### 2. `registerIdentity` is idempotent, diverging from the reference registry
+### 2. Recovery still trusts the token agent completely
 
-ERC-3643's `IdentityRegistryStorage.addIdentityToStorage` reverts with `"address stored already"` on a duplicate. **This contract does not** — with no identity state to refresh, re-registration is simply a no-op.
-
-That divergence is forced, not incidental. Limitation 1 requires the new wallet to be registered before `recoveryAddress`; step 3 of the sequence then has the token call `registerIdentity` on that same wallet. A duplicate-rejecting implementation would abort **every** recovery. The two requirements are only satisfiable together if re-registration is an update.
-
-The practical effect is that `registerIdentity` cannot be used to detect "was this wallet already known" — check `isVerified` first if you need that.
+`_investorOnchainID` is agent-supplied and unvalidated by `Token.sol`, so a compromised agent can pass a contract that vouches for any wallet and move any holder's position to an address of their choosing. That is a property of ERC-3643's recovery design, not of this registry, and no registry-side check can fix it — but it belongs in the threat model of any deployment relying on `recoveryAddress`.
 
 ### 3. No identity data is kept
 
@@ -145,7 +142,7 @@ If you need investor metadata on-chain, this is the wrong contract — it is a w
 
 | File | Covers |
 | --- | --- |
-| `test/IdentityRegistryWhitelist/IdentityRegistryWhitelistUnit.t.sol` | Registration, deletion, idempotency, zero-address rejection, access control, `keyHasPurpose` semantics and key derivation |
+| `test/IdentityRegistryWhitelist/IdentityRegistryWhitelistUnit.t.sol` | Registration, deletion, duplicate and zero-address rejection, access control, and that no identity data is stored |
 | `test/IdentityRegistryWhitelist/IdentityRegistryWhitelistERC3643.t.sol` | End-to-end against an ERC-3643 token: `mint`, `transfer`, `transferFrom`, `forcedTransfer`, `burn`, `recoveryAddress` |
 
-The integration tests use `ERC3643TokenMock`, whose registry call sequences and revert strings are transcribed from the reference `Token.sol`. The real implementation is not used because it imports the ONCHAINID Solidity package (not vendored) and targets OpenZeppelin v4 upgradeable contracts, while this repository vendors OZ v5 — it does not compile in this build. The mock keeps the registry interaction faithful and omits what is orthogonal to it (compliance module, pausing, partial-freeze accounting).
+The integration tests use `ERC3643TokenMock` plus `OnchainIdMock` (a minimal ERC-734 stub standing in for the investor's identity), whose registry call sequences and revert strings are transcribed from the reference `Token.sol`. The real implementation is not used because it imports the ONCHAINID Solidity package (not vendored) and targets OpenZeppelin v4 upgradeable contracts, while this repository vendors OZ v5 — it does not compile in this build. The mock keeps the registry interaction faithful and omits what is orthogonal to it (compliance module, pausing, partial-freeze accounting).
