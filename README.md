@@ -146,6 +146,7 @@ _Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 - `src/rules/validation/abstract/invariant/`: invariant storage contracts (constants, errors, events).
 - `src/rules/validation/deployment/`: deployable validation rules (concrete contracts).
 - `src/rules/operation/`: read-write (operation) rules that modify state on transfer.
+- `src/registry/`: contracts that plug into a token's **identity registry** slot rather than its compliance slot (`IdentityRegistryWhitelist`).
 - `test/`: Foundry tests, one folder per rule.
 - `script/`: deployment scripts.
 
@@ -272,6 +273,8 @@ The same rule can also be plugged **directly** into a CMTAT token (see [Rules as
 ## Types of Rules
 
 There are two categories of rules: validation rules (read-only) and operation rules (read-write).
+
+Separately, `src/registry/` holds [`IdentityRegistryWhitelist`](./doc/technical/IdentityRegistryWhitelist.md) — **not a rule**. It plugs into an ERC-3643 token's *identity registry* slot (`token.setIdentityRegistry(...)`) and answers `isVerified` from a whitelist, so no ONCHAINID deployment is needed. It implements no `IRule` surface and must not be added to a `RuleEngine`. Note the direction: `RuleIdentityRegistry` *consults* an identity registry, whereas `IdentityRegistryWhitelist` *is* one.
 
 ### Which rule should I use?
 
@@ -416,6 +419,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleSanctionsList | [RuleSanctionList.md](./doc/technical/RuleSanctionList.md) |
 | RuleMaxTotalSupply | [RuleMaxTotalSupply.md](./doc/technical/RuleMaxTotalSupply.md) |
 | RuleChainlinkPoR | [RuleChainlinkPoR.md](./doc/technical/RuleChainlinkPoR.md) |
+| IdentityRegistryWhitelist | [IdentityRegistryWhitelist.md](./doc/technical/IdentityRegistryWhitelist.md) |
 | RuleIdentityRegistry | [RuleIdentityRegistry.md](./doc/technical/RuleIdentityRegistry.md) |
 | RuleSpenderWhitelist | [RuleSpenderWhitelist.md](./doc/technical/RuleSpenderWhitelist.md) |
 | RuleERC2980 | [RuleERC2980.md](./doc/technical/RuleERC2980.md) |

@@ -46,6 +46,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `src/rules/validation/abstract/core/` | `RuleTransferValidation` (ERC-1404/3643/7551 views), `RuleNFTAdapter` (ERC-7943 + `ITransferContext` overloads), `RuleWhitelistShared` |
 | `src/rules/validation/abstract/` | Shared base contracts and invariant storage |
 | `src/rules/interfaces/` | Shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITotalSupply`, `ITransferContext`, `IERC2980`, `IERC7943NonFungibleCompliance`, `AggregatorV3Interface`, `IDecimals`) |
+| `src/registry/` | Contracts filling a token's **identity registry** slot, not its compliance slot (`IdentityRegistryWhitelist`). Not rules: no `IRule`, never added to a RuleEngine |
 | `src/modules/` | Reusable modules (`AccessControlModuleStandalone`, `MetaTxModuleStandalone`, `VersionModule`, `Ownable2StepERC165Module`) |
 | `test/` | Foundry tests, one folder per rule |
 | `lib/` | Git submodule dependencies (do not edit) |
@@ -68,6 +69,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `RuleMaxTotalSupply` | Cap minting so total supply never exceeds a maximum |
 | `RuleChainlinkPoR` / `RuleChainlinkPoROwnable2Step` | Cap minting at the reserves reported by a Chainlink Proof of Reserve feed (`AggregatorV3Interface`). The limit equals the reported reserves exactly — no margin parameter (deliberately dropped from Chainlink's `SecureMintPolicy`); compose with `RuleMaxTotalSupply` for a static cap. Mints only; transfers and burns always pass, so a stale or broken feed never traps holders. The read path is guarded (`code.length` check + `try/catch` + saturating arithmetic) so the ERC-1404 views never revert |
 | `RuleIdentityRegistry` | Check ERC-3643 identity registry for participant verification |
+| `IdentityRegistryWhitelist` | The mirror image of `RuleIdentityRegistry`: **is** an ERC-3643 identity registry, backed by a whitelist, so no ONCHAINID is needed. Installed with `token.setIdentityRegistry()`. Also answers `keyHasPurpose` so it can be passed as `_investorOnchainID` to `recoveryAddress` — which forces `registerIdentity` to be idempotent (the reference registry reverts on duplicates). The token itself must hold `IDENTITY_REGISTRAR_ROLE`. See `doc/technical/IdentityRegistryWhitelist.md` |
 | `RuleSpenderWhitelist` / `RuleSpenderWhitelistOwnable2Step` | Allow `transferFrom` only when spender is whitelisted; direct transfers are always allowed |
 | `RuleERC2980` | ERC-2980 Swiss Compliant rule: whitelist (recipient-only) + frozenlist (blocks sender, recipient, and spender for `transferFrom`); frozenlist takes priority |
 | `RuleERC2980Ownable2Step` | Ownable2Step variant of RuleERC2980 |

@@ -65,8 +65,14 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 - **`RuleMaxTotalSupply` now validates its token contract and guards the supply read** (same hardening as `RuleChainlinkPoR`, threat `EXT-4`). The constructor and `setTokenContract` reject a non-contract address (`RuleMaxTotalSupply_TokenIsNotAContract`) and probe that `totalSupply()` is callable (`RuleMaxTotalSupply_TokenTotalSupplyUnavailable`). At run time a token whose `totalSupply()` reverts yields the new restriction code `51` (`CODE_SUPPLY_ORACLE_UNAVAILABLE`) instead of reverting the ERC-1404 / ERC-3643 views, which MUST NOT revert. Codeless targets are excluded by construction rather than by a runtime check: the setters require code and EIP-6780 (Cancun) makes that permanent, recorded as a deployment precondition in each rule doc.
   - **Migration:** deployments that passed a placeholder or non-contract address as `tokenContract` now revert at construction. This only rejects configurations that could never have worked — the previous behaviour was to accept them and then revert on every restriction check. Integrators switching on restriction codes should handle `51`, which can only appear where the view previously threw.
 
+- **`IdentityRegistryWhitelist`** — a whitelist that plugs into an **ERC-3643 token's identity registry slot** (`token.setIdentityRegistry(...)`), so a token can enforce investor eligibility without deploying ONCHAINID contracts. `registerIdentity` whitelists, `deleteIdentity` removes, `isVerified` answers the token's per-transfer check. Only the subset of `IIdentityRegistry` that `Token.sol` actually calls is implemented. This is **not** a compliance rule: no `IRule` surface, and it must not be added to a `RuleEngine`.
+  - Implements `keyHasPurpose` so the registry itself can be passed as `_investorOnchainID` to `recoveryAddress`, resolving the key through a reverse index written at registration. Two documented consequences: the replacement wallet must be registered **before** recovery, and `registerIdentity` is **idempotent** — a deliberate divergence from the reference registry, which reverts on duplicates and would otherwise abort every recovery.
+  - The ERC-3643 token must hold `IDENTITY_REGISTRAR_ROLE`, because `recoveryAddress` makes the token call `registerIdentity` and `deleteIdentity`.
+  - `isVerified(address(0))` is always `false`; the zero address can never be registered.
+
 ### Documentation
 
+- New [`doc/technical/IdentityRegistryWhitelist.md`](./doc/technical/IdentityRegistryWhitelist.md), including a table of which ERC-3643 token functions call the registry and how, the `recoveryAddress` call sequence, and five documented limitations.
 - New [`doc/technical/RuleChainlinkPoR.md`](./doc/technical/RuleChainlinkPoR.md), including a point-by-point comparison against Chainlink's `SecureMintPolicy 1.2.0` (vendored at `lib/chainlink-ace/`); `RULE_SEMANTICS.md` and `README.md` updated with the new rule.
 
 ### Testing
@@ -75,6 +81,8 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 - Decimal-scaling suite covering token decimals 0 / 6 / 18 against feed decimals 0 / 8 / 18 / 36, the truncation behaviour at `tokenDecimals == 0`, and a fuzz cross-checking `_scaleReserve` against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
 
 ## v0.4.0 - 2026-07-14
+
+Commit: `44cec0ebc7d9eba7644f9f4d1c52e832e2791369`
 
 ### Summary
 
