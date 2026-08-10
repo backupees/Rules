@@ -9,6 +9,7 @@ pragma solidity ^0.8.20;
 contract TotalSupplyDecimalsMock {
     uint256 private _totalSupply;
     uint8 private immutable _DECIMALS;
+    bool private _revertOnTotalSupply;
 
     /**
      * @notice Deploys the mock with the given decimals and a zero total supply.
@@ -31,10 +32,19 @@ contract TotalSupplyDecimalsMock {
     }
 
     /**
+     * @notice Makes `totalSupply()` revert, simulating a token that breaks after configuration.
+     * @param shouldRevert True to revert on the next `totalSupply()` call.
+     */
+    function setRevertOnTotalSupply(bool shouldRevert) external {
+        _revertOnTotalSupply = shouldRevert;
+    }
+
+    /**
      * @notice Returns the stored total supply.
      * @return The current total supply value.
      */
     function totalSupply() external view returns (uint256) {
+        require(!_revertOnTotalSupply, TotalSupplyDecimalsMock_Unavailable());
         return _totalSupply;
     }
 
@@ -45,4 +55,6 @@ contract TotalSupplyDecimalsMock {
     function decimals() external view returns (uint8) {
         return _DECIMALS;
     }
+
+    error TotalSupplyDecimalsMock_Unavailable();
 }

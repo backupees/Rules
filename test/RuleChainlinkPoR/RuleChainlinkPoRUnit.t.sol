@@ -313,6 +313,85 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
     }
 
     /*//////////////////////////////////////////////////////////////
+                  TOKEN CONTRACT VALIDITY (F-2 REGRESSION)
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice A non-contract token is rejected by an explicit check, not by the compiler's
+     *         uncatchable extcodesize revert inside the `decimals()` probe.
+     */
+    function testTokenContract_RevertsOnNonContract() public {
+        vm.expectRevert(abi.encodeWithSelector(RuleChainlinkPoR_TokenIsNotAContract.selector, ADDRESS2));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenMetadata(ADDRESS2, TOKEN_DECIMALS);
+    }
+
+    function testConstructor_RevertsOnNonContractToken() public {
+        vm.expectRevert(abi.encodeWithSelector(RuleChainlinkPoR_TokenIsNotAContract.selector, ADDRESS2));
+        new RuleChainlinkPoR(
+            DEFAULT_ADMIN_ADDRESS, ADDRESS2, TOKEN_DECIMALS, AggregatorV3Interface(address(feed)), ONE_DAY
+        );
+    }
+
+    /**
+     * @notice `totalSupply()` is mandatory. A contract that does not expose it is rejected at
+     *         configuration rather than silently bricking the read path later.
+     */
+    function testTokenContract_RevertsWhenTotalSupplyMissing() public {
+        DecimalsOnlyMock decimalsOnly = new DecimalsOnlyMock();
+        vm.expectRevert(
+            abi.encodeWithSelector(RuleChainlinkPoR_TokenTotalSupplyUnavailable.selector, address(decimalsOnly))
+        );
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setTokenMetadata(address(decimalsOnly), TOKEN_DECIMALS);
+    }
+
+    /**
+     * @notice If the token breaks AFTER configuration, the read path must still return a code
+     *         rather than revert -- the ERC-1404 views MUST NOT revert.
+     */
+    function testTokenContract_RevertingTotalSupplyYieldsACodeNotARevert() public {
+        token.setRevertOnTotalSupply(true);
+
+        assertEq(
+            rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_TOTAL_SUPPLY_UNAVAILABLE, "must not revert"
+        );
+        assertFalse(rule.canTransfer(ZERO_ADDRESS, ADDRESS1, 1));
+        assertEq(rule.detectTransferRestrictionFrom(ADDRESS3, ZERO_ADDRESS, ADDRESS1, 1), CODE_TOTAL_SUPPLY_UNAVAILABLE);
+
+        // Transfers and burns never read the supply, so they are unaffected.
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 1), TRANSFER_OK);
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 1), TRANSFER_OK);
+    }
+
+    /**
+     * @notice A token that loses its code cannot be reached by `try/catch` at all, so the code
+     *         length is checked first.
+     */
+    function testTokenContract_CodelessTokenYieldsACodeNotARevert() public {
+        vm.etch(address(token), "");
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_TOTAL_SUPPLY_UNAVAILABLE);
+    }
+
+    /**
+     * @notice The write path still reverts, carrying the new code.
+     */
+    function testTokenContract_TransferredRevertsWithTheSupplyCode() public {
+        token.setRevertOnTotalSupply(true);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RuleChainlinkPoR_InvalidTransfer.selector,
+                address(rule),
+                ZERO_ADDRESS,
+                ADDRESS1,
+                1,
+                CODE_TOTAL_SUPPLY_UNAVAILABLE
+            )
+        );
+        rule.transferred(ZERO_ADDRESS, ADDRESS1, 1);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                     LIVE FEED DECIMALS (F-1 REGRESSION)
     //////////////////////////////////////////////////////////////*/
 
@@ -503,6 +582,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_EXCEEDED));
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_FEED_STALE));
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_ANSWER_INVALID));
+        assertTrue(rule.canReturnTransferRestrictionCode(CODE_TOTAL_SUPPLY_UNAVAILABLE));
         assertFalse(rule.canReturnTransferRestrictionCode(CODE_NONEXISTENT));
     }
 
@@ -510,6 +590,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_EXCEEDED), TEXT_RESERVES_EXCEEDED);
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_FEED_STALE), TEXT_RESERVES_FEED_STALE);
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_ANSWER_INVALID), TEXT_RESERVES_ANSWER_INVALID);
+        assertEq(rule.messageForTransferRestriction(CODE_TOTAL_SUPPLY_UNAVAILABLE), TEXT_TOTAL_SUPPLY_UNAVAILABLE);
         assertEq(rule.messageForTransferRestriction(CODE_NONEXISTENT), TEXT_CODE_NOT_FOUND);
     }
 
@@ -552,5 +633,15 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertEq(code, TRANSFER_OK);
         bool exceeds = currentSupply > backedSupply || value > backedSupply - currentSupply;
         assertEq(resUint8, exceeds ? CODE_RESERVES_EXCEEDED : TRANSFER_OK);
+    }
+}
+
+/**
+ * @notice Exposes `decimals()` but not `totalSupply()`: the shape that previously passed
+ *         configuration and then reverted the read path.
+ */
+contract DecimalsOnlyMock {
+    function decimals() external pure returns (uint8) {
+        return 18;
     }
 }

@@ -109,7 +109,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
-| RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid) |
+| RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid), 78 (total supply unavailable) |
 
 ## Conventions
 - Each rule has an `InvariantStorage` abstract contract holding its constants, custom errors, and events.
@@ -142,4 +142,5 @@ Gotchas worth knowing before you change anything:
 - `RuleWhitelistWrapperBase._detectTransferRestrictionForTargets` short-circuits once every target address is resolved, so a broken child rule may never be reached for some address pairs.
 - `RuleWhitelistWrapper` does not ERC-165-check its child rules (unlike `RuleEngineBase._checkRule`); a non-`IAddressList` child bricks the scan.
 - `RuleChainlinkPoR` reads the feed's `decimals()` **live on every check** and deliberately does NOT cache it. Caching saves ~2,900 gas per mint but lets an aggregator migration that changes decimals mis-scale the reserves by `10 ** delta` with no on-chain signal — in the overstating direction that is unlimited unbacked minting. Both feed calls share the `code.length` guard (Solidity's extcodesize revert on a `try` to a codeless address is uncatchable) and `MAX_FEED_DECIMALS` is re-checked at read time, not just at configuration. Do not "optimise" this back into a cache.
+- `RuleChainlinkPoR` guards `tokenContract.totalSupply()` with a code-length check plus `try/catch`, returning code 78 rather than reverting. `RuleMaxTotalSupply` calls it unguarded — do not copy that pattern here; the ERC-1404 views MUST NOT revert. `decimals()` stays optional on the token, `totalSupply()` is mandatory and probed at configuration.
 - `RuleChainlinkPoR` accepts `tokenDecimals == 0`. Chainlink's `SecureMintPolicy` requires 1–18, but CMTAT equity tokens report 0 decimals, so the lower bound was dropped. Do not re-add it.

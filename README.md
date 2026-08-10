@@ -193,7 +193,8 @@ Here is the list of codes used by the different rules
 | RuleChainlinkPoR             | CODE_RESERVES_EXCEEDED               | 75    |
 |                              | CODE_RESERVES_FEED_STALE             | 76    |
 |                              | CODE_RESERVES_ANSWER_INVALID         | 77    |
-|                              | Reserved slot                        | 78-79 |
+|                              | CODE_TOTAL_SUPPLY_UNAVAILABLE        | 78    |
+|                              | Reserved slot                        | 79    |
 
 Note: 
 
@@ -453,7 +454,7 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 #### RuleChainlinkPoR
 
-- `RuleChainlinkPoR`: trusts the configured `tokenContract` to return an accurate `totalSupply()`, exactly like `RuleMaxTotalSupply`.
+- `RuleChainlinkPoR`: trusts the configured `tokenContract` to report an **accurate** `totalSupply()`, but not to stay callable — a reverting or codeless token yields code 78 instead of breaking the MUST-NOT-revert views. Configuration rejects a non-contract token and probes that `totalSupply()` is callable.
 - `RuleChainlinkPoR`: the feed's `decimals()` is read **live on every check**, never cached. Caching would save ~2,900 gas per mint but a feed that changed its decimals would then be mis-scaled by `10 ** delta` with no on-chain signal, overstating reserves and authorising unbacked minting. See [the rationale](./doc/technical/RuleChainlinkPoR.md#why-the-decimals-are-read-live-and-what-it-costs).
 - `RuleChainlinkPoR`: a broken, reverting, negative-answer, over-precision or stale feed blocks **mints only** (codes 77 / 76). Transfers and burns short-circuit before any feed access, so a lapsed feed never traps holders and costs them nothing.
 - `RuleChainlinkPoR`: the feed cannot be cleared and cannot be the zero address; disable the rule by removing it from the RuleEngine or token.
@@ -653,7 +654,7 @@ The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link
 - **Limit = reserves, exactly** — no margin, buffer or headroom parameter. For a safety cushion, report conservative reserves on the feed or compose with `RuleMaxTotalSupply`.
 - **Staleness threshold** — `maxStalenessSeconds` rejects mints when the feed has not been updated recently; pick it from the feed's heartbeat. `0` disables the check.
 - **Mints only** — transfers and burns always pass, including while the feed is stale or unavailable, so a lapsed feed never traps holders.
-- **Views never revert** — a feed with no code, a reverting call, a negative answer or an incomplete round returns code 77; a stale feed returns code 76.
+- **Views never revert** — a feed with no code, a reverting call, a negative answer or an incomplete round returns code 77; a stale feed returns code 76; a token whose `totalSupply()` reverts returns code 78.
 
 Use `maxBackedSupply()` to preview the current limit without simulating a mint.
 
@@ -1604,7 +1605,7 @@ function setTokenMetadata(address newTokenContract, uint8 newTokenDecimals)
     onlyRole(DEFAULT_ADMIN_ROLE)
 ```
 
-Sets the token contract used to read `totalSupply()` and the decimals used to scale the reserve answer. Validated against the token's own `decimals()` when it exposes one.
+Sets the token contract used to read `totalSupply()` and the decimals used to scale the reserve answer. Reverts on the zero address, a non-contract address, or a token whose `totalSupply()` is not callable. The decimals are validated against the token's own `decimals()` when it exposes one.
 
 #### setMaxStalenessSeconds
 

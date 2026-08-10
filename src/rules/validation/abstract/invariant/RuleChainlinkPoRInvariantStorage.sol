@@ -37,6 +37,10 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
      * @notice Restriction message returned when the feed answer is unusable.
      */
     string constant TEXT_RESERVES_ANSWER_INVALID = "Proof of reserve answer is invalid";
+    /**
+     * @notice Restriction message returned when the token's total supply cannot be read.
+     */
+    string constant TEXT_TOTAL_SUPPLY_UNAVAILABLE = "Token total supply is unavailable";
 
     /* ============ Restriction codes ============ */
 
@@ -54,6 +58,13 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
      * or the feed call reverts / has no code.
      */
     uint8 public constant CODE_RESERVES_ANSWER_INVALID = 77;
+    /**
+     * @notice Restriction code returned when `tokenContract.totalSupply()` reverts or the token has
+     * lost its code, so the current supply cannot be established.
+     * @dev Fail-closed: without a supply figure the backing cannot be verified, so the mint is
+     * blocked rather than assumed safe.
+     */
+    uint8 public constant CODE_TOTAL_SUPPLY_UNAVAILABLE = 78;
 
     /* ============ Events ============ */
 
@@ -86,6 +97,8 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
     error RuleChainlinkPoR_FeedDecimalsUnavailable(address feed);
     error RuleChainlinkPoR_FeedDecimalsTooLarge(uint8 feedDecimals);
     error RuleChainlinkPoR_TokenAddressZeroNotAllowed();
+    error RuleChainlinkPoR_TokenIsNotAContract(address token);
+    error RuleChainlinkPoR_TokenTotalSupplyUnavailable(address token);
     error RuleChainlinkPoR_InvalidTokenDecimals(uint8 tokenDecimals);
     error RuleChainlinkPoR_TokenDecimalsMismatch(uint8 provided, uint8 onChain);
 }

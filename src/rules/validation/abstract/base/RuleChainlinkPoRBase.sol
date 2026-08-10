@@ -31,8 +31,10 @@ import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
  * every feed interaction is guarded. A feed that has no code, whose `decimals()` or
  * `latestRoundData()` reverts, that reports more than {MAX_FEED_DECIMALS} decimals, returns a
  * negative answer or reports an incomplete round yields {CODE_RESERVES_ANSWER_INVALID}; a feed
- * older than `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}. All are fail-closed: mints
- * are blocked. `tokenContract` is trusted to return a correct, non-reverting `totalSupply`.
+ * older than `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}; a `tokenContract` whose
+ * `totalSupply()` reverts or that has lost its code yields {CODE_TOTAL_SUPPLY_UNAVAILABLE}. All are
+ * fail-closed: mints are blocked. `tokenContract` is trusted to report an *accurate* supply, but it
+ * is NOT trusted to stay callable -- that is guarded.
  */
 abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkPoRInvariantStorage {
     /**
@@ -86,7 +88,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override returns (bool) {
         return restrictionCode == CODE_RESERVES_EXCEEDED || restrictionCode == CODE_RESERVES_FEED_STALE
-            || restrictionCode == CODE_RESERVES_ANSWER_INVALID;
+            || restrictionCode == CODE_RESERVES_ANSWER_INVALID || restrictionCode == CODE_TOTAL_SUPPLY_UNAVAILABLE;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -175,6 +177,8 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             return TEXT_RESERVES_FEED_STALE;
         } else if (restrictionCode == CODE_RESERVES_ANSWER_INVALID) {
             return TEXT_RESERVES_ANSWER_INVALID;
+        } else if (restrictionCode == CODE_TOTAL_SUPPLY_UNAVAILABLE) {
+            return TEXT_TOTAL_SUPPLY_UNAVAILABLE;
         }
         return TEXT_CODE_NOT_FOUND;
     }
@@ -231,6 +235,10 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      */
     function _setTokenMetadata(address newTokenContract, uint8 newTokenDecimals) internal virtual {
         require(newTokenContract != address(0), RuleChainlinkPoR_TokenAddressZeroNotAllowed());
+        // Explicit, rather than relying on the uncatchable extcodesize revert that the `decimals()`
+        // probe below happens to produce for a codeless address: that is compiler behaviour, not a
+        // check, and it would vanish if the probe were ever rewritten as a low-level staticcall.
+        require(newTokenContract.code.length != 0, RuleChainlinkPoR_TokenIsNotAContract(newTokenContract));
         require(newTokenDecimals <= MAX_TOKEN_DECIMALS, RuleChainlinkPoR_InvalidTokenDecimals(newTokenDecimals));
         try IDecimals(newTokenContract).decimals() returns (uint8 onChainDecimals) {
             require(
@@ -239,6 +247,12 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             );
         } catch {
             // The token does not expose `decimals()`; the provided value is used as-is.
+        }
+        // `totalSupply()` is mandatory, unlike `decimals()`: the restriction check cannot work
+        // without it. Probing here turns a silent read-path failure into a configuration error.
+        try ITotalSupply(newTokenContract).totalSupply() returns (uint256) {}
+        catch {
+            revert RuleChainlinkPoR_TokenTotalSupplyUnavailable(newTokenContract);
         }
         tokenContract = ITotalSupply(newTokenContract);
         tokenDecimals = newTokenDecimals;
@@ -298,6 +312,28 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     }
 
     /**
+     * @notice Reads the protected token's current total supply.
+     * @dev Guarded the same way as the feed calls so the ERC-1404 read path stays revert-free even
+     * if the token breaks after configuration -- a proxy upgraded to something that reverts, or a
+     * pausable implementation that reverts while paused. Configuration already probes
+     * `totalSupply()`, so reaching the failure branch means the token changed behaviour since.
+     * @return available True when the supply could be read.
+     * @return supply The total supply; meaningless when `available` is false.
+     */
+    function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
+        ITotalSupply token = tokenContract;
+        // A `try` on a codeless address reverts uncatchably, so check for code first.
+        if (address(token).code.length == 0) {
+            return (false, 0);
+        }
+        try token.totalSupply() returns (uint256 totalSupply_) {
+            return (true, totalSupply_);
+        } catch {
+            return (false, 0);
+        }
+    }
+
+    /**
      * @notice Converts a reserve answer from the feed's decimals to the token's decimals.
      * @dev Saturates at `type(uint256).max` instead of overflowing: this function is on a
      * MUST-NOT-revert read path, and a reserve that large backs any representable supply anyway.
@@ -345,7 +381,10 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         if (restrictionCode != uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK)) {
             return restrictionCode;
         }
-        uint256 currentSupply = tokenContract.totalSupply();
+        (bool supplyAvailable, uint256 currentSupply) = _currentSupply();
+        if (!supplyAvailable) {
+            return CODE_TOTAL_SUPPLY_UNAVAILABLE;
+        }
         // Overflow-safe: `currentSupply + value` could exceed uint256 and this is a
         // MUST-NOT-revert ERC-1404/ERC-3643 view, so compare against the remaining headroom.
         if (currentSupply > backedSupply || value > backedSupply - currentSupply) {
