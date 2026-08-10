@@ -313,6 +313,100 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
     }
 
     /*//////////////////////////////////////////////////////////////
+                    LIVE FEED DECIMALS (F-1 REGRESSION)
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice The feed's decimals are read on every check, never cached. If they were cached, a
+     *         feed that later reports MORE decimals would be read at the old, smaller scale and the
+     *         reserves would be overstated by 10 ** delta -- silently authorising unbacked minting.
+     */
+    function testLiveDecimals_FeedRaisingItsDecimalsDoesNotOverstateReserves() public {
+        // Configured against an 8-decimals feed reporting 1000 units.
+        (, uint256 before) = rule.maxBackedSupply();
+        assertEq(before, RESERVE_1000_SCALED, "1000 tokens backed at 8 feed decimals");
+
+        // The feed migrates to 18 decimals, still reporting the same 1000 units.
+        feed.setDecimals(18);
+        // RESERVE_1000_SCALED is the constant 1000 * 1e18, far inside int256.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        feed.setAnswer(int256(RESERVE_1000_SCALED));
+
+        (, uint256 afterMigration) = rule.maxBackedSupply();
+        assertEq(afterMigration, RESERVE_1000_SCALED, "still exactly 1000 tokens backed");
+
+        // The mint boundary tracks the truth, not the stale scale.
+        token.setTotalSupply(0);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, RESERVE_1000_SCALED), TRANSFER_OK);
+        assertEq(
+            rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, RESERVE_1000_SCALED + 1), CODE_RESERVES_EXCEEDED
+        );
+    }
+
+    /**
+     * @notice The mirror case: a feed lowering its decimals must not understate reserves either.
+     */
+    function testLiveDecimals_FeedLoweringItsDecimalsDoesNotUnderstateReserves() public {
+        feed.setDecimals(18);
+        // RESERVE_1000_SCALED is the constant 1000 * 1e18, far inside int256.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        feed.setAnswer(int256(RESERVE_1000_SCALED));
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.setReservesFeed(AggregatorV3Interface(address(feed)));
+        (, uint256 before) = rule.maxBackedSupply();
+        assertEq(before, RESERVE_1000_SCALED);
+
+        feed.setDecimals(8);
+        feed.setAnswer(RESERVE_1000);
+
+        (, uint256 afterMigration) = rule.maxBackedSupply();
+        assertEq(afterMigration, RESERVE_1000_SCALED, "still exactly 1000 tokens backed");
+    }
+
+    function testLiveDecimals_GetterTracksTheFeed() public {
+        assertEq(rule.feedDecimals(), FEED_DECIMALS);
+        feed.setDecimals(18);
+        assertEq(rule.feedDecimals(), 18, "getter must not serve a cached value");
+    }
+
+    /**
+     * @notice `decimals()` reverting at read time is a feed failure like any other: code 77, never
+     *         a revert out of a MUST-NOT-revert view.
+     */
+    function testLiveDecimals_RevertingDecimalsBlocksMintWithoutReverting() public {
+        feed.setRevertOnDecimals(true);
+        token.setTotalSupply(0);
+
+        (uint8 code, uint256 backedSupply) = rule.maxBackedSupply();
+        assertEq(code, CODE_RESERVES_ANSWER_INVALID);
+        assertEq(backedSupply, 0);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+    }
+
+    /**
+     * @notice A feed that raises its decimals past MAX_FEED_DECIMALS after configuration would
+     *         overflow the scaling exponent. The bound is re-checked at read time, so the view
+     *         returns a code instead of reverting.
+     */
+    function testLiveDecimals_DecimalsAboveBoundBlockMintWithoutReverting() public {
+        feed.setDecimals(rule.MAX_FEED_DECIMALS() + 1);
+        token.setTotalSupply(0);
+
+        (uint8 code,) = rule.maxBackedSupply();
+        assertEq(code, CODE_RESERVES_ANSWER_INVALID);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+    }
+
+    /**
+     * @notice Even the pathological end of the uint8 range must not revert the view.
+     */
+    function testLiveDecimals_MaxUint8DecimalsBlockMintWithoutReverting() public {
+        feed.setDecimals(type(uint8).max);
+        token.setTotalSupply(0);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             DECIMAL SCALING
     //////////////////////////////////////////////////////////////*/
 

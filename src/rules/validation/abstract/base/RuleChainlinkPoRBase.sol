@@ -22,11 +22,17 @@ import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
  * Only mints (`from == address(0)`) are gated: plain transfers do not change the total supply and
  * burns only reduce it.
  *
+ * The feed's `decimals()` is read **live on every check**, never cached. Caching would be one
+ * external call cheaper, but a feed whose decimals change after configuration would then be
+ * mis-scaled by a factor of `10 ** delta` with no on-chain signal -- in the direction that
+ * overstates reserves, that silently authorises unbacked minting. Correctness wins over the call.
+ *
  * IMPORTANT: the read path (`detectTransferRestriction*` / `canTransfer*`) must never revert, so
- * every feed interaction is guarded. A feed that has no code, reverts, returns a negative answer or
- * reports an incomplete round yields {CODE_RESERVES_ANSWER_INVALID}; a feed older than
- * `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}. Both are fail-closed: mints are blocked.
- * `tokenContract` is trusted to return a correct, non-reverting `totalSupply`.
+ * every feed interaction is guarded. A feed that has no code, whose `decimals()` or
+ * `latestRoundData()` reverts, that reports more than {MAX_FEED_DECIMALS} decimals, returns a
+ * negative answer or reports an incomplete round yields {CODE_RESERVES_ANSWER_INVALID}; a feed
+ * older than `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}. All are fail-closed: mints
+ * are blocked. `tokenContract` is trusted to return a correct, non-reverting `totalSupply`.
  */
 abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkPoRInvariantStorage {
     /**
@@ -37,12 +43,6 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      * @dev tokenContract is trusted to return a correct totalSupply.
      */
     ITotalSupply public tokenContract;
-    /**
-     * @notice Decimals reported by {reservesFeed}, cached when the feed is configured.
-     * @dev Cached rather than read on every mint so the hot read path performs a single external
-     * call and cannot revert on a feed whose `decimals()` misbehaves.
-     */
-    uint8 public feedDecimals;
     /**
      * @notice Decimals of the protected token, used to scale the reserve answer.
      */
@@ -122,6 +122,17 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     }
 
     /**
+     * @notice Returns the decimals currently reported by {reservesFeed}.
+     * @dev Read live from the feed rather than from storage, so it always agrees with what the
+     * restriction checks use. Unlike the ERC-1404 views this getter is allowed to revert: it
+     * forwards whatever the feed does, which is the honest answer for a diagnostic accessor.
+     * @return The feed's current decimals.
+     */
+    function feedDecimals() public view virtual returns (uint8) {
+        return reservesFeed.decimals();
+    }
+
+    /**
      * @notice Returns the supply currently backed by the reserves, i.e. the maximum total supply a
      * mint may reach. This is the reported reserves scaled into token units, with no margin applied.
      * @dev Mirrors what {detectTransferRestriction} computes, so integrators can preview the limit
@@ -188,7 +199,11 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Stores the data feed together with its decimals and emits {ReservesFeedUpdated}.
+     * @notice Stores the data feed and emits {ReservesFeedUpdated}.
+     * @dev The feed's `decimals()` is validated here so a misconfigured feed is rejected up front
+     * rather than silently blocking every mint later, but the value is deliberately NOT cached --
+     * {_maxBackedSupply} re-reads it on every check. The emitted decimals are informational: they
+     * record what the feed reported at configuration time.
      * @param newReservesFeed The new data feed.
      */
     function _setReservesFeed(AggregatorV3Interface newReservesFeed) internal virtual {
@@ -203,7 +218,6 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         }
         require(newFeedDecimals <= MAX_FEED_DECIMALS, RuleChainlinkPoR_FeedDecimalsTooLarge(newFeedDecimals));
         reservesFeed = newReservesFeed;
-        feedDecimals = newFeedDecimals;
         emit ReservesFeedUpdated(feed, newFeedDecimals);
     }
 
@@ -248,7 +262,21 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      */
     function _maxBackedSupply() internal view virtual returns (uint8 restrictionCode, uint256 backedSupply) {
         AggregatorV3Interface feed = reservesFeed;
+        // Guards BOTH calls below: Solidity's extcodesize check on a `try` to a codeless address
+        // reverts uncatchably, so `try/catch` alone would not keep this function revert-free.
         if (address(feed).code.length == 0) {
+            return (CODE_RESERVES_ANSWER_INVALID, 0);
+        }
+        // Read live, never cached: see the contract-level note on why the extra call is worth it.
+        uint8 currentFeedDecimals;
+        try feed.decimals() returns (uint8 decimals_) {
+            currentFeedDecimals = decimals_;
+        } catch {
+            return (CODE_RESERVES_ANSWER_INVALID, 0);
+        }
+        // Re-checked at read time, not just at configuration: a feed that raised its decimals past
+        // the bound would otherwise overflow the scaling exponent and revert this view.
+        if (currentFeedDecimals > MAX_FEED_DECIMALS) {
             return (CODE_RESERVES_ANSWER_INVALID, 0);
         }
         try feed.latestRoundData() returns (uint80, int256 answer, uint256, uint256 updatedAt, uint80) {
@@ -262,7 +290,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             }
             // `answer >= 0` was just checked, so the cast to uint256 preserves the value.
             // forge-lint: disable-next-line(unsafe-typecast)
-            uint256 backed = _scaleReserve(uint256(answer));
+            uint256 backed = _scaleReserve(uint256(answer), currentFeedDecimals);
             return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), backed);
         } catch {
             return (CODE_RESERVES_ANSWER_INVALID, 0);
@@ -274,11 +302,11 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      * @dev Saturates at `type(uint256).max` instead of overflowing: this function is on a
      * MUST-NOT-revert read path, and a reserve that large backs any representable supply anyway.
      * Scaling down truncates, which rounds the backed supply in the conservative direction.
-     * @param answer The raw feed answer, expressed with {feedDecimals} decimals.
+     * @param answer The raw feed answer, expressed with `from` decimals.
+     * @param from The feed's decimals, as read live for this check.
      * @return The reserve expressed with {tokenDecimals} decimals.
      */
-    function _scaleReserve(uint256 answer) internal view virtual returns (uint256) {
-        uint8 from = feedDecimals;
+    function _scaleReserve(uint256 answer, uint8 from) internal view virtual returns (uint256) {
         uint8 to = tokenDecimals;
         if (to == from) {
             return answer;
@@ -291,7 +319,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             }
             return answer * factor;
         }
-        // from <= MAX_FEED_DECIMALS, so the divisor cannot overflow.
+        // `from` was bounded by MAX_FEED_DECIMALS above, so the divisor cannot overflow.
         return answer / (10 ** uint256(from - to));
     }
 

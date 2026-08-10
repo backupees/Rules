@@ -454,8 +454,8 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 #### RuleChainlinkPoR
 
 - `RuleChainlinkPoR`: trusts the configured `tokenContract` to return an accurate `totalSupply()`, exactly like `RuleMaxTotalSupply`.
-- `RuleChainlinkPoR`: the feed's `decimals()` is read **once**, when the feed is configured, and cached. Replacing the feed re-reads it.
-- `RuleChainlinkPoR`: a broken, reverting, negative-answer or stale feed blocks **mints only** (codes 77 / 76). Transfers and burns always pass, so a lapsed feed never traps holders.
+- `RuleChainlinkPoR`: the feed's `decimals()` is read **live on every check**, never cached. Caching would save ~2,900 gas per mint but a feed that changed its decimals would then be mis-scaled by `10 ** delta` with no on-chain signal, overstating reserves and authorising unbacked minting. See [the rationale](./doc/technical/RuleChainlinkPoR.md#why-the-decimals-are-read-live-and-what-it-costs).
+- `RuleChainlinkPoR`: a broken, reverting, negative-answer, over-precision or stale feed blocks **mints only** (codes 77 / 76). Transfers and burns short-circuit before any feed access, so a lapsed feed never traps holders and costs them nothing.
 - `RuleChainlinkPoR`: the feed cannot be cleared and cannot be the zero address; disable the rule by removing it from the RuleEngine or token.
 - `RuleChainlinkPoR`: set `maxStalenessSeconds` from the feed's **heartbeat**; `0` disables the staleness check entirely.
 - `RuleChainlinkPoR`: the mint ceiling equals the reported reserves exactly — there is no margin parameter. Compose with `RuleMaxTotalSupply` if you also want a static cap, or report conservative reserves upstream for a cushion.
@@ -1593,7 +1593,7 @@ function setReservesFeed(AggregatorV3Interface newReservesFeed)
     onlyRole(DEFAULT_ADMIN_ROLE)
 ```
 
-Replaces the Proof of Reserve data feed and re-caches its `decimals()`. Reverts on the zero address, an address with no code, a reverting `decimals()`, or decimals above 36.
+Replaces the Proof of Reserve data feed. Reverts on the zero address, an address with no code, a reverting `decimals()`, or decimals above 36 — validation only, since the decimals are read live on every check rather than stored.
 
 #### setTokenMetadata
 
@@ -1629,7 +1629,7 @@ Previews the supply currently backed by the reserves — the reported reserves s
 
 | Event                                     | Description                                              |
 | ----------------------------------------- | -------------------------------------------------------- |
-| `ReservesFeedUpdated(address,uint8)`      | Emitted when the data feed is set or replaced.            |
+| `ReservesFeedUpdated(address,uint8)`      | Emitted when the data feed is set or replaced; the `uint8` records the decimals observed at configuration time. |
 | `TokenMetadataUpdated(address,uint8)`     | Emitted when the protected token or its decimals change.  |
 | `MaxStalenessSecondsUpdated(uint256)`     | Emitted when the staleness threshold is updated.          |
 

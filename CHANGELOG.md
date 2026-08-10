@@ -47,7 +47,25 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ## Unreleased
 
-_Nothing yet._
+### Added
+
+- **`RuleChainlinkPoR`** — a validation rule that caps total supply at the reserves reported by a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed. Before every mint it reads `latestRoundData()` from the configured `AggregatorV3Interface`, scales the answer from the feed's decimals to the token's, and rejects the mint when `totalSupply + value` would exceed it. Modelled on Chainlink's `SecureMintPolicy` from the ACE policy library, minus its configurable reserve margin. Restriction codes `75` (reserves exceeded), `76` (feed stale), `77` (feed answer invalid). Available as `RuleChainlinkPoR` (AccessControl) and `RuleChainlinkPoROwnable2Step`.
+  - **Limit = reserves, exactly** — no margin, buffer or headroom parameter. Compose with `RuleMaxTotalSupply` for a static cap, or report conservative reserves upstream for a cushion.
+  - **Staleness threshold** — `maxStalenessSeconds` rejects mints when the feed has not been updated recently; `0` disables the check.
+  - **Mints only** — transfers and burns always pass, including while the feed is stale or unavailable, so a lapsed feed never traps holders.
+  - **Feed decimals read live, never cached** — the extra `STATICCALL` costs ~2,900 gas per mint (+2.6%), which buys immunity to an aggregator migration silently mis-scaling the reserves by `10 ** delta`. In the overstating direction a cached value would authorise unbacked minting with no on-chain signal. Rationale, measurements and residual risk are in the [rule doc](./doc/technical/RuleChainlinkPoR.md#why-the-decimals-are-read-live-and-what-it-costs).
+  - **Revert-free read path** — one `code.length` check covers both feed calls (Solidity's extcodesize revert on a `try` to a codeless address is uncatchable), `decimals()` and `latestRoundData()` are both wrapped in `try/catch`, `MAX_FEED_DECIMALS` is re-checked at read time so the scaling exponent cannot overflow, decimal scaling saturates rather than overflows, and the supply comparison uses remaining headroom. The ERC-1404 / ERC-3643 views therefore return a code instead of reverting under every feed failure mode.
+  - `maxBackedSupply()` previews the current limit without simulating a mint.
+- `AggregatorV3Interface` and `IDecimals` in `src/rules/interfaces/`, so the library reads Chainlink feeds without taking a dependency on the Chainlink contracts package.
+
+### Documentation
+
+- New [`doc/technical/RuleChainlinkPoR.md`](./doc/technical/RuleChainlinkPoR.md), including a point-by-point comparison against Chainlink's `SecureMintPolicy 1.2.0` (vendored at `lib/chainlink-ace/`); `RULE_SEMANTICS.md` and `README.md` updated with the new rule.
+
+### Testing
+
+- 79 new tests across unit, decimal-scaling, Ownable2Step access-control, and CMTAT + RuleEngine end-to-end suites, including a full-domain fuzz asserting the read path never reverts. 100% line coverage on both deployment variants.
+- Decimal-scaling suite covering token decimals 0 / 6 / 18 against feed decimals 0 / 8 / 18 / 36, the truncation behaviour at `tokenDecimals == 0`, and a fuzz cross-checking `_scaleReserve` against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
 
 ## v0.4.0 - 2026-07-14
 
