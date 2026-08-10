@@ -141,12 +141,22 @@ Anything else returns `TRANSFER_OK`. `detectTransferRestrictionFrom` delegates t
 
 `detectTransferRestriction*` and `canTransfer*` are ERC-1404 / ERC-3643 views that MUST NOT revert. The implementation therefore:
 
-- checks `address(reservesFeed).code.length` once, covering both feed calls, and wraps `decimals()` and `latestRoundData()` in `try/catch`;
+- wraps `decimals()` and `latestRoundData()` in `try/catch`;
 - re-checks the `MAX_FEED_DECIMALS` bound against the live value, so the scaling exponent cannot overflow even if the feed changes;
 - saturates instead of overflowing when scaling up (`answer * 10 ** (tokenDecimals - feedDecimals)`);
 - bounds `tokenDecimals` at 18 at configuration time, so the scale-up factor is at most `10 ** 18`;
 - compares against the remaining headroom (`value > backedSupply - currentSupply`) instead of computing `currentSupply + value`, which could overflow;
-- guards `tokenContract.totalSupply()` with the same code-length check and `try/catch` as the feed, yielding code `78` instead of reverting.
+- wraps `tokenContract.totalSupply()` in `try/catch`, yielding code `78` instead of reverting.
+
+#### Deployment precondition: EIP-6780 (Cancun or later)
+
+`try/catch` does **not** catch a call to an address with no code — Solidity's `extcodesize` check reverts *uncatchably*, before the `catch` clause can run. The revert-free guarantee therefore rests on `reservesFeed` and `tokenContract` still having code at read time.
+
+That holds because the setters require code at configuration time (`RuleChainlinkPoR_FeedIsNotAContract`, `RuleChainlinkPoR_TokenIsNotAContract`), every write to either field goes through a validated setter, and **EIP-6780** (Cancun) restricts `SELFDESTRUCT` to accounts created in the same transaction — so a contract that exists across transactions can no longer be removed. A validated address stays a contract.
+
+There is deliberately **no runtime code-length re-check**: it would be unreachable code on any supported chain, and unreachable defensive code misrepresents the threat model. It is recorded here as a deployment precondition instead. `foundry.toml` targets `prague`, which is post-Cancun.
+
+> **If you deploy to a chain without EIP-6780** (post-Shanghai but pre-Cancun, as some L2s were for a period), this guarantee does not hold: a `SELFDESTRUCT`ed feed or token would make the ERC-1404 views revert instead of returning a code. Re-introduce an `address(x).code.length == 0` guard before each `try` if you target such a chain — it costs about 100 gas per call site, not the 2,600 a cold `EXTCODESIZE` suggests, because the account is warmed either way.
 
 The trust placed in `tokenContract` is narrower than it looks: it is trusted to report an **accurate** supply — nothing on-chain can verify that — but it is **not** trusted to stay callable. A token that is upgraded to something that reverts, or that reverts while paused, degrades to a restriction code rather than breaking the ERC-1404 contract. This is stricter than `RuleMaxTotalSupply`, which calls `totalSupply()` unguarded.
 

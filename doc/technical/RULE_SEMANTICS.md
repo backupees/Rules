@@ -38,7 +38,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 | `RuleSpenderWhitelist` | n/a (local address set) | ❌ | `canTransfer` (always ✓) / `canTransferFrom` | 66 |
 | `RuleBlacklist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 36–38 |
 | `RuleSanctionsList` | oracle == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 30–32 |
-| `RuleMaxTotalSupply` | token contract required (non-zero) | ❌ | `canTransfer` / `canTransferFrom` [9] | 50 |
+| `RuleMaxTotalSupply` | token contract required (non-zero, has code, `totalSupply()` callable); a token that later reverts ⇒ **mints rejected** (fail-closed, code 51) | ❌ | `canTransfer` / `canTransferFrom` [9] | 50–51 |
 | `RuleChainlinkPoR` | feed required (non-zero contract); broken/stale feed ⇒ **mints rejected** (fail-closed) [2b] | ❌ | `canTransfer` / `canTransferFrom`, plus `maxBackedSupply()` | 75–78 |
 | `RuleIdentityRegistry` | registry == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 55–57 |
 | `RuleERC2980` | n/a (local lists) | ❌ | `canTransfer` / `canTransferFrom` | 60–65 |
