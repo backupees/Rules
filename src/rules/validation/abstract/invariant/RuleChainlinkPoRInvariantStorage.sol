@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: MPL-2.0
+pragma solidity ^0.8.20;
+
+import {RuleSharedInvariantStorage} from "./RuleSharedInvariantStorage.sol";
+
+/**
+ * @title RuleChainlinkPoRInvariantStorage — constants, events and errors for the Chainlink
+ * Proof of Reserve rule.
+ */
+abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage {
+    /* ============ Constants ============ */
+
+    /**
+     * @notice Upper bound accepted for a data feed's `decimals()` value.
+     * @dev Chainlink feeds report 8 or 18 decimals. The bound keeps `10 ** (feedDecimals -
+     * tokenDecimals)` inside `uint256` so the read path can never revert on exponentiation.
+     */
+    uint8 public constant MAX_FEED_DECIMALS = 36;
+
+    /**
+     * @notice Upper bound accepted for the protected token's `decimals()` value.
+     * @dev `0` is a valid lower bound: CMTAT equity tokens commonly report 0 decimals.
+     */
+    uint8 public constant MAX_TOKEN_DECIMALS = 18;
+
+    /* ============ String messages ============ */
+
+    /**
+     * @notice Restriction message returned when the mint is not backed by the reported reserves.
+     */
+    string constant TEXT_RESERVES_EXCEEDED = "Mint would exceed the proof of reserve backing";
+    /**
+     * @notice Restriction message returned when the reserve data is older than the staleness threshold.
+     */
+    string constant TEXT_RESERVES_FEED_STALE = "Proof of reserve data is stale";
+    /**
+     * @notice Restriction message returned when the feed answer is unusable.
+     */
+    string constant TEXT_RESERVES_ANSWER_INVALID = "Proof of reserve answer is invalid";
+
+    /* ============ Restriction codes ============ */
+
+    // It is very important that each rule uses an unique code
+    /**
+     * @notice Restriction code returned when the new total supply would exceed the backed supply.
+     */
+    uint8 public constant CODE_RESERVES_EXCEEDED = 75;
+    /**
+     * @notice Restriction code returned when the feed has not been updated within the staleness threshold.
+     */
+    uint8 public constant CODE_RESERVES_FEED_STALE = 76;
+    /**
+     * @notice Restriction code returned when the feed answer is negative, from an incomplete round,
+     * or the feed call reverts / has no code.
+     */
+    uint8 public constant CODE_RESERVES_ANSWER_INVALID = 77;
+
+    /* ============ Events ============ */
+
+    /**
+     * @notice Emitted when the Proof of Reserve data feed is set or replaced.
+     * @param newReservesFeed Address of the newly configured data feed.
+     * @param feedDecimals Decimals reported by that feed, cached at configuration time.
+     */
+    event ReservesFeedUpdated(address indexed newReservesFeed, uint8 feedDecimals);
+    /**
+     * @notice Emitted when the protected token or its decimals are updated.
+     * @param newTokenContract Address of the token whose `totalSupply` is checked.
+     * @param newTokenDecimals Decimals used to scale the reserve value.
+     */
+    event TokenMetadataUpdated(address indexed newTokenContract, uint8 newTokenDecimals);
+    /**
+     * @notice Emitted when the staleness threshold is updated.
+     * @param newMaxStalenessSeconds New maximum accepted age of the reserve data, in seconds; 0 disables the check.
+     */
+    event MaxStalenessSecondsUpdated(uint256 newMaxStalenessSeconds);
+
+    /* ============ Errors ============ */
+
+    error RuleChainlinkPoR_InvalidTransfer(address rule, address from, address to, uint256 value, uint8 code);
+    error RuleChainlinkPoR_InvalidTransferFrom(
+        address rule, address spender, address from, address to, uint256 value, uint8 code
+    );
+    error RuleChainlinkPoR_FeedAddressZeroNotAllowed();
+    error RuleChainlinkPoR_FeedIsNotAContract(address feed);
+    error RuleChainlinkPoR_FeedDecimalsUnavailable(address feed);
+    error RuleChainlinkPoR_FeedDecimalsTooLarge(uint8 feedDecimals);
+    error RuleChainlinkPoR_TokenAddressZeroNotAllowed();
+    error RuleChainlinkPoR_InvalidTokenDecimals(uint8 tokenDecimals);
+    error RuleChainlinkPoR_TokenDecimalsMismatch(uint8 provided, uint8 onChain);
+}

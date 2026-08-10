@@ -28,6 +28,7 @@ Operation rules that treat `msg.sender` or `getTokenBound()` as a *token identit
 - `RuleWhitelist`, `RuleSpenderWhitelist`, `RuleWhitelistWrapper` explicitly exempt mint/burn from the spender check.
 - `RuleIdentityRegistry`, `RuleBlacklist`, `RuleSanctionsList`, `RuleERC2980` do **not** — they screen the minter. For the deny-lists this is intended; for `RuleIdentityRegistry` it means the minter must itself be identity-verified (see `RESULT.md` F-1).
 - `RuleMintAllowance` is the only rule that *uses* the mint spender: it debits `mintAllowance[spender]`.
+- `RuleMaxTotalSupply` and `RuleChainlinkPoR` ignore the spender entirely — they cap *supply*, not identities, and act only when `from == address(0)`.
 
 Full per-rule semantics (who each rule screens, mint/burn handling, unset-oracle behaviour, stateful?, authoritative view) are tabulated in `doc/technical/RULE_SEMANTICS.md` — consult it before assuming any rule behaves like its siblings.
 
@@ -44,7 +45,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `src/rules/operation/` | Read-write rules (modify state on transfer) |
 | `src/rules/validation/abstract/core/` | `RuleTransferValidation` (ERC-1404/3643/7551 views), `RuleNFTAdapter` (ERC-7943 + `ITransferContext` overloads), `RuleWhitelistShared` |
 | `src/rules/validation/abstract/` | Shared base contracts and invariant storage |
-| `src/rules/interfaces/` | Shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITotalSupply`, `ITransferContext`, `IERC2980`, `IERC7943NonFungibleCompliance`) |
+| `src/rules/interfaces/` | Shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITotalSupply`, `ITransferContext`, `IERC2980`, `IERC7943NonFungibleCompliance`, `AggregatorV3Interface`, `IDecimals`) |
 | `src/modules/` | Reusable modules (`AccessControlModuleStandalone`, `MetaTxModuleStandalone`, `VersionModule`, `Ownable2StepERC165Module`) |
 | `test/` | Foundry tests, one folder per rule |
 | `lib/` | Git submodule dependencies (do not edit) |
@@ -65,6 +66,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `RuleBlacklist` / `RuleBlacklistOwnable2Step` | Block transfers involving blacklisted addresses |
 | `RuleSanctionsList` | Block sanctioned addresses via Chainalysis oracle |
 | `RuleMaxTotalSupply` | Cap minting so total supply never exceeds a maximum |
+| `RuleChainlinkPoR` / `RuleChainlinkPoROwnable2Step` | Cap minting at the reserves reported by a Chainlink Proof of Reserve feed (`AggregatorV3Interface`). The limit equals the reported reserves exactly — no margin parameter (deliberately dropped from Chainlink's `SecureMintPolicy`); compose with `RuleMaxTotalSupply` for a static cap. Mints only; transfers and burns always pass, so a stale or broken feed never traps holders. The read path is guarded (`code.length` check + `try/catch` + saturating arithmetic) so the ERC-1404 views never revert |
 | `RuleIdentityRegistry` | Check ERC-3643 identity registry for participant verification |
 | `RuleSpenderWhitelist` / `RuleSpenderWhitelistOwnable2Step` | Allow `transferFrom` only when spender is whitelisted; direct transfers are always allowed |
 | `RuleERC2980` | ERC-2980 Swiss Compliant rule: whitelist (recipient-only) + frozenlist (blocks sender, recipient, and spender for `transferFrom`); frozenlist takes priority |
@@ -107,6 +109,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
+| RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid) |
 
 ## Conventions
 - Each rule has an `InvariantStorage` abstract contract holding its constants, custom errors, and events.
@@ -138,3 +141,5 @@ Gotchas worth knowing before you change anything:
 - `HelperContract` already inherits `RuleConditionalTransferLightInvariantStorage`; inheriting the multi-token variant alongside it is a compile error (`OPERATOR_ROLE`, `CODE_TRANSFER_REQUEST_NOT_APPROVED` clash).
 - `RuleWhitelistWrapperBase._detectTransferRestrictionForTargets` short-circuits once every target address is resolved, so a broken child rule may never be reached for some address pairs.
 - `RuleWhitelistWrapper` does not ERC-165-check its child rules (unlike `RuleEngineBase._checkRule`); a non-`IAddressList` child bricks the scan.
+- `RuleChainlinkPoR` caches the feed's `decimals()` at configuration time (`feedDecimals`) instead of reading it per mint — replacing the feed re-reads it, but a feed that changes its own decimals after being set is not picked up. This is deliberate: it keeps the mint path to one external call and removes a second revert source from a MUST-NOT-revert view.
+- `RuleChainlinkPoR` accepts `tokenDecimals == 0`. Chainlink's `SecureMintPolicy` requires 1–18, but CMTAT equity tokens report 0 decimals, so the lower bound was dropped. Do not re-add it.

@@ -139,7 +139,7 @@ _Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 ### Directory Layout
 
 - `src/modules/`: reusable modules shared across rules (`AccessControlModuleStandalone`, `MetaTxModuleStandalone`, `VersionModule`).
-- `src/rules/interfaces/`: shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITransferContext`).
+- `src/rules/interfaces/`: shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITransferContext`, `AggregatorV3Interface`, `IDecimals`).
 - `src/rules/validation/abstract/`: shared base contracts and invariant storage.
 - `src/rules/validation/abstract/base/`: base contracts with core rule logic (no access control).
 - `src/rules/validation/abstract/core/`: shared adapters/validation helpers.
@@ -190,6 +190,10 @@ Here is the list of codes used by the different rules
 |                              | Reserved slot                        | 67-69 |
 | RuleMintAllowance            | CODE_MINTER_ALLOWANCE_EXCEEDED       | 70    |
 |                              | Reserved slot                        | 71-74 |
+| RuleChainlinkPoR             | CODE_RESERVES_EXCEEDED               | 75    |
+|                              | CODE_RESERVES_FEED_STALE             | 76    |
+|                              | CODE_RESERVES_ANSWER_INVALID         | 77    |
+|                              | Reserved slot                        | 78-79 |
 
 Note: 
 
@@ -277,6 +281,7 @@ There are two categories of rules: validation rules (read-only) and operation ru
 | Block known bad addresses | `RuleBlacklist` |
 | Block sanctioned addresses (Chainalysis oracle) | `RuleSanctionsList` |
 | Cap total token supply | `RuleMaxTotalSupply` |
+| Cap total supply at the reserves reported by a Chainlink Proof of Reserve feed | `RuleChainlinkPoR` |
 | Require identity-registry verification (ERC-3643) | `RuleIdentityRegistry` |
 | ERC-2980 Swiss compliance (whitelist + frozenlist) | `RuleERC2980` |
 | Require operator approval per transfer | `RuleConditionalTransferLight` |
@@ -290,7 +295,7 @@ Each rule is also available in `Ownable2Step` and `AccessControl` variants; see 
 Rules do **not** all treat the spender, mint/burn, or an unset oracle the same way. The full side-by-side table — who each rule screens (`from` / `to` / spender on `transferFrom` / mint / burn), how it behaves when its oracle/registry is unset, whether it is stateful, and which pre-flight view is authoritative — is in **[RULE_SEMANTICS.md](./doc/technical/RULE_SEMANTICS.md)**. The differences most likely to surprise an integrator:
 
 - **Spender on mint.** `RuleWhitelist` / `RuleWhitelistWrapper` / `RuleSpenderWhitelist` **exempt** the minter; `RuleBlacklist` / `RuleSanctionsList` **screen** it (deny-list, by design); `RuleIdentityRegistry` also screens it, so the minter must itself be identity-verified; `RuleMintAllowance` **debits the minter's quota**.
-- **Unset oracle/registry.** `RuleSanctionsList` (oracle unset) and `RuleIdentityRegistry` (registry unset) **fail open** — all transfers pass. An empty `RuleWhitelistWrapper` **fails closed**.
+- **Unset oracle/registry.** `RuleSanctionsList` (oracle unset) and `RuleIdentityRegistry` (registry unset) **fail open** — all transfers pass. An empty `RuleWhitelistWrapper` **fails closed**. `RuleChainlinkPoR` cannot be left unset, and a broken or stale feed **fails closed for mints only** — transfers and burns still pass.
 - **Authoritative pre-flight view.** For `RuleMintAllowance`, `canTransfer` is not authoritative — use `canTransferFrom`. For `RuleConditionalTransferLightMultiToken`, `detectTransferRestriction` is `msg.sender`-dependent.
 
 ### Validation Rules (Read-Only)
@@ -299,7 +304,7 @@ Validation rules only read blockchain state — they never modify it during a tr
 
 All validation rules implement `IRuleEngine` to be usable both standalone (plugged directly into CMTAT) and via the RuleEngine.
 
-Available validation rules: `RuleWhitelist`, `RuleWhitelistWrapper`, `RuleSpenderWhitelist`, `RuleBlacklist`, `RuleSanctionsList`, `RuleMaxTotalSupply`, `RuleIdentityRegistry`, `RuleERC2980`.
+Available validation rules: `RuleWhitelist`, `RuleWhitelistWrapper`, `RuleSpenderWhitelist`, `RuleBlacklist`, `RuleSanctionsList`, `RuleMaxTotalSupply`, `RuleChainlinkPoR`, `RuleIdentityRegistry`, `RuleERC2980`.
 
  A community made project, [RuleSelf](https://github.com/rya-sge/ruleself), which uses [Self](https://self.xyz), a zero-knowledge identity is also available but is not developed or maintained by CMTA.
 
@@ -381,6 +386,7 @@ Several rules are available in multiple access-control variants. Use the simples
 | RuleBlacklist                                                | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule can be used to forbid transfer from/to addresses in the blacklist |
 | RuleSanctionList                                             | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | The purpose of this contract is to use the oracle contract from [Chainalysis](https://go.chainalysis.com/chainalysis-oracle-docs.html) to forbid transfer from/to an address included in a sanctions designation (US, EU, or UN). |
 | RuleMaxTotalSupply                                           | Read-Only                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule limits minting so that the total supply never exceeds a configured maximum. |
+| RuleChainlinkPoR                                             | Read-Only                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule limits minting so that the total supply never exceeds the reserves reported by a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed. |
 | RuleIdentityRegistry                                         | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule checks the ERC-3643 Identity Registry for transfer participants when configured. |
 | RuleSpenderWhitelist                                         | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule blocks `transferFrom` when the spender is not in the whitelist. Direct transfers are always allowed. |
 | RuleERC2980                                                  | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | ERC-2980 Swiss Compliant rule combining a whitelist (recipient-only) and a frozenlist (blocks sender, recipient, and spender for `transferFrom`). Frozenlist takes priority over whitelist. |
@@ -407,6 +413,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleBlacklist | [RuleBlacklist.md](./doc/technical/RuleBlacklist.md) |
 | RuleSanctionsList | [RuleSanctionList.md](./doc/technical/RuleSanctionList.md) |
 | RuleMaxTotalSupply | [RuleMaxTotalSupply.md](./doc/technical/RuleMaxTotalSupply.md) |
+| RuleChainlinkPoR | [RuleChainlinkPoR.md](./doc/technical/RuleChainlinkPoR.md) |
 | RuleIdentityRegistry | [RuleIdentityRegistry.md](./doc/technical/RuleIdentityRegistry.md) |
 | RuleSpenderWhitelist | [RuleSpenderWhitelist.md](./doc/technical/RuleSpenderWhitelist.md) |
 | RuleERC2980 | [RuleERC2980.md](./doc/technical/RuleERC2980.md) |
@@ -443,6 +450,16 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 - `RuleMaxTotalSupply`: trusts the configured `tokenContract` to return an accurate `totalSupply()`.
 - `RuleMaxTotalSupply`: does not allow clearing the token contract; disable the rule by removing it from the RuleEngine or token.
+
+#### RuleChainlinkPoR
+
+- `RuleChainlinkPoR`: trusts the configured `tokenContract` to return an accurate `totalSupply()`, exactly like `RuleMaxTotalSupply`.
+- `RuleChainlinkPoR`: the feed's `decimals()` is read **once**, when the feed is configured, and cached. Replacing the feed re-reads it.
+- `RuleChainlinkPoR`: a broken, reverting, negative-answer or stale feed blocks **mints only** (codes 77 / 76). Transfers and burns always pass, so a lapsed feed never traps holders.
+- `RuleChainlinkPoR`: the feed cannot be cleared and cannot be the zero address; disable the rule by removing it from the RuleEngine or token.
+- `RuleChainlinkPoR`: set `maxStalenessSeconds` from the feed's **heartbeat**; `0` disables the staleness check entirely.
+- `RuleChainlinkPoR`: the mint ceiling equals the reported reserves exactly — there is no margin parameter. Compose with `RuleMaxTotalSupply` if you also want a static cap, or report conservative reserves upstream for a cushion.
+- `RuleChainlinkPoR`: for a token that does not expose `decimals()`, the configured value is trusted as-is — a wrong value allows over-minting or blocks valid mints.
 
 #### RuleWhitelistWrapper
 
@@ -627,6 +644,23 @@ Limits minting so that total supply never exceeds a configured maximum. Transfer
 
 The operator deploys `RuleMaxTotalSupply` with `setMaxTotalSupply(1_000_000)` and sets the token with `setTokenContract`. When the issuer mints and `totalSupply + amount` exceeds the limit, `detectTransferRestriction` rejects the mint. Transfers between holders still pass.
 
+#### Chainlink Proof of Reserve
+
+Limits minting so that the total supply never exceeds the reserves actually backing the token. Before every mint the rule reads the latest reserve value from a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed (any `AggregatorV3Interface`), scales it from the feed's decimals to the token's, and rejects the mint if `totalSupply + amount` would exceed it.
+
+The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link/ace/reference/policy-library/secure-mint-policy) from the ACE policy library, re-expressed as an ERC-1404 / ERC-3643 compliance rule and deliberately simplified: the ACE policy's configurable reserve margin is not carried over.
+
+- **Limit = reserves, exactly** — no margin, buffer or headroom parameter. For a safety cushion, report conservative reserves on the feed or compose with `RuleMaxTotalSupply`.
+- **Staleness threshold** — `maxStalenessSeconds` rejects mints when the feed has not been updated recently; pick it from the feed's heartbeat. `0` disables the check.
+- **Mints only** — transfers and burns always pass, including while the feed is stale or unavailable, so a lapsed feed never traps holders.
+- **Views never revert** — a feed with no code, a reverting call, a negative answer or an incomplete round returns code 77; a stale feed returns code 76.
+
+Use `maxBackedSupply()` to preview the current limit without simulating a mint.
+
+**Usage scenario**
+
+The operator deploys `RuleChainlinkPoR` with the token, its decimals, the Proof of Reserve feed and a staleness threshold slightly above the feed heartbeat. With reserves reported at 1 000 units, at most 1 000 tokens may exist; a mint beyond that is rejected with code 75. When the custodian deposits more and the feed updates, the headroom reopens with no rule reconfiguration. Full details in [RuleChainlinkPoR.md](./doc/technical/RuleChainlinkPoR.md).
+
 #### Identity registry
 
 **ERC-3643 conformant: only the RECEIVER is verified.** The specification mandates exactly one identity check — *"The receiver MUST be whitelisted on the Identity Registry and verified"* — and states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility". The **sender**, the **spender** and the **minter** are therefore **not** verified by default.
@@ -703,7 +737,7 @@ See also [docs.openzeppelin.com - AccessControl](https://docs.openzeppelin.com/c
 
 | Role | Hash | Functions (by rule) |
 | --- | --- | --- |
-| `DEFAULT_ADMIN_ROLE` | `0x0000000000000000000000000000000000000000000000000000000000000000` | `grantRole`, `revokeRole`, `renounceRole` (all AccessControl rules); `setCheckSpender` (RuleWhitelist, RuleWhitelistWrapper); `setMaxTotalSupply`, `setTokenContract` (RuleMaxTotalSupply); `setIdentityRegistry`, `clearIdentityRegistry` (RuleIdentityRegistry) |
+| `DEFAULT_ADMIN_ROLE` | `0x0000000000000000000000000000000000000000000000000000000000000000` | `grantRole`, `revokeRole`, `renounceRole` (all AccessControl rules); `setCheckSpender` (RuleWhitelist, RuleWhitelistWrapper); `setMaxTotalSupply`, `setTokenContract` (RuleMaxTotalSupply); `setReservesFeed`, `setTokenMetadata`, `setMaxStalenessSeconds` (RuleChainlinkPoR); `setIdentityRegistry`, `clearIdentityRegistry` (RuleIdentityRegistry) |
 | `ADDRESS_LIST_ADD_ROLE` | `0x1b03c849816e077359373cf0a8d6d8f741d643bc1e95273ffe11515f83bebf61` | `addAddress`, `addAddresses` (RuleWhitelist, RuleBlacklist) |
 | `ADDRESS_LIST_REMOVE_ROLE` | `0x1b94c92b564251ed6b49246d9a82eb7a486b6490f3b3a3bf3b28d2e99801f3ec` | `removeAddress`, `removeAddresses` (RuleWhitelist, RuleBlacklist) |
 | `SANCTIONLIST_ROLE` | `0x30842281ac34bdc7d568c7ab276f84ba6fc1a1de1ae858b0afd35e716fb0650d` | `setSanctionListOracle`, `clearSanctionListOracle` (RuleSanctionsList) |
@@ -726,6 +760,7 @@ For simpler ownership-based control, `Ownable2Step` variants (two-step ownership
 - `RuleSanctionsListOwnable2Step`
 - `RuleIdentityRegistryOwnable2Step`
 - `RuleMaxTotalSupplyOwnable2Step`
+- `RuleChainlinkPoROwnable2Step`
 - `RuleERC2980Ownable2Step`
 - `RuleConditionalTransferLightOwnable2Step`
 - `RuleConditionalTransferLightMultiTokenOwnable2Step`
@@ -1528,6 +1563,75 @@ function setTokenContract(address tokenContract_)
 ```
 
 Sets the token contract used to read `totalSupply()`.
+
+### RuleChainlinkPoR
+
+Compliance rule that caps total token supply at the reserves reported by a Chainlink Proof of Reserve data feed; only mints (`from == address(0)`) are restricted.
+
+------
+
+#### Constructor
+
+```solidity
+constructor(
+    address admin,
+    address tokenContract_,
+    uint8 tokenDecimals_,
+    AggregatorV3Interface reservesFeed_,
+    uint256 maxStalenessSeconds_
+)
+```
+
+Initializes access control, the protected token and its decimals, the reserve feed (whose `decimals()` is cached) and the staleness threshold.
+
+#### setReservesFeed
+
+```solidity
+function setReservesFeed(AggregatorV3Interface newReservesFeed)
+    public
+    virtual
+    onlyRole(DEFAULT_ADMIN_ROLE)
+```
+
+Replaces the Proof of Reserve data feed and re-caches its `decimals()`. Reverts on the zero address, an address with no code, a reverting `decimals()`, or decimals above 36.
+
+#### setTokenMetadata
+
+```solidity
+function setTokenMetadata(address newTokenContract, uint8 newTokenDecimals)
+    public
+    virtual
+    onlyRole(DEFAULT_ADMIN_ROLE)
+```
+
+Sets the token contract used to read `totalSupply()` and the decimals used to scale the reserve answer. Validated against the token's own `decimals()` when it exposes one.
+
+#### setMaxStalenessSeconds
+
+```solidity
+function setMaxStalenessSeconds(uint256 newMaxStalenessSeconds)
+    public
+    virtual
+    onlyRole(DEFAULT_ADMIN_ROLE)
+```
+
+Updates the maximum accepted age of the reserve data. `0` disables the staleness check.
+
+#### maxBackedSupply
+
+```solidity
+function maxBackedSupply() public view returns (uint8 restrictionCode, uint256 backedSupply)
+```
+
+Previews the supply currently backed by the reserves — the reported reserves scaled into token units. `restrictionCode` is `0` when the feed answer is usable, otherwise the code a mint would return. Never reverts.
+
+##### Emits
+
+| Event                                     | Description                                              |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `ReservesFeedUpdated(address,uint8)`      | Emitted when the data feed is set or replaced.            |
+| `TokenMetadataUpdated(address,uint8)`     | Emitted when the protected token or its decimals change.  |
+| `MaxStalenessSecondsUpdated(uint256)`     | Emitted when the staleness threshold is updated.          |
 
 ### RuleConditionalTransferLight
 

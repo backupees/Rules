@@ -40,6 +40,10 @@ import {
     RuleSanctionsListInvariantStorage
 } from "src/rules/validation/abstract/invariant/RuleSanctionsListInvariantStorage.sol";
 
+import {
+    RuleChainlinkPoRInvariantStorage
+} from "src/rules/validation/abstract/invariant/RuleChainlinkPoRInvariantStorage.sol";
+
 // utils
 import {CMTATDeployment} from "test/utils/CMTATDeployment.sol";
 
@@ -52,6 +56,7 @@ abstract contract HelperContract is
     RuleAddressSetInvariantStorage,
     RuleSanctionsListInvariantStorage,
     RuleMaxTotalSupplyInvariantStorage,
+    RuleChainlinkPoRInvariantStorage,
     RuleIdentityRegistryInvariantStorage,
     RuleConditionalTransferLightInvariantStorage,
     RuleMintAllowanceInvariantStorage,

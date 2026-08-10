@@ -22,6 +22,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 | `RuleBlacklist` | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks listed minter [1] | ✅ blocks listed burner [1] |
 | `RuleSanctionsList` | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks sanctioned minter [1] | ✅ blocks sanctioned burner [1] |
 | `RuleMaxTotalSupply` | ⚙️ mint only [2] | ❌ | ❌ ignored | ❌ caps supply, not minter | ❌ |
+| `RuleChainlinkPoR` | ⚙️ mint only [2b] | ❌ | ❌ ignored | ❌ caps supply, not minter | ❌ |
 | `RuleIdentityRegistry` | ⚙️ only if `checkSender` [3] | ✅ **must be verified** (ERC-3643) [3] | ⚙️ only if `checkSpender` [3] | ❌ exempt [3] | ❌ exempt [3] |
 | `RuleERC2980` | ⚙️ frozen-check only [4] | ✅ frozen-check + must be whitelisted | ✅ frozen-check | ✅ blocks frozen minter | ✅ blocks frozen burner |
 | `RuleConditionalTransferLight` | ❌ per-tuple approval [5] | ❌ per-tuple approval [5] | ❌ spender ignored | ❌ exempt | ❌ exempt |
@@ -38,6 +39,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 | `RuleBlacklist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 36–38 |
 | `RuleSanctionsList` | oracle == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 30–32 |
 | `RuleMaxTotalSupply` | token contract required (non-zero) | ❌ | `canTransfer` / `canTransferFrom` [9] | 50 |
+| `RuleChainlinkPoR` | feed required (non-zero contract); broken/stale feed ⇒ **mints rejected** (fail-closed) [2b] | ❌ | `canTransfer` / `canTransferFrom`, plus `maxBackedSupply()` | 75–77 |
 | `RuleIdentityRegistry` | registry == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 55–57 |
 | `RuleERC2980` | n/a (local lists) | ❌ | `canTransfer` / `canTransferFrom` | 60–65 |
 | `RuleConditionalTransferLight` | n/a (needs `bindToken`) | ✅ consumes an approval | `canTransfer` / `canTransferFrom` | 46 |
@@ -48,7 +50,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 
 ## 3. Overload surface (ERC-7943 `tokenId` / `ITransferContext`)
 
-Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads and the `ITransferContext` struct entrypoints come from `RuleNFTAdapter`, and **only the rules that inherit it have them**. This is a deliberate design choice, not an oversight: `RuleMaxTotalSupply` caps a fungible supply, and the conditional-transfer / mint-allowance rules key on fungible amounts, so a `tokenId` dimension would be meaningless for them.
+Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads and the `ITransferContext` struct entrypoints come from `RuleNFTAdapter`, and **only the rules that inherit it have them**. This is a deliberate design choice, not an oversight: `RuleMaxTotalSupply` and `RuleChainlinkPoR` cap a fungible supply, and the conditional-transfer / mint-allowance rules key on fungible amounts, so a `tokenId` dimension would be meaningless for them.
 
 | Rule | ERC-7943 `tokenId` overloads [12] | `transferred(FungibleTransferContext)` | `transferred(MultiTokenTransferContext)` |
 |---|---|---|---|
@@ -60,6 +62,7 @@ Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads an
 | `RuleERC2980` | ✅ | ✅ | ✅ |
 | `RuleIdentityRegistry` | ✅ | ✅ | ✅ |
 | `RuleMaxTotalSupply` | ❌ | ❌ | ❌ |
+| `RuleChainlinkPoR` | ❌ | ❌ | ❌ |
 | `RuleConditionalTransferLight` | ❌ | ✅ | ❌ |
 | `RuleConditionalTransferLightMultiToken` | ❌ | ✅ | ❌ |
 | `RuleMintAllowance` | ❌ | ❌ | ❌ |
@@ -76,6 +79,8 @@ The `tokenId` parameter is **always ignored** by the rules that accept it — `R
 1. **Deny-lists intentionally screen the minter/burner.** `RuleBlacklist` and `RuleSanctionsList` do **not** exempt mint/burn from the spender check, so a blacklisted/sanctioned address cannot mint or burn. This is correct fail-closed behaviour for a deny-list (threat `BL-1`), the mirror image of the whitelist rules, which exempt mint/burn because the minter acts on its own authority rather than as a delegated spender.
 
 2. **`RuleMaxTotalSupply` only acts on mints.** `_detectTransferRestriction` returns `TRANSFER_OK` unless `from == address(0)`; it caps *total supply*, so the "screened party" is the mint operation, not any address. The spender is ignored on every path.
+
+2b. **`RuleChainlinkPoR` only acts on mints, and fails closed for mints only.** Like `RuleMaxTotalSupply` it returns `TRANSFER_OK` unless `from == address(0)`, and ignores the spender. The cap is not static but read live from a Chainlink Proof of Reserve feed: `totalSupply + value` must stay within the reported reserves, scaled from the feed's decimals to the token's. The limit equals the reserves exactly — there is no margin parameter. A feed that has no code, reverts, returns a negative answer or reports an incomplete round yields code `77`; a feed older than `maxStalenessSeconds` yields code `76`. Both block **minting only** — transfers and burns still pass, so a lapsed feed never traps holders. The read path is guarded (`code.length` check, `try/catch`, saturating arithmetic) so it can return these codes without reverting. See [RuleChainlinkPoR.md](./RuleChainlinkPoR.md).
 
 3. **`RuleIdentityRegistry` is ERC-3643 conformant: only the RECEIVER is verified** (improvement I-1, finding **F-1** fixed). The spec mandates exactly one check — *"The receiver MUST be whitelisted on the Identity Registry and verified"* — and explicitly states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility". The sender, spender and minter are therefore **not** screened by default. Checking the sender would **trap de-listed holders**: ERC-3643 screens only the receiver precisely so an investor whose identity lapses can still exit their position by sending to a verified counterparty. Stricter screening is available as an explicit opt-in via `checkSender` / `checkSpender` (both default `false`); mint and burn stay exempt from the spender check even when `checkSpender` is on.
 
