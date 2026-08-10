@@ -30,3 +30,6 @@ FEEDBACK.md
 *.dtmp
 
 
+
+# LibreOffice lock files
+.~lock.*#
