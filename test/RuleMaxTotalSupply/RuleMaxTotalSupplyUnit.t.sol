@@ -84,11 +84,6 @@ contract RuleMaxTotalSupplyUnit is Test, HelperContract {
         assertEq(rule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 1), TRANSFER_OK);
     }
 
-    function testCodelessTokenYieldsACodeNotARevert() public {
-        vm.etch(address(token), "");
-        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_SUPPLY_ORACLE_UNAVAILABLE);
-    }
-
     function testTransferred_RevertsWithTheSupplyOracleCode() public {
         RevertingTotalSupplyMock breakable = new RevertingTotalSupplyMock();
         vm.prank(DEFAULT_ADMIN_ADDRESS);

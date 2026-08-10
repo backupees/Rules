@@ -143,19 +143,19 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
 
     /**
      * @notice Reads the tracked token's current total supply.
-     * @dev Guarded so the ERC-1404 read path stays revert-free even if the token breaks after
-     * configuration -- a proxy upgraded to something that reverts, or a pausable implementation
-     * that reverts while paused. Configuration already probes `totalSupply()`, so reaching the
-     * failure branch means the token changed behaviour since.
+     * @dev Wrapped in `try/catch` so the ERC-1404 read path stays revert-free if the token breaks
+     * after configuration -- a proxy upgraded to something that reverts, or a pausable
+     * implementation that reverts while paused. Configuration already probes `totalSupply()`, so
+     * reaching the failure branch means the token changed behaviour since.
+     *
+     * No code-length check here: `_validateTokenContract` requires code, and EIP-6780 (Cancun)
+     * makes that permanent, so the token cannot become codeless afterwards. A `try` to a codeless
+     * address would revert *uncatchably*, so this reasoning assumes a Cancun-or-later chain.
      * @return available True when the supply could be read.
      * @return supply The total supply; meaningless when `available` is false.
      */
     function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
         ITotalSupply token = tokenContract;
-        // A `try` on a codeless address reverts uncatchably, so check for code first.
-        if (address(token).code.length == 0) {
-            return (false, 0);
-        }
         try token.totalSupply() returns (uint256 totalSupply_) {
             return (true, totalSupply_);
         } catch {

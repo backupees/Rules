@@ -28,7 +28,12 @@ import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
  * overstates reserves, that silently authorises unbacked minting. Correctness wins over the call.
  *
  * IMPORTANT: the read path (`detectTransferRestriction*` / `canTransfer*`) must never revert, so
- * every feed interaction is guarded. A feed that has no code, whose `decimals()` or
+ * every feed interaction is wrapped in `try/catch`. This relies on `reservesFeed` and
+ * `tokenContract` still having code, which the setters enforce at configuration time and EIP-6780
+ * (Cancun) makes permanent -- SELFDESTRUCT can only clear an account created in the same
+ * transaction, so a validated contract cannot become codeless afterwards. A `try` to a codeless
+ * address reverts *uncatchably*, so on a chain WITHOUT EIP-6780 that guarantee does not hold; this
+ * library targets Cancun or later (see `foundry.toml`). A feed that has no code, whose `decimals()` or
  * `latestRoundData()` reverts, that reports more than {MAX_FEED_DECIMALS} decimals, returns a
  * negative answer or reports an incomplete round yields {CODE_RESERVES_ANSWER_INVALID}; a feed
  * older than `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}; a `tokenContract` whose
@@ -276,12 +281,8 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      */
     function _maxBackedSupply() internal view virtual returns (uint8 restrictionCode, uint256 backedSupply) {
         AggregatorV3Interface feed = reservesFeed;
-        // Guards BOTH calls below: Solidity's extcodesize check on a `try` to a codeless address
-        // reverts uncatchably, so `try/catch` alone would not keep this function revert-free.
-        if (address(feed).code.length == 0) {
-            return (CODE_RESERVES_ANSWER_INVALID, 0);
-        }
         // Read live, never cached: see the contract-level note on why the extra call is worth it.
+        // No code-length guard: `_setReservesFeed` requires code and EIP-6780 makes that permanent.
         uint8 currentFeedDecimals;
         try feed.decimals() returns (uint8 decimals_) {
             currentFeedDecimals = decimals_;
@@ -313,19 +314,16 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
 
     /**
      * @notice Reads the protected token's current total supply.
-     * @dev Guarded the same way as the feed calls so the ERC-1404 read path stays revert-free even
-     * if the token breaks after configuration -- a proxy upgraded to something that reverts, or a
-     * pausable implementation that reverts while paused. Configuration already probes
-     * `totalSupply()`, so reaching the failure branch means the token changed behaviour since.
+     * @dev Wrapped in `try/catch` so the ERC-1404 read path stays revert-free if the token breaks
+     * after configuration -- a proxy upgraded to something that reverts, or a pausable
+     * implementation that reverts while paused. Configuration already probes `totalSupply()`, so
+     * reaching the failure branch means the token changed behaviour since. No code-length check is
+     * needed: `_setTokenMetadata` requires code, and EIP-6780 prevents it disappearing.
      * @return available True when the supply could be read.
      * @return supply The total supply; meaningless when `available` is false.
      */
     function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
         ITotalSupply token = tokenContract;
-        // A `try` on a codeless address reverts uncatchably, so check for code first.
-        if (address(token).code.length == 0) {
-            return (false, 0);
-        }
         try token.totalSupply() returns (uint256 totalSupply_) {
             return (true, totalSupply_);
         } catch {

@@ -296,14 +296,6 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertEq(resUint8, CODE_RESERVES_ANSWER_INVALID);
     }
 
-    function testDetectRestriction_FeedWithoutCodeBlocksMintWithoutReverting() public {
-        // The feed had code when it was configured, and lost it afterwards.
-        vm.etch(address(feed), "");
-        token.setTotalSupply(0);
-        resUint8 = rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1);
-        assertEq(resUint8, CODE_RESERVES_ANSWER_INVALID);
-    }
-
     function testDetectRestriction_ZeroReserveBlocksAnyMint() public {
         feed.setAnswer(0);
         token.setTotalSupply(0);
@@ -362,15 +354,6 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         // Transfers and burns never read the supply, so they are unaffected.
         assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 1), TRANSFER_OK);
         assertEq(rule.detectTransferRestriction(ADDRESS1, ZERO_ADDRESS, 1), TRANSFER_OK);
-    }
-
-    /**
-     * @notice A token that loses its code cannot be reached by `try/catch` at all, so the code
-     *         length is checked first.
-     */
-    function testTokenContract_CodelessTokenYieldsACodeNotARevert() public {
-        vm.etch(address(token), "");
-        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_TOTAL_SUPPLY_UNAVAILABLE);
     }
 
     /**
