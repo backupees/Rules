@@ -38,6 +38,7 @@ abstract contract IdentityRegistryWhitelistInvariantStorage {
 
     /* ============ Errors ============ */
 
-    error IdentityRegistryWhitelist_AddressZeroNotAllowed();
-    error IdentityRegistryWhitelist_AddressNotRegistered(address userAddress);
+    // The zero-address and not-listed conditions deliberately reuse the address-set errors
+    // (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) inherited with
+    // `RuleAddressSetInternal`, so this registry reverts identically to the whitelist rules.
 }

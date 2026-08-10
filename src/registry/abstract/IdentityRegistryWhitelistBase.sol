@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RuleAddressSetInternal} from "../../rules/validation/abstract/RuleAddressSet/RuleAddressSetInternal.sol";
 import {IdentityRegistryWhitelistInvariantStorage} from "./IdentityRegistryWhitelistInvariantStorage.sol";
 import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.sol";
 
@@ -26,6 +26,18 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
  * consequence is documented in the technical doc: **the new wallet must already be registered
  * before `recoveryAddress` is called**.
  *
+ * ## Where the whitelist comes from
+ * The address set is not re-implemented here: this contract inherits {RuleAddressSetInternal}, the
+ * same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on, so the storage
+ * layout and the zero-address guard are shared code rather than a second implementation. No
+ * separate whitelist contract is deployed -- the registry *is* the list.
+ *
+ * Only the `internal` layer is inherited, deliberately. Inheriting the public `RuleAddressSet` API
+ * would expose `addAddress` / `removeAddress` as a second write path, and those functions are not
+ * `virtual`, so they could not be overridden to maintain the {keyHasPurpose} reverse index -- a
+ * wallet added that way would be verified but unrecoverable. Routing every write through
+ * {registerIdentity} / {deleteIdentity} keeps the index and the set inseparable by construction.
+ *
  * ## No identity state is kept
  * This contract stores **no identity data at all** -- no ONCHAINID, no country, no claims. Its only
  * state is the whitelist and the reverse index that indexes it. `registerIdentity`'s `_identity`
@@ -34,16 +46,11 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
  * whitelist. Everything else in the interface is a wrapper over that single question.
  */
 abstract contract IdentityRegistryWhitelistBase is
+    RuleAddressSetInternal,
     IIdentityRegistryERC3643,
     IERC734KeyHasPurpose,
     IdentityRegistryWhitelistInvariantStorage
 {
-    using EnumerableSet for EnumerableSet.AddressSet;
-
-    /**
-     * @dev Registered wallets. Enumerable so an operator can audit the whole set on-chain.
-     */
-    EnumerableSet.AddressSet private _registered;
     /**
      * @dev `keccak256(abi.encode(wallet)) -> wallet`, the reverse index that makes {keyHasPurpose}
      * possible. Kept exactly in step with {_registered}.
@@ -78,10 +85,12 @@ abstract contract IdentityRegistryWhitelistBase is
         override
         onlyIdentityRegistrar
     {
-        require(_userAddress != address(0), IdentityRegistryWhitelist_AddressZeroNotAllowed());
-        // Return value intentionally ignored: false simply means the wallet was already registered,
-        // and with no identity state to refresh, re-registration is a genuine no-op.
-        _registered.add(_userAddress);
+        // Same guard, same error as the whitelist rules: the zero address is the mint/burn
+        // sentinel and must never be listed, or `isVerified(address(0))` would return true.
+        require(_userAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
+        // `_addAddress` is a no-op for an already-listed wallet, and with no identity state to
+        // refresh, that makes re-registration idempotent for free.
+        _addAddress(_userAddress);
         _walletOfKey[_walletKey(_userAddress)] = _userAddress;
         emit IdentityRegistered(_userAddress, _identity);
     }
@@ -91,26 +100,20 @@ abstract contract IdentityRegistryWhitelistBase is
      * @dev Reverts if the wallet is not registered.
      */
     function deleteIdentity(address _userAddress) external virtual override onlyIdentityRegistrar {
-        require(_registered.remove(_userAddress), IdentityRegistryWhitelist_AddressNotRegistered(_userAddress));
+        require(_isAddressListed(_userAddress), RuleAddressSet_AddressNotFound());
+        _removeAddress(_userAddress);
         delete _walletOfKey[_walletKey(_userAddress)];
         emit IdentityRemoved(_userAddress);
     }
 
     /**
-     * @notice Returns every registered wallet.
-     * @dev Unbounded: intended for off-chain reads. Do not call from another contract.
-     * @return The registered wallets.
-     */
-    function registeredIdentities() external view virtual returns (address[] memory) {
-        return _registered.values();
-    }
-
-    /**
      * @notice Returns how many wallets are registered.
+     * @dev There is deliberately no full enumeration getter, matching `RuleWhitelist` and
+     * `RuleBlacklist`, which expose a count but not the member list.
      * @return The number of registered wallets.
      */
     function registeredIdentityCount() external view virtual returns (uint256) {
-        return _registered.length();
+        return _listedAddressCount();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -124,7 +127,7 @@ abstract contract IdentityRegistryWhitelistBase is
      * Mint and burn permission is the token's business, not the registry's.
      */
     function isVerified(address _userAddress) public view virtual override returns (bool) {
-        return _registered.contains(_userAddress);
+        return _isAddressListed(_userAddress);
     }
 
     /**

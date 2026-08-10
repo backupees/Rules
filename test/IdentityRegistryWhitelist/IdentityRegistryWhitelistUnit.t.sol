@@ -40,7 +40,6 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
 
         assertTrue(registry.isVerified(ADDRESS1));
         assertEq(registry.registeredIdentityCount(), 1);
-        assertEq(registry.registeredIdentities()[0], ADDRESS1);
     }
 
     /**
@@ -76,7 +75,7 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
      *         not a wallet, so it can never enter the registry.
      */
     function testRegisterIdentity_RejectsZeroAddress() public {
-        vm.expectRevert(IdentityRegistryWhitelist_AddressZeroNotAllowed.selector);
+        vm.expectRevert(RuleAddressSet_ZeroAddressNotAllowed.selector);
         vm.prank(REGISTRAR);
         registry.registerIdentity(ZERO_ADDRESS, ADDRESS3, COUNTRY_CH);
 
@@ -107,7 +106,7 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
     }
 
     function testDeleteIdentity_RevertsWhenNotRegistered() public {
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistryWhitelist_AddressNotRegistered.selector, ADDRESS1));
+        vm.expectRevert(RuleAddressSet_AddressNotFound.selector);
         vm.prank(REGISTRAR);
         registry.deleteIdentity(ADDRESS1);
     }
