@@ -26,11 +26,12 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../interfaces/IIde
  * consequence is documented in the technical doc: **the new wallet must already be registered
  * before `recoveryAddress` is called**.
  *
- * ## What is deliberately not stored
- * The `_identity` (ONCHAINID) argument of {registerIdentity} is emitted in {IdentityRegistered} but
- * never stored, and there is no `identity()` getter: verification here is whitelist membership, not
- * claim validation, and `Token.sol` never reads it back. `_country` **is** stored, because
- * `recoveryAddress` reads it via {investorCountry} to carry it to the replacement wallet.
+ * ## No identity state is kept
+ * This contract stores **no identity data at all** -- no ONCHAINID, no country, no claims. Its only
+ * state is the whitelist and the reverse index that indexes it. `registerIdentity`'s `_identity`
+ * and `_country` arguments are accepted so the ERC-3643 signature matches, then discarded;
+ * {investorCountry} always returns 0. Verification here means one thing: is this wallet on the
+ * whitelist. Everything else in the interface is a wrapper over that single question.
  */
 abstract contract IdentityRegistryWhitelistBase is
     IIdentityRegistryERC3643,
@@ -48,10 +49,6 @@ abstract contract IdentityRegistryWhitelistBase is
      * possible. Kept exactly in step with {_registered}.
      */
     mapping(bytes32 walletKey => address wallet) private _walletOfKey;
-    /**
-     * @dev Country code per registered wallet; cleared on removal.
-     */
-    mapping(address wallet => uint16 country) private _country;
 
     /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
@@ -59,8 +56,11 @@ abstract contract IdentityRegistryWhitelistBase is
 
     /**
      * @inheritdoc IIdentityRegistryERC3643
-     * @dev Reverts only on the zero address. Re-registering an already-registered wallet is an
-     * **idempotent update** of its country, not an error.
+     * @dev Adds the wallet to the whitelist. `_identity` is echoed in {IdentityRegistered} for
+     * off-chain traceability and `_country` is ignored entirely -- neither is stored.
+     *
+     * Reverts only on the zero address. Re-registering an already-registered wallet is a no-op, not
+     * an error.
      *
      * IMPORTANT: this is a deliberate divergence from ERC-3643's reference registry, which reverts
      * with "address stored already". It is forced by answering {keyHasPurpose} from the whitelist:
@@ -68,18 +68,22 @@ abstract contract IdentityRegistryWhitelistBase is
      * `registerIdentity(newWallet, ...)`, so the new wallet must already be registered -- and a
      * duplicate-rejecting `registerIdentity` would then abort every recovery. See the technical doc.
      */
-    function registerIdentity(address _userAddress, address _identity, uint16 _countryCode)
+    function registerIdentity(
+        address _userAddress,
+        address _identity,
+        uint16 /* _country */
+    )
         external
         virtual
         override
         onlyIdentityRegistrar
     {
         require(_userAddress != address(0), IdentityRegistryWhitelist_AddressZeroNotAllowed());
-        // Return value intentionally ignored: false simply means the wallet was already registered.
+        // Return value intentionally ignored: false simply means the wallet was already registered,
+        // and with no identity state to refresh, re-registration is a genuine no-op.
         _registered.add(_userAddress);
         _walletOfKey[_walletKey(_userAddress)] = _userAddress;
-        _country[_userAddress] = _countryCode;
-        emit IdentityRegistered(_userAddress, _identity, _countryCode);
+        emit IdentityRegistered(_userAddress, _identity);
     }
 
     /**
@@ -89,7 +93,6 @@ abstract contract IdentityRegistryWhitelistBase is
     function deleteIdentity(address _userAddress) external virtual override onlyIdentityRegistrar {
         require(_registered.remove(_userAddress), IdentityRegistryWhitelist_AddressNotRegistered(_userAddress));
         delete _walletOfKey[_walletKey(_userAddress)];
-        delete _country[_userAddress];
         emit IdentityRemoved(_userAddress);
     }
 
@@ -126,9 +129,20 @@ abstract contract IdentityRegistryWhitelistBase is
 
     /**
      * @inheritdoc IIdentityRegistryERC3643
+     * @dev Always returns 0: this registry keeps no identity data, only a whitelist. The function
+     * exists because `recoveryAddress` calls it -- omitting it would make every recovery revert --
+     * and the 0 it returns is handed straight back to {registerIdentity}, which ignores it.
      */
-    function investorCountry(address _userAddress) public view virtual override returns (uint16) {
-        return _country[_userAddress];
+    function investorCountry(
+        address /* _userAddress */
+    )
+        public
+        view
+        virtual
+        override
+        returns (uint16)
+    {
+        return 0;
     }
 
     /**

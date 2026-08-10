@@ -23,13 +23,13 @@ abstract contract IdentityRegistryWhitelistInvariantStorage {
     /* ============ Events ============ */
 
     /**
-     * @notice Emitted when a wallet is registered as a verified investor.
+     * @notice Emitted when a wallet is added to the whitelist.
      * @param userAddress The registered wallet.
-     * @param identity The ONCHAINID passed by the caller. Recorded in the event only; see
-     * {IdentityRegistryWhitelistBase} for why it is not stored.
-     * @param country The recorded country code.
+     * @param identity The ONCHAINID passed by the caller. Echoed for off-chain traceability only --
+     * this registry stores no identity data. The `_country` argument is not echoed because it is
+     * ignored entirely.
      */
-    event IdentityRegistered(address indexed userAddress, address indexed identity, uint16 country);
+    event IdentityRegistered(address indexed userAddress, address indexed identity);
     /**
      * @notice Emitted when a wallet is removed from the registry.
      * @param userAddress The removed wallet.

@@ -33,30 +33,42 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
     function testRegisterIdentity_VerifiesTheWallet() public {
         assertFalse(registry.isVerified(ADDRESS1));
 
-        vm.expectEmit(true, true, false, true);
-        emit IdentityRegistered(ADDRESS1, ADDRESS3, COUNTRY_CH);
+        vm.expectEmit(true, true, false, false);
+        emit IdentityRegistered(ADDRESS1, ADDRESS3);
         vm.prank(REGISTRAR);
         registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
 
         assertTrue(registry.isVerified(ADDRESS1));
-        assertEq(registry.investorCountry(ADDRESS1), COUNTRY_CH);
         assertEq(registry.registeredIdentityCount(), 1);
         assertEq(registry.registeredIdentities()[0], ADDRESS1);
     }
 
     /**
-     * @notice Re-registration is an idempotent country update, not an error. Required so
-     *         `recoveryAddress` can register a wallet the whitelist already contains.
+     * @notice Re-registration is a no-op, not an error. Required so `recoveryAddress` can register
+     *         a wallet the whitelist already contains.
      */
-    function testRegisterIdentity_IsIdempotentAndUpdatesTheCountry() public {
+    function testRegisterIdentity_IsIdempotent() public {
         vm.prank(REGISTRAR);
         registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
         vm.prank(REGISTRAR);
-        registry.registerIdentity(ADDRESS1, ADDRESS3, 250);
+        registry.registerIdentity(ADDRESS1, ADDRESS2, 250);
 
         assertTrue(registry.isVerified(ADDRESS1));
-        assertEq(registry.investorCountry(ADDRESS1), 250, "country updated");
         assertEq(registry.registeredIdentityCount(), 1, "no duplicate entry");
+    }
+
+    /**
+     * @notice No identity data is kept: the ONCHAINID and country arguments are accepted so the
+     *         ERC-3643 signature matches, then discarded. `investorCountry` is a constant 0.
+     */
+    function testNoIdentityDataIsStored() public {
+        assertEq(registry.investorCountry(ADDRESS1), 0, "unregistered");
+
+        vm.prank(REGISTRAR);
+        registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
+
+        assertTrue(registry.isVerified(ADDRESS1));
+        assertEq(registry.investorCountry(ADDRESS1), 0, "country discarded, not stored");
     }
 
     /**
@@ -81,7 +93,7 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
                              DELETION
     //////////////////////////////////////////////////////////////*/
 
-    function testDeleteIdentity_RemovesTheWalletAndItsCountry() public {
+    function testDeleteIdentity_RemovesTheWallet() public {
         vm.prank(REGISTRAR);
         registry.registerIdentity(ADDRESS1, ADDRESS3, COUNTRY_CH);
 
@@ -91,7 +103,6 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
         registry.deleteIdentity(ADDRESS1);
 
         assertFalse(registry.isVerified(ADDRESS1));
-        assertEq(registry.investorCountry(ADDRESS1), 0);
         assertEq(registry.registeredIdentityCount(), 0);
     }
 

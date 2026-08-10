@@ -233,22 +233,23 @@ contract IdentityRegistryWhitelistERC3643 is Test, HelperContract, IdentityRegis
     }
 
     /**
-     * @notice The country recorded for the lost wallet is what the token carries over, so it must
-     *         survive the round trip.
+     * @notice `recoveryAddress` reads `investorCountry(lostWallet)` and feeds it to
+     *         `registerIdentity`. This registry keeps no country, so that round trip carries a
+     *         constant 0 -- harmless, because the value is discarded on the way back in. The test
+     *         pins that recovery still succeeds despite the registry having no identity data.
      */
-    function testRecoveryAddress_CarriesTheCountryOver() public {
+    function testRecoveryAddress_SucceedsWithNoIdentityDataTracked() public {
         vm.prank(AGENT);
         token.mint(INVESTOR, 100);
         vm.prank(AGENT);
-        registry.registerIdentity(NEW_WALLET, address(0), 0);
-        assertEq(registry.investorCountry(INVESTOR), COUNTRY_CH);
+        registry.registerIdentity(NEW_WALLET, address(0), COUNTRY_CH);
+
+        assertEq(registry.investorCountry(INVESTOR), 0, "no country tracked");
 
         vm.prank(AGENT);
-        token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry));
+        assertTrue(token.recoveryAddress(INVESTOR, NEW_WALLET, address(registry)));
 
-        // registerIdentity is idempotent, so the token's re-registration UPDATES the new wallet's
-        // country to the lost wallet's. That is the ERC-3643 intent: the country follows the investor.
-        assertEq(registry.investorCountry(NEW_WALLET), COUNTRY_CH, "country carried over");
-        assertEq(registry.investorCountry(INVESTOR), 0, "lost wallet cleared");
+        assertEq(token.balanceOf(NEW_WALLET), 100);
+        assertEq(registry.investorCountry(NEW_WALLET), 0, "still none after recovery");
     }
 }
