@@ -4,6 +4,8 @@
 
 This page describes a Conditional Transfer implementation. This rule requires that transfers have to be approved before being executed by the token holders.
 
+> **This rule is not part of this repository.** `RuleConditionalTransfer` is the full-featured, experimental variant maintained separately at [CMTA/RuleConditionalTransfer](https://github.com/CMTA/RuleConditionalTransfer). This page is kept for reference; the rules shipped here are [`RuleConditionalTransferLight`](./RuleConditionalTransferLight.md) and [`RuleConditionalTransferLightMultiToken`](./RuleConditionalTransferLightMultiToken.md). The diagrams referenced below live in the upstream repository and were never migrated here, so the embeds have been replaced with links.
+
 In the Swiss law, this rule allows to implement a specific restriction called *Vinkulierung*.
 
 
@@ -63,7 +65,7 @@ This option, if activated, will perform the transfer if the request is approved 
 
 To perform the transfer, the token holder has to `approve` the rule to spend tokens on his behalf (standard ERC-20 approval). If the allowance is not sufficient, the request will be approved, but without performing the transfer.
 
-![conditionalTransfer-automaticTransfer.drawio](../schema/rule/conditionalTransfer-automaticTransfer.drawio.png)
+_Diagram: `conditionalTransfer-automaticTransfer.drawio.png` — see [the upstream repository](https://github.com/CMTA/RuleConditionalTransfer)._
 
 ## Schema
 
@@ -91,15 +93,15 @@ Each request has a status, which changes regarding the decision of the operator
 
 The default status is `NONE`.
 
-![conditionalTransfer-state machine.drawio](../schema/rule/conditionalTransfer-state machine.drawio.png)
+_Diagram: `conditionalTransfer-state machine.drawio.png` — see [the upstream repository](https://github.com/CMTA/RuleConditionalTransfer)._
 
 #### With the CMTAT
 
-![conditionalTransfer - CMTAT](../schema/rule/conditionalTransferCMTAT.drawio.png)
+_Diagram: `conditionalTransferCMTAT.drawio.png` — see [the upstream repository](https://github.com/CMTA/RuleConditionalTransfer)._
 
 #### With Storage
 
-![conditionalTransfer-Storage](../schema/rule/conditionalTransfer-Storage.drawio.png)
+_Diagram: `conditionalTransfer-Storage.drawio.png` — see [the upstream repository](https://github.com/CMTA/RuleConditionalTransfer)._
 
 ## Request
 

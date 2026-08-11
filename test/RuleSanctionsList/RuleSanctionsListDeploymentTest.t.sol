@@ -11,7 +11,7 @@ import {AccessControlModuleStandalone} from "../../src/modules/AccessControlModu
  * @title General functions of the ruleSanctionList
  */
 
-contract RuleSanctionListDeploymentTest is Test, HelperContract {
+contract RuleSanctionsListDeploymentTest is Test, HelperContract {
     RuleSanctionsList ruleSanctionList;
     SanctionListOracle sanctionlistOracle;
 
