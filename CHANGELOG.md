@@ -47,6 +47,33 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ## Unreleased
 
+_Nothing yet._
+
+## v0.5.0 - 2026-08-11
+
+Commit: _pending — not yet committed at the time of writing._
+
+### Summary
+
+Two new contracts, one behavioural hardening with a migration note, and the first tests that run
+against a real ERC-3643 token.
+
+**New**
+- **`RuleChainlinkPoR`** — caps total supply at the reserves reported by a Chainlink Proof of Reserve feed. Restriction codes `75`–`78`.
+- **`IdentityRegistryWhitelist`** — a whitelist that fills an ERC-3643 token's *identity registry* slot, so a token can enforce investor eligibility with no ONCHAINID deployment. Not a rule: it implements no `IRule` and must never be added to a `RuleEngine`.
+
+**Breaking behaviour: `RuleMaxTotalSupply`.** The constructor and `setTokenContract` now reject a
+non-contract token and probe that `totalSupply()` is callable, and a token that later reverts yields
+the new restriction code `51` instead of breaking the MUST-NOT-revert views. Deployments that passed
+a placeholder address now fail at construction — see *Changed* for the migration note. This only
+rejects configurations that could never have worked, which is why it is a MINOR rather than MAJOR
+bump pre-1.0.
+
+**ERC-3643 interoperability.** Both integration directions are now covered end to end: a `RuleEngine`
+in the token's *compliance* slot enforcing `RuleWhitelist`, and `IdentityRegistryWhitelist` in the
+*identity* slot. One suite runs against the genuine vendored `Token.sol` rather than a mock, which
+requires a second Foundry profile — **`forge test` alone no longer runs everything**, see *Testing*.
+
 ### Added
 
 - **`RuleChainlinkPoR`** — a validation rule that caps total supply at the reserves reported by a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed. Before every mint it reads `latestRoundData()` from the configured `AggregatorV3Interface`, scales the answer from the feed's decimals to the token's, and rejects the mint when `totalSupply + value` would exceed it. Modelled on Chainlink's `SecureMintPolicy` from the ACE policy library, minus its configurable reserve margin. Restriction codes `75` (reserves exceeded), `76` (feed stale), `77` (feed answer invalid), `78` (total supply unavailable). Available as `RuleChainlinkPoR` (AccessControl) and `RuleChainlinkPoROwnable2Step`.
@@ -59,18 +86,17 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
   - `maxBackedSupply()` previews the current limit without simulating a mint.
   - **Documented:** one instance protects one token. The rule reads `totalSupply()` from its configured `tokenContract` rather than from the token that triggered the check, and has no binding to enforce the pairing — sharing an instance across RuleEngines silently evaluates both tokens against the first one's supply and feed. Same exposure as `RuleMaxTotalSupply`; see [One instance per protected token](./doc/technical/RuleChainlinkPoR.md#one-instance-per-protected-token).
 - `AggregatorV3Interface` and `IDecimals` in `src/rules/interfaces/`, so the library reads Chainlink feeds without taking a dependency on the Chainlink contracts package.
+- **`IdentityRegistryWhitelist`** — a whitelist that plugs into an **ERC-3643 token's identity registry slot** (`token.setIdentityRegistry(...)`), so a token can enforce investor eligibility without deploying ONCHAINID contracts. `registerIdentity` whitelists, `deleteIdentity` removes, `isVerified` answers the token's per-transfer check. Only the subset of `IIdentityRegistry` that `Token.sol` actually calls is implemented. This is **not** a compliance rule: no `IRule` surface, and it must not be added to a `RuleEngine`.
+  - Implements **no** ERC-734 surface. `recoveryAddress` must be given a real ONCHAINID as `_investorOnchainID`; the registry only supplies `isVerified`, `registerIdentity`, `deleteIdentity` and `investorCountry`. Consequently `registerIdentity` rejects duplicates exactly like the reference registry, and the replacement wallet is registered by the token during recovery rather than beforehand — no behavioural divergence from stock ERC-3643 remains.
+  - The ERC-3643 token must hold `IDENTITY_REGISTRAR_ROLE`, because `recoveryAddress` makes the token call `registerIdentity` and `deleteIdentity`.
+  - Reuses `RuleAddressSetInternal` — the same `EnumerableSet` machinery as `RuleWhitelist` / `RuleBlacklist` — for storage, the zero-address guard and the revert errors, so no whitelist contract is deployed and none is re-implemented. Only the internal layer is inherited: `RuleAddressSet`'s public mutators are not `virtual` and could not keep the `keyHasPurpose` reverse index in step.
+  - **No identity data is kept.** The `_identity` and `_country` arguments exist so the ERC-3643 signature matches, then are discarded; `investorCountry` is a constant `0`. The contract is a wrapper that adapts the token's registry calls onto a plain whitelist. `Token.sol` reads the country in exactly one place (`recoveryAddress`, a pass-through it hands straight back), so the token is unaffected; the exposure is a *custom* compliance module reading `investorCountry`, which would see every investor as country 0.
+  - `isVerified(address(0))` is always `false`; the zero address can never be registered.
 
 ### Changed
 
 - **`RuleMaxTotalSupply` now validates its token contract and guards the supply read** (same hardening as `RuleChainlinkPoR`, threat `EXT-4`). The constructor and `setTokenContract` reject a non-contract address (`RuleMaxTotalSupply_TokenIsNotAContract`) and probe that `totalSupply()` is callable (`RuleMaxTotalSupply_TokenTotalSupplyUnavailable`). At run time a token whose `totalSupply()` reverts yields the new restriction code `51` (`CODE_SUPPLY_ORACLE_UNAVAILABLE`) instead of reverting the ERC-1404 / ERC-3643 views, which MUST NOT revert. Codeless targets are excluded by construction rather than by a runtime check: the setters require code and EIP-6780 (Cancun) makes that permanent, recorded as a deployment precondition in each rule doc.
   - **Migration:** deployments that passed a placeholder or non-contract address as `tokenContract` now revert at construction. This only rejects configurations that could never have worked — the previous behaviour was to accept them and then revert on every restriction check. Integrators switching on restriction codes should handle `51`, which can only appear where the view previously threw.
-
-- **`IdentityRegistryWhitelist`** — a whitelist that plugs into an **ERC-3643 token's identity registry slot** (`token.setIdentityRegistry(...)`), so a token can enforce investor eligibility without deploying ONCHAINID contracts. `registerIdentity` whitelists, `deleteIdentity` removes, `isVerified` answers the token's per-transfer check. Only the subset of `IIdentityRegistry` that `Token.sol` actually calls is implemented. This is **not** a compliance rule: no `IRule` surface, and it must not be added to a `RuleEngine`.
-  - Implements **no** ERC-734 surface. `recoveryAddress` must be given a real ONCHAINID as `_investorOnchainID`; the registry only supplies `isVerified`, `registerIdentity`, `deleteIdentity` and `investorCountry`. Consequently `registerIdentity` rejects duplicates exactly like the reference registry, and the replacement wallet is registered by the token during recovery rather than beforehand — no behavioural divergence from stock ERC-3643 remains.
-  - The ERC-3643 token must hold `IDENTITY_REGISTRAR_ROLE`, because `recoveryAddress` makes the token call `registerIdentity` and `deleteIdentity`.
-  - Reuses `RuleAddressSetInternal` — the same `EnumerableSet` machinery as `RuleWhitelist` / `RuleBlacklist` — for storage, the zero-address guard and the revert errors, so no whitelist contract is deployed and none is re-implemented. Only the internal layer is inherited: `RuleAddressSet`'s public mutators are not `virtual` and could not keep the `keyHasPurpose` reverse index in step.
-  - **No identity data is kept.** The `_identity` and `_country` arguments exist so the ERC-3643 signature matches, then are discarded; `investorCountry` is a constant `0`. The contract is a wrapper that adapts the token's registry calls onto a plain whitelist — country-based compliance cannot be built on it.
-  - `isVerified(address(0))` is always `false`; the zero address can never be registered.
 
 ### Documentation
 
