@@ -197,12 +197,6 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         _;
     }
 
-    /**
-     * @notice Authorization hook invoked before any configuration change.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     */
-    function _authorizeChainlinkPoRManager() internal view virtual;
-
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -272,6 +266,12 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         maxStalenessSeconds = newMaxStalenessSeconds;
         emit MaxStalenessSecondsUpdated(newMaxStalenessSeconds);
     }
+
+    /**
+     * @notice Authorization hook invoked before any configuration change.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     */
+    function _authorizeChainlinkPoRManager() internal view virtual;
 
     /**
      * @notice Reads the feed and derives the supply currently backed by the reserves.

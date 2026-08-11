@@ -9,11 +9,47 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../registry/interf
  * compute an ERC-165 interface ID and is explicitly not meant to be used as a type.
  */
 interface IERC3643ComplianceForToken {
+    /**
+     * @notice Binds a token to this compliance contract.
+     * @param token The token being bound.
+     */
     function bindToken(address token) external;
+
+    /**
+     * @notice Unbinds a previously bound token.
+     * @param token The token being unbound.
+     */
     function unbindToken(address token) external;
+
+    /**
+     * @notice Notifies the compliance contract that a transfer has occurred.
+     * @param from The sender.
+     * @param to The recipient.
+     * @param value The amount moved.
+     */
     function transferred(address from, address to, uint256 value) external;
+
+    /**
+     * @notice Notifies the compliance contract that tokens have been minted.
+     * @param to The recipient.
+     * @param value The amount minted.
+     */
     function created(address to, uint256 value) external;
+
+    /**
+     * @notice Notifies the compliance contract that tokens have been burned.
+     * @param from The holder burned from.
+     * @param value The amount burned.
+     */
     function destroyed(address from, uint256 value) external;
+
+    /**
+     * @notice Returns whether a transfer is allowed.
+     * @param from The sender, or the zero address for a mint.
+     * @param to The recipient.
+     * @param value The amount to move.
+     * @return True when the transfer is allowed.
+     */
     function canTransfer(address from, address to, uint256 value) external view returns (bool);
 }
 
@@ -42,6 +78,9 @@ interface IERC3643ComplianceForToken {
  * the cross-check circular.
  */
 contract ERC3643TokenMock {
+    /**
+     * @notice The identity registry this token consults on every inbound transfer.
+     */
     IIdentityRegistryERC3643 public identityRegistry;
     /**
      * @notice The compliance contract, i.e. a `RuleEngine`.
@@ -51,11 +90,32 @@ contract ERC3643TokenMock {
      */
     IERC3643ComplianceForToken public compliance;
 
+    /**
+     * @notice Token balance per account.
+     */
     mapping(address account => uint256 balance) public balanceOf;
+    /**
+     * @notice Whether an account holds the ERC-3643 agent role.
+     */
     mapping(address account => bool isAgent) public isAgent;
+    /**
+     * @notice Total token supply.
+     */
     uint256 public totalSupply;
 
+    /**
+     * @notice Emitted on every balance movement, including mint and burn.
+     * @param from The sender, or the zero address for a mint.
+     * @param to The recipient, or the zero address for a burn.
+     * @param value The amount moved.
+     */
     event Transfer(address indexed from, address indexed to, uint256 value);
+    /**
+     * @notice Emitted when a position is recovered onto a replacement wallet.
+     * @param lostWallet The wallet recovered from.
+     * @param newWallet The replacement wallet.
+     * @param investorOnchainId The identity contract that vouched for the replacement wallet.
+     */
     event RecoverySuccess(address indexed lostWallet, address indexed newWallet, address indexed investorOnchainId);
 
     error ERC3643TokenMock_OnlyAgent();
@@ -148,27 +208,6 @@ contract ERC3643TokenMock {
     }
 
     /**
-     * @notice Agent-forced transfer; the recipient must still be verified.
-     * @dev `Token.forcedTransfer`: bypasses freezes but NOT the registry check on `_to`.
-     * @param _from Sender.
-     * @param _to Recipient.
-     * @param _amount Amount to transfer.
-     * @return True on success.
-     */
-    function forcedTransfer(address _from, address _to, uint256 _amount) public onlyAgent returns (bool) {
-        require(balanceOf[_from] >= _amount, "sender balance too low");
-        // NOTE: `Token.forcedTransfer` does NOT consult `canTransfer` -- it only notifies
-        // `transferred` afterwards. A compliance contract that reverts in `transferred` (as a
-        // RuleEngine does) still blocks the move; one that only answers `canTransfer` does not.
-        if (identityRegistry.isVerified(_to)) {
-            _transfer(_from, _to, _amount);
-            _complianceTransferred(_from, _to, _amount);
-            return true;
-        }
-        revert("Transfer not possible");
-    }
-
-    /**
      * @notice Mints tokens; the recipient must be verified.
      * @dev `Token.mint`: `require(isVerified(_to), "Identity is not verified.")`.
      * @param _to Recipient.
@@ -205,18 +244,17 @@ contract ERC3643TokenMock {
      * @notice Moves an investor's position to a replacement wallet.
      * @dev Transcribed from `Token.recoveryAddress`, preserving the order that matters:
      *      1. `keyHasPurpose(keccak256(abi.encode(_newWallet)), 1)` on the **caller-supplied**
-     *         `_investorOnchainID` -- reverts "Recovery not possible" when false;
+     *         `_investorOnchainId` -- reverts "Recovery not possible" when false;
      *      2. `investorCountry(_lostWallet)` read from the registry;
-     *      3. `registerIdentity(_newWallet, _investorOnchainID, country)` -- called BY THE TOKEN;
+     *      3. `registerIdentity(_newWallet, _investorOnchainId, country)` -- called BY THE TOKEN;
      *      4. `forcedTransfer(_lostWallet, _newWallet, balance)`;
      *      5. `deleteIdentity(_lostWallet)` -- also called BY THE TOKEN.
      * @param _lostWallet The wallet to recover from.
      * @param _newWallet The replacement wallet.
-     * @param _investorOnchainID The contract answering `keyHasPurpose`.
+     * @param _investorOnchainId The contract answering `keyHasPurpose`.
      * @return True on success.
      */
-    // forge-lint: disable-next-line(mixed-case-variable)
-    function recoveryAddress(address _lostWallet, address _newWallet, address _investorOnchainID)
+    function recoveryAddress(address _lostWallet, address _newWallet, address _investorOnchainId)
         external
         onlyAgent
         returns (bool)
@@ -224,36 +262,43 @@ contract ERC3643TokenMock {
         require(balanceOf[_lostWallet] != 0, "no tokens to recover");
         // forge-lint: disable-next-line(asm-keccak256)
         bytes32 _key = keccak256(abi.encode(_newWallet));
-        if (IERC734KeyHasPurpose(_investorOnchainID).keyHasPurpose(_key, 1)) {
+        if (IERC734KeyHasPurpose(_investorOnchainId).keyHasPurpose(_key, 1)) {
             uint256 investorTokens = balanceOf[_lostWallet];
             identityRegistry.registerIdentity(
-                _newWallet, _investorOnchainID, identityRegistry.investorCountry(_lostWallet)
+                _newWallet, _investorOnchainId, identityRegistry.investorCountry(_lostWallet)
             );
             forcedTransfer(_lostWallet, _newWallet, investorTokens);
             identityRegistry.deleteIdentity(_lostWallet);
-            emit RecoverySuccess(_lostWallet, _newWallet, _investorOnchainID);
+            emit RecoverySuccess(_lostWallet, _newWallet, _investorOnchainId);
             return true;
         }
         revert("Recovery not possible");
     }
 
+    /**
+     * @notice Agent-forced transfer; the recipient must still be verified.
+     * @dev `Token.forcedTransfer`: bypasses freezes but NOT the registry check on `_to`.
+     * @param _from Sender.
+     * @param _to Recipient.
+     * @param _amount Amount to transfer.
+     * @return True on success.
+     */
+    function forcedTransfer(address _from, address _to, uint256 _amount) public onlyAgent returns (bool) {
+        require(balanceOf[_from] >= _amount, "sender balance too low");
+        // NOTE: `Token.forcedTransfer` does NOT consult `canTransfer` -- it only notifies
+        // `transferred` afterwards. A compliance contract that reverts in `transferred` (as a
+        // RuleEngine does) still blocks the move; one that only answers `canTransfer` does not.
+        if (identityRegistry.isVerified(_to)) {
+            _transfer(_from, _to, _amount);
+            _complianceTransferred(_from, _to, _amount);
+            return true;
+        }
+        revert("Transfer not possible");
+    }
+
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Asks the compliance contract whether a move is allowed; true when none is set.
-     * @param from Sender, or the zero address for a mint.
-     * @param to Recipient.
-     * @param amount Amount to move.
-     * @return True when the move is allowed.
-     */
-    function _canTransfer(address from, address to, uint256 amount) internal view returns (bool) {
-        if (address(compliance) == address(0)) {
-            return true;
-        }
-        return compliance.canTransfer(from, to, amount);
-    }
 
     /**
      * @notice Notifies the compliance contract that a transfer happened; no-op when none is set.
@@ -277,5 +322,19 @@ contract ERC3643TokenMock {
         balanceOf[from] -= amount;
         balanceOf[to] += amount;
         emit Transfer(from, to, amount);
+    }
+
+    /**
+     * @notice Asks the compliance contract whether a move is allowed; true when none is set.
+     * @param from Sender, or the zero address for a mint.
+     * @param to Recipient.
+     * @param amount Amount to move.
+     * @return True when the move is allowed.
+     */
+    function _canTransfer(address from, address to, uint256 amount) internal view returns (bool) {
+        if (address(compliance) == address(0)) {
+            return true;
+        }
+        return compliance.canTransfer(from, to, amount);
     }
 }

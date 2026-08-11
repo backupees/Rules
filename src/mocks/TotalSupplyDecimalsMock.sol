@@ -7,8 +7,17 @@ pragma solidity ^0.8.20;
  * cross-check performed when configuring a rule can be exercised.
  */
 contract TotalSupplyDecimalsMock {
+    /**
+     * @notice The stored total supply value.
+     */
     uint256 private _totalSupply;
+    /**
+     * @notice Decimals reported by the token; fixed at construction.
+     */
     uint8 private immutable _DECIMALS;
+    /**
+     * @notice When true, `totalSupply()` reverts.
+     */
     bool private _revertOnTotalSupply;
 
     /**

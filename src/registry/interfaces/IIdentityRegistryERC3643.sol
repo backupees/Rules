@@ -15,14 +15,6 @@ pragma solidity ^0.8.20;
  */
 interface IIdentityRegistryERC3643 {
     /**
-     * @notice Returns whether a wallet is a verified investor.
-     * @dev Called by `transfer`, `transferFrom`, `forcedTransfer` and `mint`.
-     * @param _userAddress The wallet to check.
-     * @return True if the wallet is verified.
-     */
-    function isVerified(address _userAddress) external view returns (bool);
-
-    /**
      * @notice Registers a wallet as a verified investor.
      * @dev Called by the token itself inside `recoveryAddress`, and by a registrar off-chain.
      * @param _userAddress The wallet to register.
@@ -37,6 +29,14 @@ interface IIdentityRegistryERC3643 {
      * @param _userAddress The wallet to remove.
      */
     function deleteIdentity(address _userAddress) external;
+
+    /**
+     * @notice Returns whether a wallet is a verified investor.
+     * @dev Called by `transfer`, `transferFrom`, `forcedTransfer` and `mint`.
+     * @param _userAddress The wallet to check.
+     * @return True if the wallet is verified.
+     */
+    function isVerified(address _userAddress) external view returns (bool);
 
     /**
      * @notice Returns the country code recorded for a wallet.

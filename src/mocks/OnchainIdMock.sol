@@ -15,6 +15,9 @@ import {IERC734KeyHasPurpose} from "../registry/interfaces/IIdentityRegistryERC3
  * WARNING: test scaffolding only. Holds no real keys and performs no authorisation.
  */
 contract OnchainIdMock is IERC734KeyHasPurpose {
+    /**
+     * @notice Keys this identity vouches for, per ERC-734 purpose.
+     */
     mapping(bytes32 key => mapping(uint256 purpose => bool held)) private _keys;
 
     /**

@@ -9,11 +9,29 @@ import {AggregatorV3Interface} from "../rules/interfaces/AggregatorV3Interface.s
  * `decimals()` or `latestRoundData()` so the failure paths of the Proof of Reserve rule can be exercised.
  */
 contract AggregatorV3Mock is AggregatorV3Interface {
+    /**
+     * @notice Decimals reported by the feed.
+     */
     uint8 private _decimals;
+    /**
+     * @notice The reserve answer returned by `latestRoundData`.
+     */
     int256 private _answer;
+    /**
+     * @notice Round identifier, bumped on every {setAnswer}.
+     */
     uint80 private _roundId;
+    /**
+     * @notice Timestamp reported as `updatedAt`; 0 simulates an incomplete round.
+     */
     uint256 private _updatedAt;
+    /**
+     * @notice When true, `decimals()` reverts.
+     */
     bool private _revertOnDecimals;
+    /**
+     * @notice When true, `latestRoundData()` reverts.
+     */
     bool private _revertOnLatestRoundData;
 
     /**
