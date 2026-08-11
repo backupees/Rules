@@ -36,10 +36,18 @@ import {IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.s
  *
  * ## No identity state is kept
  * This contract stores **no identity data at all** -- no ONCHAINID, no country, no claims. Its only
- * state is the whitelist and the reverse index that indexes it. `registerIdentity`'s `_identity`
- * and `_country` arguments are accepted so the ERC-3643 signature matches, then discarded;
- * {investorCountry} always returns 0. Verification here means one thing: is this wallet on the
- * whitelist. Everything else in the interface is a wrapper over that single question.
+ * state is the inherited address set. `registerIdentity`'s `_identity` and `_country` arguments are
+ * accepted so the ERC-3643 signature matches, then discarded; {investorCountry} always returns 0.
+ * Verification here means one thing: is this wallet on the whitelist. Everything else in the
+ * interface is a wrapper over that single question.
+ *
+ * Returning a constant country is safe for the token itself. `Token.sol` reads `investorCountry` in
+ * exactly one place -- `recoveryAddress`, line 308 -- and only to pass it straight back into
+ * `registerIdentity`, which discards it here. It never branches on the value and exposes no getter.
+ * The exposure is a *custom* compliance module that calls `investorCountry`: it would see every
+ * investor as country 0. No shipped ERC-3643 compliance does (the one consumer,
+ * `compliance/legacy/BasicCompliance._getCountry`, has no caller in the reference tree, and the
+ * modular framework has no country module). See the technical doc for the full audit.
  */
 abstract contract IdentityRegistryWhitelistBase is
     RuleAddressSetInternal,

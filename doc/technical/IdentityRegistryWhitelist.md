@@ -10,7 +10,7 @@
 
 The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal` — the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.
 
-Only the `internal` layer is inherited, and that is deliberate. Inheriting the public `RuleAddressSet` API would expose `addAddress` / `removeAddress` as a second write path — and those functions are **not `virtual`**, so they could not be overridden to maintain the `keyHasPurpose` reverse index. A wallet added through that path would be verified but permanently unrecoverable. Routing every write through `registerIdentity` / `deleteIdentity` keeps the set and the index inseparable by construction.
+Only the `internal` layer is inherited, and that is deliberate: the registry exposes exactly one write API — the ERC-3643 one — rather than two overlapping ones. Inheriting the public `RuleAddressSet` surface would add `addAddress` / `removeAddress` alongside `registerIdentity` / `deleteIdentity`, giving the same state change two sets of roles and two sets of events, and leaving an operator to guess which pair is authoritative.
 
 The design goal is a **wrapper, not a registry**: it adapts the calls an ERC-3643 token makes onto a plain whitelist, and keeps **no identity state whatsoever** — no ONCHAINID, no country, no claims. `registerIdentity`'s `_identity` and `_country` arguments exist so the ERC-3643 signature matches; both are discarded. Verification means exactly one thing: is this wallet on the whitelist.
 
@@ -118,7 +118,7 @@ This is a deliberate narrowing. Answering `keyHasPurpose` from the whitelist was
 
 ### 3. No identity data is kept
 
-The contract's entire state is the whitelist plus the reverse index over it. Specifically:
+The contract's entire state is the inherited address set. Nothing else is stored:
 
 | ERC-3643 concept | Here |
 | --- | --- |
@@ -126,9 +126,28 @@ The contract's entire state is the whitelist plus the reverse index over it. Spe
 | Investor country (`_country`) | Ignored on write; `investorCountry` is a constant `0`. |
 | Claims / claim topics | Not modelled at all. |
 
-Consequences: anything expecting `identityRegistry.identity(wallet)` to return a usable ONCHAINID will not work, and **country-based compliance cannot be built on this registry** — a compliance module that branches on `investorCountry` will see every investor as country 0. `Token.sol` itself reads neither, so the token is unaffected; it is downstream tooling that needs checking.
+Anything expecting `identityRegistry.identity(wallet)` to return a usable ONCHAINID will not work against this registry.
 
-If you need investor metadata on-chain, this is the wrong contract — it is a whitelist wearing the registry interface, nothing more.
+#### How much does the missing country actually matter?
+
+Less than it sounds, because the token barely uses it. Auditing the reference implementation (`lib/ERC-3643/`) for every consumer of `investorCountry`:
+
+| Location | Role |
+| --- | --- |
+| `token/Token.sol:308` (`recoveryAddress`) | **The only use in the token.** A pure pass-through: reads the lost wallet's country and hands it straight to `registerIdentity` for the new wallet. The token never branches on the value, never stores it, and exposes no getter — `IToken.sol` does not mention country at all. |
+| `registry/implementation/IdentityRegistryStorage.sol:91,112,177` | Storage plumbing — writes and reads the field. |
+| `registry/implementation/IdentityRegistry.sol:132,226` | Forwards to storage. |
+| `compliance/legacy/BasicCompliance.sol:175` | `_getCountry()` — the only place country drives *logic*, and it has **no caller** in the vendored tree; it exists for country-restriction modules built on top. Note the path: `legacy`. |
+| `_testContracts/` | `MockContract`, `LegacyToken_3_5_2`. |
+
+Two things follow:
+
+- **The token is genuinely unaffected.** Its single use is a round trip that starts and ends in the registry, so a constant `0` in and a discarded `0` out changes nothing. Recovery works exactly as it does with a full registry.
+- **The current modular compliance framework has no country module.** `compliance/modular/modules/` contains only `AbstractModule`, `AbstractModuleUpgradeable`, `IModule`, `ModuleProxy` and `TestModule` — none reference country.
+
+So the real exposure is narrow and specific: **a custom compliance module that calls `investorCountry` will see every investor as country 0**, and will therefore apply whatever rule it has for country 0 to everyone. Nothing shipped in ERC-3643 does this, but a jurisdiction-restriction module is a plausible thing to write. If that is on your roadmap, this registry is the wrong base — use the full ERC-3643 registry stack, which stores the country properly.
+
+If you need investor metadata on-chain generally, the same conclusion applies: this is a whitelist wearing the registry interface, nothing more.
 
 ### 4. No claim topics, no trusted issuers
 
