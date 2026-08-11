@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleAddressSetRolesStorage.sol | 6f75529d3a7d9645316c498c0f36aa1afdc2ae48 |
+| ./rules/validation/abstract/RuleAddressSet/invariantStorage/RuleAddressSetRolesStorage.sol | 6f75529d3a7d9645316c498c0f36aa1afdc2ae48 |
 
 
 ### Contracts Description Table

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleAddressSet/RuleAddressSet.sol | c2543c2c217b102c9570518c3da2b96e4205d100 |
+| ./rules/validation/abstract/RuleAddressSet/RuleAddressSet.sol | 4cc6363d011c30c1c071be888e38445f0062fc99 |
 
 
 ### Contracts Description Table
@@ -15,7 +15,7 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleAddressSet** | Implementation | MetaTxModuleStandalone, RuleAddressSetInvariantStorage, RuleAddressSetInternal, IAddressList |||
+| **RuleAddressSet** | Implementation | MetaTxModuleStandalone, RuleAddressSetInvariantStorage, RuleAddressSetRolesStorage, RuleAddressSetInternal, IAddressList |||
 | └ | <Constructor> | Public ❗️ | 🛑  | MetaTxModuleStandalone |
 | └ | addAddresses | Public ❗️ | 🛑  | onlyAddressListAdd |
 | └ | removeAddresses | Public ❗️ | 🛑  | onlyAddressListRemove |

@@ -165,7 +165,7 @@ Here is the list of codes used by the different rules
 |                              | CODE_MINT_NOT_ALLOWED                | 24    |
 |                              | CODE_BURN_NOT_ALLOWED                | 25    |
 |                              | Reserved slot                        | 26-29 |
-| RuleSanctionList             | CODE_ADDRESS_FROM_IS_SANCTIONED      | 30    |
+| RuleSanctionsList            | CODE_ADDRESS_FROM_IS_SANCTIONED      | 30    |
 |                              | CODE_ADDRESS_TO_IS_SANCTIONED        | 31    |
 |                              | CODE_ADDRESS_SPENDER_IS_SANCTIONED   | 32    |
 |                              | Reserved slot                        | 33-35 |
@@ -392,7 +392,7 @@ Several rules are available in multiple access-control variants. Use the simples
 | RuleWhitelist                                                | Read-only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule can be used to restrict transfers from/to only addresses inside a whitelist. |
 | RuleWhitelistWrapper                                         | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule can be used to restrict transfers from/to only addresses inside a group of whitelist rules managed by different operators. |
 | RuleBlacklist                                                | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule can be used to forbid transfer from/to addresses in the blacklist |
-| RuleSanctionList                                             | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | The purpose of this contract is to use the oracle contract from [Chainalysis](https://go.chainalysis.com/chainalysis-oracle-docs.html) to forbid transfer from/to an address included in a sanctions designation (US, EU, or UN). |
+| RuleSanctionsList                                            | Read-Only                           | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | The purpose of this contract is to use the oracle contract from [Chainalysis](https://go.chainalysis.com/chainalysis-oracle-docs.html) to forbid transfer from/to an address included in a sanctions designation (US, EU, or UN). |
 | RuleMaxTotalSupply                                           | Read-Only                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule limits minting so that the total supply never exceeds a configured maximum. |
 | RuleChainlinkPoR                                             | Read-Only                          | <strong><span style="color: #b00020;">&#x2718;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule limits minting so that the total supply never exceeds the reserves reported by a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed. |
 | RuleIdentityRegistry                                         | Read-Only                          | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34;">&#x2714;</span></strong> | This rule checks the ERC-3643 Identity Registry for transfer participants when configured. |
@@ -420,7 +420,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleWhitelist | [RuleWhitelist.md](./doc/technical/RuleWhitelist.md) |
 | RuleWhitelistWrapper | [RuleWhitelistWrapper.md](./doc/technical/RuleWhitelistWrapper.md) |
 | RuleBlacklist | [RuleBlacklist.md](./doc/technical/RuleBlacklist.md) |
-| RuleSanctionsList | [RuleSanctionList.md](./doc/technical/RuleSanctionList.md) |
+| RuleSanctionsList | [RuleSanctionsList.md](./doc/technical/RuleSanctionsList.md) |
 | RuleMaxTotalSupply | [RuleMaxTotalSupply.md](./doc/technical/RuleMaxTotalSupply.md) |
 | RuleChainlinkPoR | [RuleChainlinkPoR.md](./doc/technical/RuleChainlinkPoR.md) |
 | IdentityRegistryWhitelist | [IdentityRegistryWhitelist.md](./doc/technical/IdentityRegistryWhitelist.md) |
