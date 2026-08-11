@@ -18,6 +18,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 |---|---|---|---|---|---|
 | `RuleWhitelist` | ✅ must be listed | ✅ must be listed | ⚙️ only if `checkSpender` | ❌ exempt | ❌ exempt |
 | `RuleWhitelistWrapper` | ✅ listed in ≥1 child | ✅ listed in ≥1 child | ⚙️ only if `checkSpender` | ❌ exempt | ❌ exempt |
+| `RuleReceiverWhitelist` | ❌ **never** [1b] | ✅ must be listed | ❌ never | ✅ receiver must be listed | ❌ exempt |
 | `RuleSpenderWhitelist` | ❌ always allowed | ❌ always allowed | ✅ always (rule's purpose) | ❌ exempt | ❌ exempt |
 | `RuleBlacklist` | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks if listed | ✅ blocks listed minter [1] | ✅ blocks listed burner [1] |
 | `RuleSanctionsList` | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks if sanctioned | ✅ blocks sanctioned minter [1] | ✅ blocks sanctioned burner [1] |
@@ -35,6 +36,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 |---|---|---|---|---|
 | `RuleWhitelist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 21–25 |
 | `RuleWhitelistWrapper` | empty wrapper ⇒ **all rejected** (fail-closed) | ❌ | `canTransfer` / `canTransferFrom` | 21–25 |
+| `RuleReceiverWhitelist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 81 |
 | `RuleSpenderWhitelist` | n/a (local address set) | ❌ | `canTransfer` (always ✓) / `canTransferFrom` | 66 |
 | `RuleBlacklist` | n/a (local address set) | ❌ | `canTransfer` / `canTransferFrom` | 36–38 |
 | `RuleSanctionsList` | oracle == 0 ⇒ **all allowed** (fail-open) [8] | ❌ | `canTransfer` / `canTransferFrom` | 30–32 |
@@ -56,6 +58,7 @@ Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads an
 |---|---|---|---|
 | `RuleWhitelist` | ✅ | ✅ | ✅ |
 | `RuleWhitelistWrapper` | ✅ | ✅ | ✅ |
+| `RuleReceiverWhitelist` | ✅ | ✅ | ✅ |
 | `RuleBlacklist` | ✅ | ✅ | ✅ |
 | `RuleSpenderWhitelist` | ✅ | ✅ | ✅ |
 | `RuleSanctionsList` | ✅ | ✅ | ✅ |
@@ -77,6 +80,8 @@ The `tokenId` parameter is **always ignored** by the rules that accept it — `R
 
 
 1. **Deny-lists intentionally screen the minter/burner.** `RuleBlacklist` and `RuleSanctionsList` do **not** exempt mint/burn from the spender check, so a blacklisted/sanctioned address cannot mint or burn. This is correct fail-closed behaviour for a deny-list (threat `BL-1`), the mirror image of the whitelist rules, which exempt mint/burn because the minter acts on its own authority rather than as a delegated spender.
+
+1b. **`RuleReceiverWhitelist` screens the receiver and nothing else** — the CMTAT-side expression of ERC-3643's eligibility rule. The sender and the spender are never checked, deliberately: screening the sender **traps de-listed holders**, and ERC-3643 checks only the receiver precisely so a lapsed investor can still exit. Mint is screened on the receiver like any other transfer (no `allowMint` flag); burn is exempt, because `address(0)` can never be listed and would otherwise be rejected on every burn. Equivalence with the standard is pinned against the real vendored token in `test/ERC3643Real/ERC3643ReceiverWhitelistParity.t.sol`. Use `RuleWhitelist` when you want both parties screened. See [RuleReceiverWhitelist.md](./RuleReceiverWhitelist.md).
 
 2. **`RuleMaxTotalSupply` only acts on mints.** `_detectTransferRestriction` returns `TRANSFER_OK` unless `from == address(0)`; it caps *total supply*, so the "screened party" is the mint operation, not any address. The spender is ignored on every path.
 
