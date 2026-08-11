@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleIdentityRegistryBase.sol | 3314d7f11202a0210238d55ad78d0ee67339aadf |
+| ./rules/validation/abstract/base/RuleIdentityRegistryBase.sol | 74e215f9f7ec78fcbef43376d76b8f1c368fabb7 |
 
 
 ### Contracts Description Table
@@ -17,13 +17,15 @@
 ||||||
 | **RuleIdentityRegistryBase** | Implementation | RuleNFTAdapter, RuleIdentityRegistryInvariantStorage |||
 | └ | <Constructor> | Public ❗️ | 🛑  |NO❗️ |
-| └ | _authorizeIdentityRegistryManager | Internal 🔒 |   | |
 | └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
 | └ | setIdentityRegistry | Public ❗️ | 🛑  | onlyIdentityRegistryManager |
+| └ | setCheckSender | Public ❗️ | 🛑  | onlyIdentityRegistryManager |
+| └ | setCheckSpender | Public ❗️ | 🛑  | onlyIdentityRegistryManager |
 | └ | clearIdentityRegistry | Public ❗️ | 🛑  | onlyIdentityRegistryManager |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
+| └ | _authorizeIdentityRegistryManager | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |

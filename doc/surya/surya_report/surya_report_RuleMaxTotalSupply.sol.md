@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleMaxTotalSupply.sol | 3880cdfe3de4b9ba850cb43e6310b2179329ce0d |
+| ./rules/validation/deployment/RuleMaxTotalSupply.sol | e6499a3861218ecfde7db68c440f0c2dd6690c3f |
 
 
 ### Contracts Description Table

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/interfaces/IERC2980.sol | 11ed42e834b5471a3a2aa81bfd20748e7535f075 |
+| ./rules/interfaces/IERC2980.sol | 572923f223f79c9c8abebeaaae2bdefa3e0f48ec |
 
 
 ### Contracts Description Table

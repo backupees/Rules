@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleAddressSet/RuleAddressSetInternal.sol | 1c962935e41f98f081c56290f77322eb6787ef14 |
+| ./rules/validation/abstract/RuleAddressSet/RuleAddressSetInternal.sol | 50d98cbdef19b7319538dceee8056fda909cbced |
 
 
 ### Contracts Description Table
@@ -15,7 +15,7 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleAddressSetInternal** | Implementation |  |||
+| **RuleAddressSetInternal** | Implementation | RuleAddressSetInvariantStorage |||
 | └ | _addAddresses | Internal 🔒 | 🛑  | |
 | └ | _removeAddresses | Internal 🔒 | 🛑  | |
 | └ | _addAddress | Internal 🔒 | 🛑  | |

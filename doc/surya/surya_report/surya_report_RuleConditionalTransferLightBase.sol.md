@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/operation/abstract/RuleConditionalTransferLightBase.sol | ca4e40de3d7c746518faf45ef82d6c21c846e650 |
+| ./rules/operation/abstract/RuleConditionalTransferLightBase.sol | 6b64c3ddcf9e55e7bb62fd45782b0e575037266a |
 
 
 ### Contracts Description Table
@@ -16,14 +16,17 @@
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
 | **RuleConditionalTransferLightBase** | Implementation | VersionModule, ERC3643ComplianceModule, RuleConditionalTransferLightApprovalBase, IRule |||
-| └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
-| └ | messageForTransferRestriction | External ❗️ |   |NO❗️ |
 | └ | created | External ❗️ | 🛑  | onlyBoundToken |
 | └ | destroyed | External ❗️ | 🛑  | onlyBoundToken |
+| └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
+| └ | messageForTransferRestriction | External ❗️ |   |NO❗️ |
 | └ | approveAndTransferIfAllowed | Public ❗️ | 🛑  | onlyTransferApprover |
 | └ | transferred | Public ❗️ | 🛑  | onlyTransferExecutor |
 | └ | transferred | Public ❗️ | 🛑  | onlyTransferExecutor |
 | └ | bindToken | Public ❗️ | 🛑  | onlyComplianceManager |
+| └ | bindRuleEngine | Public ❗️ | 🛑  | onlyComplianceManager |
+| └ | unbindRuleEngine | Public ❗️ | 🛑  | onlyComplianceManager |
+| └ | isTransferExecutor | Public ❗️ |   |NO❗️ |
 | └ | detectTransferRestriction | Public ❗️ |   |NO❗️ |
 | └ | detectTransferRestrictionFrom | Public ❗️ |   |NO❗️ |
 | └ | canTransfer | Public ❗️ |   |NO❗️ |

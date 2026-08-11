@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleMaxTotalSupplyBase.sol | c61ef04957bfd41edd3c13a799831f882d64813d |
+| ./rules/validation/abstract/base/RuleMaxTotalSupplyBase.sol | 845a7ae5da778000d497759311cada4d802ff887 |
 
 
 ### Contracts Description Table
@@ -24,6 +24,8 @@
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
 | └ | _authorizeMaxTotalSupplyManager | Internal 🔒 |   | |
+| └ | _validateTokenContract | Internal 🔒 |   | |
+| └ | _currentSupply | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |

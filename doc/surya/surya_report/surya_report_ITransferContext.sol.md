@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/interfaces/ITransferContext.sol | 3303d7a0948bc9d850c589678af416f49eab532e |
+| ./rules/interfaces/ITransferContext.sol | 488af7ebe62ce42d52770738154a04a7835241ce |
 
 
 ### Contracts Description Table

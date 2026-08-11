@@ -10,6 +10,16 @@ Only mint operations (`from == address(0)`) are gated. Plain transfers do not ch
 
 The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link/ace/reference/policy-library/secure-mint-policy) from the ACE policy library, re-expressed as an ERC-1404 / ERC-3643 compliance rule for this library and deliberately simplified: the ACE policy's configurable reserve margin is not carried over.
 
+## Schema
+
+### Graph
+
+![surya_graph_RuleChainlinkPoR](../surya/surya_graph/surya_graph_RuleChainlinkPoR.sol.png)
+
+### Inheritance
+
+![surya_inheritance_RuleChainlinkPoR](../surya/surya_inheritance/surya_inheritance_RuleChainlinkPoR.sol.png)
+
 ## Configuration
 
 ### Constructor parameters

@@ -10,7 +10,7 @@
 
 The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal` — the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.
 
-Only the `internal` layer is inherited, and that is deliberate: the registry exposes exactly one write API — the ERC-3643 one — rather than two overlapping ones. Inheriting the public `RuleAddressSet` surface would add `addAddress` / `removeAddress` alongside `registerIdentity` / `deleteIdentity`, giving the same state change two sets of roles and two sets of events, and leaving an operator to guess which pair is authoritative.
+Only the `internal` layer is inherited, and that is deliberate: the registry exposes exactly one write API — the ERC-3643 one — rather than two overlapping ones. The two roles that gate `RuleAddressSet`'s public `addAddress` / `removeAddress` live in a separate `RuleAddressSetRolesStorage`, inherited by that public layer only, so **this registry does not advertise `ADDRESS_LIST_ADD_ROLE` / `ADDRESS_LIST_REMOVE_ROLE` at all** — it never enforces them, and exposing an inert role invites an operator to grant a privilege that authorises nothing. `testDoesNotExposeInertAddressListRoles` pins their absence from the ABI. Inheriting the public `RuleAddressSet` surface would add `addAddress` / `removeAddress` alongside `registerIdentity` / `deleteIdentity`, giving the same state change two sets of roles and two sets of events, and leaving an operator to guess which pair is authoritative.
 
 The design goal is a **wrapper, not a registry**: it adapts the calls an ERC-3643 token makes onto a plain whitelist, and keeps **no identity state whatsoever** — no ONCHAINID, no country, no claims. `registerIdentity`'s `_identity` and `_country` arguments exist so the ERC-3643 signature matches; both are discarded. Verification means exactly one thing: is this wallet on the whitelist.
 
@@ -51,6 +51,16 @@ Two consequences worth internalising:
 An earlier revision implemented `keyHasPurpose` here so the registry could be passed as that argument, removing the ONCHAINID dependency entirely. It was **removed**, because it bought nothing: `Token.recoveryAddress` calls `keyHasPurpose` on the address the agent supplies and never cross-checks it against the registry (`Token.sol:303-305`), so an agent who wants to skip the gate simply passes a different contract. It was convenience for an honest agent, not a control — and it cost a reverse index plus two behavioural divergences from the reference registry, both of which are now gone.
 
 Steps 3 and 5 mean **the token itself is a caller of the registry's write functions**, which drives the access-control setup below.
+
+## Schema
+
+### Graph
+
+![surya_graph_IdentityRegistryWhitelist](../surya/surya_graph/surya_graph_IdentityRegistryWhitelist.sol.png)
+
+### Inheritance
+
+![surya_inheritance_IdentityRegistryWhitelist](../surya/surya_inheritance/surya_inheritance_IdentityRegistryWhitelist.sol.png)
 
 ## Installation
 

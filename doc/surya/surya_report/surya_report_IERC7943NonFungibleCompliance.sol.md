@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/interfaces/IERC7943NonFungibleCompliance.sol | 056034ef3844a682334b6a1d880e5144af4f6eb2 |
+| ./rules/interfaces/IERC7943NonFungibleCompliance.sol | 55871969a9e16b8fce437cf48ebcd3f4a33ee99f |
 
 
 ### Contracts Description Table
@@ -19,11 +19,11 @@
 | └ | canTransfer | External ❗️ |   |NO❗️ |
 ||||||
 | **IERC7943NonFungibleComplianceExtend** | Interface | IERC7943NonFungibleCompliance |||
-| └ | detectTransferRestriction | External ❗️ |   |NO❗️ |
-| └ | detectTransferRestrictionFrom | External ❗️ |   |NO❗️ |
 | └ | canTransferFrom | External ❗️ | 🛑  |NO❗️ |
 | └ | transferred | External ❗️ | 🛑  |NO❗️ |
 | └ | transferred | External ❗️ | 🛑  |NO❗️ |
+| └ | detectTransferRestriction | External ❗️ |   |NO❗️ |
+| └ | detectTransferRestrictionFrom | External ❗️ |   |NO❗️ |
 
 
 ### Legend

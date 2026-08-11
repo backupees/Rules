@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./mocks/SanctionListOracle.sol | 01c0c904f32a647b4e851d03b6ca2947ed119bd0 |
+| ./mocks/SanctionListOracle.sol | a680799215477f8865d8f39982edf293cd24f3dc |
 
 
 ### Contracts Description Table

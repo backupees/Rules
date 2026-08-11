@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleWhitelistBase.sol | c03f8b0e8af1c93b60cbde46d512b75eb501c805 |
+| ./rules/validation/abstract/base/RuleWhitelistBase.sol | d998141279fb19204ba177944c70fcc5412c2e35 |
 
 
 ### Contracts Description Table
@@ -20,10 +20,10 @@
 | └ | setCheckSpender | Public ❗️ | 🛑  | onlyCheckSpenderManager |
 | └ | isVerified | Public ❗️ |   |NO❗️ |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _setCheckSpender | Internal 🔒 | 🛑  | |
 | └ | _authorizeCheckSpenderManager | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
-| └ | _setCheckSpender | Internal 🔒 | 🛑  | |
 
 
 ### Legend

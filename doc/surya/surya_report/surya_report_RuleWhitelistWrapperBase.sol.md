@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleWhitelistWrapperBase.sol | f345ef26fdc628576e5f4497642bd782d5f6d709 |
+| ./rules/validation/abstract/base/RuleWhitelistWrapperBase.sol | afd89e8447fb78d04a958d4cd9ab4cc99c2ed3d2 |
 
 
 ### Contracts Description Table
@@ -17,16 +17,17 @@
 ||||||
 | **RuleWhitelistWrapperBase** | Implementation | RulesManagementModule, MetaTxModuleStandalone, RuleWhitelistShared, IIdentityRegistryVerified |||
 | └ | <Constructor> | Public ❗️ | 🛑  | MetaTxModuleStandalone |
-| └ | _authorizeCheckSpenderManager | Internal 🔒 | 🛑  | |
 | └ | setCheckSpender | Public ❗️ | 🛑  | onlyCheckSpenderManager |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | isVerified | Public ❗️ |   |NO❗️ |
+| └ | _setCheckSpender | Internal 🔒 | 🛑  | |
+| └ | _authorizeCheckSpenderManager | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
+| └ | _isListedInAnyChild | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionForTargets | Internal 🔒 |   | |
-| └ | _setCheckSpender | Internal 🔒 | 🛑  | |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

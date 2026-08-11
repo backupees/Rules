@@ -45,6 +45,16 @@ Unlike `RuleWhitelist`, there is no `allowMint`/`allowBurn`. ERC-3643 gates mint
 
 The constant is named `RECEIVER` rather than `TO` so it does not collide with `RuleWhitelist`'s `CODE_ADDRESS_TO_NOT_WHITELISTED` (22) when a test contract inherits both invariant stores.
 
+## Schema
+
+### Graph
+
+![surya_graph_RuleReceiverWhitelist](../surya/surya_graph/surya_graph_RuleReceiverWhitelist.sol.png)
+
+### Inheritance
+
+![surya_inheritance_RuleReceiverWhitelist](../surya/surya_inheritance/surya_inheritance_RuleReceiverWhitelist.sol.png)
+
 ## Configuration
 
 ### Constructor parameters

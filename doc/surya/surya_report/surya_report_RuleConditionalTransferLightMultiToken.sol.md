@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/operation/RuleConditionalTransferLightMultiToken.sol | 5a26c4179ebee4b52842ca0073933366fcb4ce6c |
+| ./rules/operation/RuleConditionalTransferLightMultiToken.sol | bc1bc27d2f80a0116ae1987cf795ab22032fce60 |
 
 
 ### Contracts Description Table
@@ -18,8 +18,8 @@
 | **RuleConditionalTransferLightMultiToken** | Implementation | AccessControlModuleStandalone, RuleConditionalTransferLightMultiTokenBase, ERC3643ComplianceRolesStorage |||
 | └ | <Constructor> | Public ❗️ | 🛑  | AccessControlModuleStandalone |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _onlyComplianceManager | Internal 🔒 |   | onlyRole |
 | └ | _authorizeTransferApproval | Internal 🔒 |   | onlyRole |
-| └ | _onlyComplianceManager | Internal 🔒 | 🛑  | onlyRole |
 
 
 ### Legend

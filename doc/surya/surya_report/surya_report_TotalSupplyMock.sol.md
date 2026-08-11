@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./mocks/TotalSupplyMock.sol | 6c950ae26666c8693a87d9c66ea2a87107d03dd1 |
+| ./mocks/TotalSupplyMock.sol | 8d4a76dbfceac5e628416fa5989c86050062059c |
 
 
 ### Contracts Description Table

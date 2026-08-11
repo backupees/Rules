@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleSpenderWhitelistOwnable2Step.sol | f45ba40d563a6f073f666cd1cd3866efab959081 |
+| ./rules/validation/deployment/RuleSpenderWhitelistOwnable2Step.sol | b2584e146b1d5de373a2052be54d210e0a15f03b |
 
 
 ### Contracts Description Table
@@ -17,9 +17,9 @@
 ||||||
 | **RuleSpenderWhitelistOwnable2Step** | Implementation | RuleSpenderWhitelistBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleSpenderWhitelistBase Ownable |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _authorizeAddressListAdd | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeAddressListRemove | Internal 🔒 |   | onlyOwner |
-| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

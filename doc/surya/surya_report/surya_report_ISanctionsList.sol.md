@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/interfaces/ISanctionsList.sol | e42d721fd4b6938e759e3d47843660707ee55f24 |
+| ./rules/interfaces/ISanctionsList.sol | 37c234b1876be59364a54ad2120828565154567a |
 
 
 ### Contracts Description Table

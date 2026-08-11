@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleMaxTotalSupplyOwnable2Step.sol | f41457c8a1aefbb09ff45cbee3083f9111525686 |
+| ./rules/validation/deployment/RuleMaxTotalSupplyOwnable2Step.sol | 900ebc7cc8497e40bfc50d800aa49213d33da3f6 |
 
 
 ### Contracts Description Table
@@ -17,8 +17,8 @@
 ||||||
 | **RuleMaxTotalSupplyOwnable2Step** | Implementation | RuleMaxTotalSupplyBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleMaxTotalSupplyBase Ownable |
-| └ | _authorizeMaxTotalSupplyManager | Internal 🔒 |   | onlyOwner |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _authorizeMaxTotalSupplyManager | Internal 🔒 |   | onlyOwner |
 
 
 ### Legend

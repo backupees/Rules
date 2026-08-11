@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/operation/RuleMintAllowance.sol | 20af9da8f7f75bbedd817de955e768f9a716b54c |
+| ./rules/operation/RuleMintAllowance.sol | e2cf3135bdb23ade767c610bd125d6d39706a617 |
 
 
 ### Contracts Description Table
@@ -18,8 +18,8 @@
 | **RuleMintAllowance** | Implementation | AccessControlModuleStandalone, RuleMintAllowanceBase, ERC3643ComplianceRolesStorage |||
 | └ | <Constructor> | Public ❗️ | 🛑  | AccessControlModuleStandalone |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _onlyComplianceManager | Internal 🔒 |   | onlyRole |
 | └ | _authorizeSetMintAllowance | Internal 🔒 |   | onlyRole |
-| └ | _onlyComplianceManager | Internal 🔒 | 🛑  | onlyRole |
 | └ | _authorizeComplianceBindingChange | Internal 🔒 |   | onlyRole |
 
 

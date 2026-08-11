@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol | 084ab0430f52a08abdad8e38a4693255426a3058 |
+| ./rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol | 98c16e072b51952238cf3f8ad384b5991310ea59 |
 
 
 ### Contracts Description Table
@@ -15,17 +15,17 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleERC2980Internal** | Implementation |  |||
+| **RuleERC2980Internal** | Implementation | RuleERC2980InvariantStorage |||
 | └ | _addWhitelistAddresses | Internal 🔒 | 🛑  | |
 | └ | _removeWhitelistAddresses | Internal 🔒 | 🛑  | |
 | └ | _addWhitelistAddress | Internal 🔒 | 🛑  | |
 | └ | _removeWhitelistAddress | Internal 🔒 | 🛑  | |
-| └ | _isWhitelisted | Internal 🔒 |   | |
-| └ | _whitelistCount | Internal 🔒 |   | |
 | └ | _addFrozenlistAddresses | Internal 🔒 | 🛑  | |
 | └ | _removeFrozenlistAddresses | Internal 🔒 | 🛑  | |
 | └ | _addFrozenlistAddress | Internal 🔒 | 🛑  | |
 | └ | _removeFrozenlistAddress | Internal 🔒 | 🛑  | |
+| └ | _isWhitelisted | Internal 🔒 |   | |
+| └ | _whitelistCount | Internal 🔒 |   | |
 | └ | _isFrozen | Internal 🔒 |   | |
 | └ | _frozenlistCount | Internal 🔒 |   | |
 

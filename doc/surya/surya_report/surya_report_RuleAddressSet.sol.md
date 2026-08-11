@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleAddressSet/RuleAddressSet.sol | 2b2c138a17fd651aa8bc8346df863c7fc08ffeb3 |
+| ./rules/validation/abstract/RuleAddressSet/RuleAddressSet.sol | c2543c2c217b102c9570518c3da2b96e4205d100 |
 
 
 ### Contracts Description Table
@@ -15,10 +15,8 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleAddressSet** | Implementation | MetaTxModuleStandalone, RuleAddressSetInternal, RuleAddressSetInvariantStorage, IAddressList |||
+| **RuleAddressSet** | Implementation | MetaTxModuleStandalone, RuleAddressSetInvariantStorage, RuleAddressSetInternal, IAddressList |||
 | └ | <Constructor> | Public ❗️ | 🛑  | MetaTxModuleStandalone |
-| └ | _authorizeAddressListAdd | Internal 🔒 |   | |
-| └ | _authorizeAddressListRemove | Internal 🔒 |   | |
 | └ | addAddresses | Public ❗️ | 🛑  | onlyAddressListAdd |
 | └ | removeAddresses | Public ❗️ | 🛑  | onlyAddressListRemove |
 | └ | addAddress | Public ❗️ | 🛑  | onlyAddressListAdd |
@@ -27,6 +25,8 @@
 | └ | contains | Public ❗️ |   |NO❗️ |
 | └ | isAddressListed | Public ❗️ |   |NO❗️ |
 | └ | areAddressesListed | Public ❗️ |   |NO❗️ |
+| └ | _authorizeAddressListAdd | Internal 🔒 |   | |
+| └ | _authorizeAddressListRemove | Internal 🔒 |   | |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |
