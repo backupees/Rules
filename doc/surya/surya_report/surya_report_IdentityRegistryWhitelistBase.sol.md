@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./registry/abstract/IdentityRegistryWhitelistBase.sol | 45873dc2c77487244e62ee96f807a60595376c28 |
+| src/registry/abstract/IdentityRegistryWhitelistBase.sol | 7d8ecb5618c360d59487a59c4e8bff48743b8ebe |
 
 
 ### Contracts Description Table
@@ -15,7 +15,7 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **IdentityRegistryWhitelistBase** | Implementation | RuleAddressSetInternal, IIdentityRegistryERC3643, IdentityRegistryWhitelistInvariantStorage |||
+| **IdentityRegistryWhitelistBase** | Implementation | RuleAddressSetInternal, VersionModule, IIdentityRegistryERC3643, IdentityRegistryWhitelistInvariantStorage |||
 | └ | registerIdentity | External ❗️ | 🛑  | onlyIdentityRegistrar |
 | └ | deleteIdentity | External ❗️ | 🛑  | onlyIdentityRegistrar |
 | └ | registeredIdentityCount | External ❗️ |   |NO❗️ |

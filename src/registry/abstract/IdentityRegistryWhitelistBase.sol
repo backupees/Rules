@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {RuleAddressSetInternal} from "../../rules/validation/abstract/RuleAddressSet/RuleAddressSetInternal.sol";
 import {IdentityRegistryWhitelistInvariantStorage} from "./IdentityRegistryWhitelistInvariantStorage.sol";
+import {VersionModule} from "../../modules/VersionModule.sol";
 import {IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.sol";
 
 /**
@@ -51,6 +52,7 @@ import {IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.s
  */
 abstract contract IdentityRegistryWhitelistBase is
     RuleAddressSetInternal,
+    VersionModule,
     IIdentityRegistryERC3643,
     IdentityRegistryWhitelistInvariantStorage
 {

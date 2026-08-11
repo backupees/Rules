@@ -18,6 +18,7 @@ import {RuleSpenderWhitelist} from "src/rules/validation/deployment/RuleSpenderW
 import {RuleReceiverWhitelist} from "src/rules/validation/deployment/RuleReceiverWhitelist.sol";
 import {RuleIdentityRegistry} from "src/rules/validation/deployment/RuleIdentityRegistry.sol";
 import {RuleChainlinkPoR} from "src/rules/validation/deployment/RuleChainlinkPoR.sol";
+import {IdentityRegistryWhitelist} from "src/registry/IdentityRegistryWhitelist.sol";
 import {AggregatorV3Interface} from "src/rules/interfaces/AggregatorV3Interface.sol";
 import {AggregatorV3Mock} from "src/mocks/AggregatorV3Mock.sol";
 import {TotalSupplyDecimalsMock} from "src/mocks/TotalSupplyDecimalsMock.sol";
@@ -93,5 +94,14 @@ contract VersionTest is Test, HelperContract {
     function testVersionRuleMintAllowance() public {
         RuleMintAllowance rule = new RuleMintAllowance(DEFAULT_ADMIN_ADDRESS);
         assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    /**
+     * @notice `IdentityRegistryWhitelist` is not a rule, but it is a deployable production contract
+     *         wired into an ERC-3643 token's identity slot, so it carries the same version string.
+     */
+    function testVersionIdentityRegistryWhitelist() public {
+        IdentityRegistryWhitelist registry = new IdentityRegistryWhitelist(DEFAULT_ADMIN_ADDRESS);
+        assertEq(registry.version(), EXPECTED_VERSION);
     }
 }

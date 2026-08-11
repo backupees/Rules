@@ -96,6 +96,7 @@ requires a second Foundry profile — **`forge test` alone no longer runs everyt
   - The ERC-3643 token must hold `IDENTITY_REGISTRAR_ROLE`, because `recoveryAddress` makes the token call `registerIdentity` and `deleteIdentity`.
   - Reuses `RuleAddressSetInternal` — the same `EnumerableSet` machinery as `RuleWhitelist` / `RuleBlacklist` — for storage, the zero-address guard and the revert errors, so no whitelist contract is deployed and none is re-implemented. Only the internal layer is inherited, so the registry exposes one write API rather than two overlapping ones.
   - **No identity data is kept.** The `_identity` and `_country` arguments exist so the ERC-3643 signature matches, then are discarded; `investorCountry` is a constant `0`. The contract is a wrapper that adapts the token's registry calls onto a plain whitelist. `Token.sol` reads the country in exactly one place (`recoveryAddress`, a pass-through it hands straight back), so the token is unaffected; the exposure is a *custom* compliance module reading `investorCountry`, which would see every investor as country 0.
+  - Implements `IERC3643Version` via `VersionModule`, like the rules: it is a deployable production contract wired into a token's identity slot, so its release must be identifiable on-chain.
   - `isVerified(address(0))` is always `false`; the zero address can never be registered.
 
 ### Changed

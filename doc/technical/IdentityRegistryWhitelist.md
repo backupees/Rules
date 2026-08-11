@@ -110,6 +110,12 @@ Whitelist membership. **`isVerified(address(0))` is always `false`** — the zer
 
 **Always returns 0.** No country is stored. The function exists only because `recoveryAddress` calls it — omitting it would make every recovery revert — and the 0 it returns is handed straight back into `registerIdentity`, which ignores it. See [Limitation 3](#3-no-identity-data-is-kept).
 
+### `version() → string`
+
+Returns the library release the contract was deployed from (currently `"0.5.0"`), via `VersionModule`. The
+registry is not a rule, but it is a deployable production contract wired into a token's identity slot, so being
+able to identify its release matters for the same reasons it does for the rules.
+
 ### `registeredIdentityCount() → uint256`
 
 How many wallets are registered. There is deliberately no full enumeration getter, matching `RuleWhitelist` and `RuleBlacklist`, which expose a count but not the member list.
