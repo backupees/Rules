@@ -63,6 +63,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | Contract | Role |
 |---|---|
 | `RuleWhitelist` / `RuleWhitelistOwnable2Step` | Allow transfers only between whitelisted addresses |
+| `RuleReceiverWhitelist` / `RuleReceiverWhitelistOwnable2Step` | Screen **only the receiver**, reproducing ERC-3643 eligibility. Sender and spender are never checked — do not add those, it traps de-listed holders (same reasoning as I-1). Burn is exempt (`to == address(0)` can never be listed); mint is screened on the receiver with no `allowMint` flag. Code 81 |
 | `RuleWhitelistWrapper` / `Ownable2Step` | Aggregate multiple whitelist rules (OR logic) |
 | `RuleBlacklist` / `RuleBlacklistOwnable2Step` | Block transfers involving blacklisted addresses |
 | `RuleSanctionsList` | Block sanctioned addresses via Chainalysis oracle |
@@ -127,6 +128,7 @@ types appear as parameters or event fields, which canonicalise to `address` and 
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
+| RuleReceiverWhitelist | 81 |
 | RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid), 78 (total supply unavailable) |
 
 ## Conventions

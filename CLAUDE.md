@@ -63,6 +63,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | Contract | Role |
 |---|---|
 | `RuleWhitelist` / `RuleWhitelistOwnable2Step` | Allow transfers only between whitelisted addresses |
+| `RuleReceiverWhitelist` / `RuleReceiverWhitelistOwnable2Step` | Screen **only the receiver**, reproducing ERC-3643 eligibility. Sender and spender are never checked — do not add those, it traps de-listed holders (same reasoning as I-1). Burn is exempt (`to == address(0)` can never be listed); mint is screened on the receiver with no `allowMint` flag. Code 81 |
 | `RuleWhitelistWrapper` / `Ownable2Step` | Aggregate multiple whitelist rules (OR logic) |
 | `RuleBlacklist` / `RuleBlacklistOwnable2Step` | Block transfers involving blacklisted addresses |
 | `RuleSanctionsList` | Block sanctioned addresses via Chainalysis oracle |
@@ -96,8 +97,24 @@ Remappings are in `remappings.txt`; aliases used in source: `OZ/`, `CMTAT/`, `Ru
 forge build          # compile
 forge test           # run all tests
 forge test -vvv      # verbose output
+
+FOUNDRY_PROFILE=erc3643 forge test   # the real-ERC-3643-token suite (see below)
 ```
 Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
+
+**There are two profiles, and `forge test` alone does not run everything.** The vendored ERC-3643
+`Token.sol` pins `pragma solidity 0.8.30` *exactly*, which cannot share a compilation unit with our
+0.8.34. So `test/ERC3643Real/**` is in the default profile's `skip` list and is built by
+`[profile.erc3643]` at solc 0.8.30 instead (our contracts are `^0.8.20`, so they compile there too).
+CI must run **both** commands. Gotchas: profiles inherit unspecified keys from `[profile.default]`,
+so that profile has to clear `skip = []` explicitly; and it writes to `out-erc3643/` to avoid
+clobbering the 0.8.34 artifacts.
+
+ERC-3643 imports `@onchain-id/solidity`, which is an npm package rather than a submodule and so is
+not vendored. `test/utils/onchainid/` holds minimal `IIdentity` / `IClaimIssuer` stubs wired in by a
+**context-scoped** remapping (`lib/ERC-3643/:@onchain-id/solidity/contracts/=test/utils/onchainid/`)
+so they apply to the ERC-3643 build only. Only `keyHasPurpose` is ever called; everywhere else those
+types appear as parameters or event fields, which canonicalise to `address` and affect no selector.
 
 ## Restriction Code Ranges
 | Rule | Codes |
@@ -111,6 +128,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
+| RuleReceiverWhitelist | 81 |
 | RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid), 78 (total supply unavailable) |
 
 ## Conventions
@@ -120,7 +138,7 @@ Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
 - **All `_authorize*()` / `_only*()` access-control hooks are `internal view virtual`** — both the abstract declaration and every override. An authorization hook checks and reverts; it must never mutate state, and `view` makes that a compiler-enforced invariant rather than a convention. It is free: these are `internal`, so `view` costs no gas and changes no runtime behaviour. Both OZ check functions (`AccessControl._checkRole`, `Ownable._checkOwner`) are `view`, so every hook can be.
   - **One documented exception**: `RuleConditionalTransferLightMultiTokenBase._authorizeComplianceBindingChange` cannot be `view`, because it delegates to `_onlyComplianceManager()`, which `lib/RuleEngine` declares non-`view` (Solidity checks mutability against a virtual's *declared* type, not the installed override). If you hit this constraint elsewhere, document why inline — do not silently drop `view` from a hook.
 - AccessControl variants treat the default admin as having all roles via `hasRole`, but the admin may not appear in role member enumerations unless explicitly granted.
-- All rules implement `IERC3643Version` via `VersionModule`; the current version string is `"0.4.0"` (asserted by `test/Version.t.sol`).
+- All rules implement `IERC3643Version` via `VersionModule`; the current version string is `"0.5.0"` (asserted by `test/Version.t.sol`).
 - **ERC-165 interface IDs**: `type(IFoo).interfaceId` only XORs selectors defined directly on `IFoo` and does NOT include selectors from inherited interfaces. Always use the pre-computed library constants instead: `ERC1404ExtendInterfaceId.ERC1404EXTEND_INTERFACE_ID` (from `CMTAT/library/`), `RuleEngineInterfaceId.RULE_ENGINE_INTERFACE_ID` (from `CMTAT/library/`), and `RuleInterfaceId.IRULE_INTERFACE_ID` (from `RuleEngine/modules/library/`). If no pre-computed constant exists for an interface, define a flat mock interface that redeclares all functions from the full inheritance tree and use `type(IFooFlattened).interfaceId` to compute the correct value (see `lib/RuleEngine/src/mocks/IRuleInterfaceIdHelper.sol` for the established pattern).
 - Batch add/remove operations are non-reverting (skip duplicates); single-item operations revert on invalid input.
 - All `internal` functions should be marked `virtual`.

@@ -7,7 +7,7 @@ Each rule can be used **standalone**, directly plugged into a CMTAT token, **or*
 The **RuleEngine** is an external smart contract that applies transfer restrictions to security tokens such as **CMTAT** or [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643)-compatible tokens through a RuleEngine.
 Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatible token can call on every transfer to ensure regulatory and business-logic compliance.
 
-**Current package version:** `v0.4.0` (contracts report `version()` → `"0.4.0"`). Built against CMTAT `v3.3.0-rc1` and RuleEngine `v3.0.0-rc4`; see [Compatibility](#compatibility) for the supported range.
+**Current package version:** `v0.5.0` (contracts report `version()` → `"0.5.0"`). Built against CMTAT `v3.3.0-rc1` and RuleEngine `v3.0.0-rc4`; see [Compatibility](#compatibility) for the supported range.
 
 > This project has not undergone an audit and is provided as-is without any warranties.
 
@@ -69,7 +69,7 @@ Interface details for each mode are documented under [Architecture](#architectur
 
 | Component        | Compatible Versions                                        |
 | ---------------- | ---------------------------------------------------------- |
-| **Rules v0.4.0** | CMTAT ≥ v3.0.0 (tested against v3.3.0-rc1)<br />RuleEngine v3.0.0-rc4 |
+| **Rules v0.5.0** | CMTAT ≥ v3.0.0 (tested against v3.3.0-rc1)<br />RuleEngine v3.0.0-rc4 |
 
 Spender-aware paths (e.g. `RuleMintAllowance`) rely on the 4-argument `canTransferFrom` / `transferred(spender, from, to, value)` callbacks, which require a CMTAT / RuleEngine that forwards the spender to the rule; this repository is validated against CMTAT `v3.3.0-rc1`. The other rules only use the 3-argument path and work across the full CMTAT ≥ v3.0.0 range.
 
@@ -196,7 +196,9 @@ Here is the list of codes used by the different rules
 |                              | CODE_RESERVES_FEED_STALE             | 76    |
 |                              | CODE_RESERVES_ANSWER_INVALID         | 77    |
 |                              | CODE_TOTAL_SUPPLY_UNAVAILABLE        | 78    |
-|                              | Reserved slot                        | 79    |
+|                              | Reserved slot                        | 79-80 |
+| RuleReceiverWhitelist        | CODE_ADDRESS_RECEIVER_NOT_WHITELISTED | 81   |
+|                              | Reserved slot                        | 82-84 |
 
 Note: 
 
@@ -281,6 +283,7 @@ Separately, `src/registry/` holds [`IdentityRegistryWhitelist`](./doc/technical/
 | Need | Rule |
 | --- | --- |
 | Only approved holders can send/receive | `RuleWhitelist` |
+| Only approved holders can **receive** (ERC-3643 semantics; a de-listed holder can still exit) | `RuleReceiverWhitelist` |
 | Combine several whitelists (OR logic) | `RuleWhitelistWrapper` |
 | Restrict `transferFrom` operators (spenders) | `RuleSpenderWhitelist` |
 | Block known bad addresses | `RuleBlacklist` |
@@ -309,7 +312,7 @@ Validation rules only read blockchain state — they never modify it during a tr
 
 All validation rules implement `IRuleEngine` to be usable both standalone (plugged directly into CMTAT) and via the RuleEngine.
 
-Available validation rules: `RuleWhitelist`, `RuleWhitelistWrapper`, `RuleSpenderWhitelist`, `RuleBlacklist`, `RuleSanctionsList`, `RuleMaxTotalSupply`, `RuleChainlinkPoR`, `RuleIdentityRegistry`, `RuleERC2980`.
+Available validation rules: `RuleWhitelist`, `RuleReceiverWhitelist`, `RuleWhitelistWrapper`, `RuleSpenderWhitelist`, `RuleBlacklist`, `RuleSanctionsList`, `RuleMaxTotalSupply`, `RuleChainlinkPoR`, `RuleIdentityRegistry`, `RuleERC2980`.
 
  A community made project, [RuleSelf](https://github.com/rya-sge/ruleself), which uses [Self](https://self.xyz), a zero-knowledge identity is also available but is not developed or maintained by CMTA.
 
@@ -422,6 +425,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | IdentityRegistryWhitelist | [IdentityRegistryWhitelist.md](./doc/technical/IdentityRegistryWhitelist.md) |
 | RuleIdentityRegistry | [RuleIdentityRegistry.md](./doc/technical/RuleIdentityRegistry.md) |
 | RuleSpenderWhitelist | [RuleSpenderWhitelist.md](./doc/technical/RuleSpenderWhitelist.md) |
+| RuleReceiverWhitelist | [RuleReceiverWhitelist.md](./doc/technical/RuleReceiverWhitelist.md) |
 | RuleERC2980 | [RuleERC2980.md](./doc/technical/RuleERC2980.md) |
 | RuleConditionalTransferLight | [RuleConditionalTransferLight.md](./doc/technical/RuleConditionalTransferLight.md) |
 | RuleConditionalTransferLightMultiToken | [RuleConditionalTransferLightMultiToken.md](./doc/technical/RuleConditionalTransferLightMultiToken.md) |
@@ -479,6 +483,11 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 - `RuleSpenderWhitelist`: only checks the spender in `transferFrom`; direct transfers always pass this rule.
 
+#### RuleReceiverWhitelist
+
+- `RuleReceiverWhitelist`: screens **only the receiver**, reproducing ERC-3643's eligibility rule. The sender and the spender are never checked — deliberately, so a de-listed holder can still exit their position rather than being trapped. Use `RuleWhitelist` if you want both parties screened.
+- `RuleReceiverWhitelist`: **burn is always allowed** (`to == address(0)` is exempt, since the zero address can never be listed), and mint is screened on the receiver like any other transfer — there is no `allowMint`/`allowBurn` flag. Compose with `RuleMaxTotalSupply` or `RuleChainlinkPoR` to cap issuance.
+
 #### RuleERC2980
 
 - `RuleERC2980`: frozenlist takes priority over whitelist; an address that is both whitelisted and frozen is rejected.
@@ -507,7 +516,7 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 - All AccessControl variants: use `onlyRole(ROLE)` in `_authorize*()` and mark internal helpers `virtual`.
 - All AccessControl variants: use `AccessControlEnumerable`, so role members can be enumerated with `getRoleMember` / `getRoleMemberCount`; default admin is treated as having all roles via `hasRole`, but may not appear in role member lists unless explicitly granted.
 - All meta-tx-enabled rules: `forwarderIrrevocable` is accepted as-is (including `address(0)`) and is not validated against ERC-165 because some forwarders do not implement it.
-- All rules: implement `IERC3643Version` via `VersionModule` and expose `version()` returning `"0.4.0"`.
+- All rules: implement `IERC3643Version` via `VersionModule` and expose `version()` returning `"0.5.0"`.
 
 ### Read-only (validation) rule
 
@@ -762,6 +771,7 @@ See also [docs.openzeppelin.com - AccessControl](https://docs.openzeppelin.com/c
 For simpler ownership-based control, `Ownable2Step` variants (two-step ownership transfer) are available:
 
 - `RuleWhitelistOwnable2Step`
+- `RuleReceiverWhitelistOwnable2Step`
 - `RuleBlacklistOwnable2Step`
 - `RuleWhitelistWrapperOwnable2Step`
 - `RuleSanctionsListOwnable2Step`
