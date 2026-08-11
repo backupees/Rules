@@ -33,3 +33,6 @@ FEEDBACK.md
 
 # LibreOffice lock files
 .~lock.*#
+
+# Artifacts from the erc3643 Foundry profile
+out-erc3643/
