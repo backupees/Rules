@@ -4,6 +4,20 @@ pragma solidity ^0.8.20;
 import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../registry/interfaces/IIdentityRegistryERC3643.sol";
 
 /**
+ * @title IERC3643ComplianceForToken — the compliance surface `Token.sol` calls.
+ * @dev Declared here rather than reused from `IERC3643ComplianceFull`, which exists solely to
+ * compute an ERC-165 interface ID and is explicitly not meant to be used as a type.
+ */
+interface IERC3643ComplianceForToken {
+    function bindToken(address token) external;
+    function unbindToken(address token) external;
+    function transferred(address from, address to, uint256 value) external;
+    function created(address to, uint256 value) external;
+    function destroyed(address from, uint256 value) external;
+    function canTransfer(address from, address to, uint256 value) external view returns (bool);
+}
+
+/**
  * @title ERC3643TokenMock — a minimal ERC-3643 token reproducing the identity-registry call
  * sequences of the reference implementation.
  * @notice The registry-facing logic of `transfer`, `transferFrom`, `forcedTransfer`, `mint`, `burn`
@@ -29,6 +43,13 @@ import {IERC734KeyHasPurpose, IIdentityRegistryERC3643} from "../registry/interf
  */
 contract ERC3643TokenMock {
     IIdentityRegistryERC3643 public identityRegistry;
+    /**
+     * @notice The compliance contract, i.e. a `RuleEngine`.
+     * @dev Optional here, unlike the real token which requires one: when unset the compliance calls
+     * are skipped, so identity-registry tests can run without wiring an engine. Every call that IS
+     * made follows `Token.sol` exactly.
+     */
+    IERC3643ComplianceForToken public compliance;
 
     mapping(address account => uint256 balance) public balanceOf;
     mapping(address account => bool isAgent) public isAgent;
@@ -67,6 +88,21 @@ contract ERC3643TokenMock {
     }
 
     /**
+     * @notice Sets the compliance contract, mirroring `Token.setCompliance`.
+     * @dev Transcribed from `Token.sol:515-522`: unbinds the previous compliance, then makes the
+     *      **token itself** call `bindToken(address(this))` on the new one. That self-call is why a
+     *      `RuleEngine` needs `setTokenSelfBindingApproval(token, true)` first.
+     * @param compliance_ The new compliance contract.
+     */
+    function setCompliance(IERC3643ComplianceForToken compliance_) external {
+        if (address(compliance) != address(0)) {
+            compliance.unbindToken(address(this));
+        }
+        compliance = compliance_;
+        compliance.bindToken(address(this));
+    }
+
+    /**
      * @notice Grants or revokes the agent role.
      * @param account The account to update.
      * @param status True to grant.
@@ -85,8 +121,9 @@ contract ERC3643TokenMock {
      */
     function transfer(address _to, uint256 _amount) external returns (bool) {
         require(_amount <= balanceOf[msg.sender], "Insufficient Balance");
-        if (identityRegistry.isVerified(_to)) {
+        if (identityRegistry.isVerified(_to) && _canTransfer(msg.sender, _to, _amount)) {
             _transfer(msg.sender, _to, _amount);
+            _complianceTransferred(msg.sender, _to, _amount);
             return true;
         }
         revert("Transfer not possible");
@@ -102,8 +139,9 @@ contract ERC3643TokenMock {
      */
     function transferFrom(address _from, address _to, uint256 _amount) external returns (bool) {
         require(_amount <= balanceOf[_from], "Insufficient Balance");
-        if (identityRegistry.isVerified(_to)) {
+        if (identityRegistry.isVerified(_to) && _canTransfer(_from, _to, _amount)) {
             _transfer(_from, _to, _amount);
+            _complianceTransferred(_from, _to, _amount);
             return true;
         }
         revert("Transfer not possible");
@@ -119,8 +157,12 @@ contract ERC3643TokenMock {
      */
     function forcedTransfer(address _from, address _to, uint256 _amount) public onlyAgent returns (bool) {
         require(balanceOf[_from] >= _amount, "sender balance too low");
+        // NOTE: `Token.forcedTransfer` does NOT consult `canTransfer` -- it only notifies
+        // `transferred` afterwards. A compliance contract that reverts in `transferred` (as a
+        // RuleEngine does) still blocks the move; one that only answers `canTransfer` does not.
         if (identityRegistry.isVerified(_to)) {
             _transfer(_from, _to, _amount);
+            _complianceTransferred(_from, _to, _amount);
             return true;
         }
         revert("Transfer not possible");
@@ -134,9 +176,13 @@ contract ERC3643TokenMock {
      */
     function mint(address _to, uint256 _amount) external onlyAgent {
         require(identityRegistry.isVerified(_to), "Identity is not verified.");
+        require(_canTransfer(address(0), _to, _amount), "Compliance not followed");
         balanceOf[_to] += _amount;
         totalSupply += _amount;
         emit Transfer(address(0), _to, _amount);
+        if (address(compliance) != address(0)) {
+            compliance.created(_to, _amount);
+        }
     }
 
     /**
@@ -150,6 +196,9 @@ contract ERC3643TokenMock {
         balanceOf[_userAddress] -= _amount;
         totalSupply -= _amount;
         emit Transfer(_userAddress, address(0), _amount);
+        if (address(compliance) != address(0)) {
+            compliance.destroyed(_userAddress, _amount);
+        }
     }
 
     /**
@@ -191,6 +240,32 @@ contract ERC3643TokenMock {
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Asks the compliance contract whether a move is allowed; true when none is set.
+     * @param from Sender, or the zero address for a mint.
+     * @param to Recipient.
+     * @param amount Amount to move.
+     * @return True when the move is allowed.
+     */
+    function _canTransfer(address from, address to, uint256 amount) internal view returns (bool) {
+        if (address(compliance) == address(0)) {
+            return true;
+        }
+        return compliance.canTransfer(from, to, amount);
+    }
+
+    /**
+     * @notice Notifies the compliance contract that a transfer happened; no-op when none is set.
+     * @param from Sender.
+     * @param to Recipient.
+     * @param amount Amount moved.
+     */
+    function _complianceTransferred(address from, address to, uint256 amount) internal {
+        if (address(compliance) != address(0)) {
+            compliance.transferred(from, to, amount);
+        }
+    }
 
     /**
      * @notice Moves value between two balances.

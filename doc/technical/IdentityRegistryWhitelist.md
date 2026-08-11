@@ -163,5 +163,6 @@ If you need investor metadata on-chain generally, the same conclusion applies: t
 | --- | --- |
 | `test/IdentityRegistryWhitelist/IdentityRegistryWhitelistUnit.t.sol` | Registration, deletion, duplicate and zero-address rejection, access control, and that no identity data is stored |
 | `test/IdentityRegistryWhitelist/IdentityRegistryWhitelistERC3643.t.sol` | End-to-end against an ERC-3643 token: `mint`, `transfer`, `transferFrom`, `forcedTransfer`, `burn`, `recoveryAddress` |
+| `test/ERC3643Compliance/ERC3643RuleEngineWhitelist.t.sol` | The **other** slot: an ERC-3643 token with a `RuleEngine` as its compliance contract, enforcing `RuleWhitelist`, alongside this registry on the identity slot |
 
 The integration tests use `ERC3643TokenMock` plus `OnchainIdMock` (a minimal ERC-734 stub standing in for the investor's identity), whose registry call sequences and revert strings are transcribed from the reference `Token.sol`. The real implementation is not used because it imports the ONCHAINID Solidity package (not vendored) and targets OpenZeppelin v4 upgradeable contracts, while this repository vendors OZ v5 — it does not compile in this build. The mock keeps the registry interaction faithful and omits what is orthogonal to it (compliance module, pausing, partial-freeze accounting).

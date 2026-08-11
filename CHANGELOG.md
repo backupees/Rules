@@ -79,6 +79,13 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ### Testing
 
+- New `test/ERC3643Real/ERC3643RealTokenRuleEngine.t.sol` — the same **ERC-3643 token → RuleEngine → RuleWhitelist** wiring, but against the **real vendored `Token.sol`** rather than a mock, so nothing in it is transcribed. 12 tests covering mint, transfer, transferFrom, forcedTransfer and burn, asserting the token's own `ComplianceNotFollowed` / `TransferNotPossible` errors and the rule's `RuleWhitelist_InvalidTransfer` codes.
+  - Requires its own Foundry profile: `Token.sol` pins `pragma solidity 0.8.30` exactly, which cannot share a compilation unit with the project's 0.8.34. `test/ERC3643Real/**` is skipped by the default profile and built by `[profile.erc3643]`. **CI must run both `forge test` and `FOUNDRY_PROFILE=erc3643 forge test`.**
+  - The `lib/ERC-3643` submodule moves from 4.1.3 to **4.2.0-beta1**; 4.1.3 pins `0.8.17`, which cannot compile alongside our `^0.8.20` contracts at all. Nothing in `src/` imports ERC-3643, so the bump affects tests only.
+  - Adds minimal `IIdentity` / `IClaimIssuer` stubs under `test/utils/onchainid/`, wired by a context-scoped remapping, because ONCHAINID is an npm dependency rather than a submodule.
+- New `test/ERC3643Compliance/ERC3643RuleEngineWhitelist.t.sol` — an ERC-3643 token wired to a `RuleEngine` as its **compliance** contract (`setCompliance`), enforcing `RuleWhitelist`: **ERC-3643 token → RuleEngine → RuleWhitelist**. Covers `mint`, `transfer`, `transferFrom`, `forcedTransfer` and `burn`, and pins that the compliance slot and the identity-registry slot block independently — an address verified by the registry but absent from the rule is rejected, and vice versa. Exercises the `setTokenSelfBindingApproval` path that exists in `ERC3643ComplianceExtendedModule` for ERC-3643 self-binding.
+- `ERC3643TokenMock` gained an optional compliance slot, with `canTransfer` / `transferred` / `created` / `destroyed` / `bindToken` call sites transcribed from `Token.sol`. Optional so the identity-registry suites keep running without an engine.
+
 - 79 new tests across unit, decimal-scaling, Ownable2Step access-control, and CMTAT + RuleEngine end-to-end suites, including a full-domain fuzz asserting the read path never reverts. 100% line coverage on both deployment variants.
 - Decimal-scaling suite covering token decimals 0 / 6 / 18 against feed decimals 0 / 8 / 18 / 36, the truncation behaviour at `tokenDecimals == 0`, and a fuzz cross-checking `_scaleReserve` against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
 

@@ -96,8 +96,24 @@ Remappings are in `remappings.txt`; aliases used in source: `OZ/`, `CMTAT/`, `Ru
 forge build          # compile
 forge test           # run all tests
 forge test -vvv      # verbose output
+
+FOUNDRY_PROFILE=erc3643 forge test   # the real-ERC-3643-token suite (see below)
 ```
 Foundry config: `foundry.toml` (solc 0.8.34, EVM prague, optimizer 200 runs).
+
+**There are two profiles, and `forge test` alone does not run everything.** The vendored ERC-3643
+`Token.sol` pins `pragma solidity 0.8.30` *exactly*, which cannot share a compilation unit with our
+0.8.34. So `test/ERC3643Real/**` is in the default profile's `skip` list and is built by
+`[profile.erc3643]` at solc 0.8.30 instead (our contracts are `^0.8.20`, so they compile there too).
+CI must run **both** commands. Gotchas: profiles inherit unspecified keys from `[profile.default]`,
+so that profile has to clear `skip = []` explicitly; and it writes to `out-erc3643/` to avoid
+clobbering the 0.8.34 artifacts.
+
+ERC-3643 imports `@onchain-id/solidity`, which is an npm package rather than a submodule and so is
+not vendored. `test/utils/onchainid/` holds minimal `IIdentity` / `IClaimIssuer` stubs wired in by a
+**context-scoped** remapping (`lib/ERC-3643/:@onchain-id/solidity/contracts/=test/utils/onchainid/`)
+so they apply to the ERC-3643 build only. Only `keyHasPurpose` is ever called; everywhere else those
+types appear as parameters or event fields, which canonicalise to `address` and affect no selector.
 
 ## Restriction Code Ranges
 | Rule | Codes |
