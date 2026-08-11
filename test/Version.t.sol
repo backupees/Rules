@@ -12,6 +12,15 @@ import {TotalSupplyMock} from "src/mocks/TotalSupplyMock.sol";
 import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelistWrapper.sol";
 import {RuleERC2980} from "src/rules/validation/deployment/RuleERC2980.sol";
 import {RuleConditionalTransferLight} from "src/rules/operation/RuleConditionalTransferLight.sol";
+import {RuleConditionalTransferLightMultiToken} from "src/rules/operation/RuleConditionalTransferLightMultiToken.sol";
+import {RuleMintAllowance} from "src/rules/operation/RuleMintAllowance.sol";
+import {RuleSpenderWhitelist} from "src/rules/validation/deployment/RuleSpenderWhitelist.sol";
+import {RuleReceiverWhitelist} from "src/rules/validation/deployment/RuleReceiverWhitelist.sol";
+import {RuleIdentityRegistry} from "src/rules/validation/deployment/RuleIdentityRegistry.sol";
+import {RuleChainlinkPoR} from "src/rules/validation/deployment/RuleChainlinkPoR.sol";
+import {AggregatorV3Interface} from "src/rules/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Mock} from "src/mocks/AggregatorV3Mock.sol";
+import {TotalSupplyDecimalsMock} from "src/mocks/TotalSupplyDecimalsMock.sol";
 
 contract VersionTest is Test, HelperContract {
     string constant EXPECTED_VERSION = "0.5.0";
@@ -49,6 +58,40 @@ contract VersionTest is Test, HelperContract {
 
     function testVersionRuleConditionalTransferLight() public {
         RuleConditionalTransferLight rule = new RuleConditionalTransferLight(DEFAULT_ADMIN_ADDRESS);
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleSpenderWhitelist() public {
+        RuleSpenderWhitelist rule = new RuleSpenderWhitelist(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS);
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleReceiverWhitelist() public {
+        RuleReceiverWhitelist rule = new RuleReceiverWhitelist(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS);
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleIdentityRegistry() public {
+        RuleIdentityRegistry rule = new RuleIdentityRegistry(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, false, false);
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleChainlinkPoR() public {
+        TotalSupplyDecimalsMock token = new TotalSupplyDecimalsMock(18);
+        AggregatorV3Mock feed = new AggregatorV3Mock(8, 1000 * 1e8);
+        RuleChainlinkPoR rule = new RuleChainlinkPoR(
+            DEFAULT_ADMIN_ADDRESS, address(token), 18, AggregatorV3Interface(address(feed)), 1 days
+        );
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleConditionalTransferLightMultiToken() public {
+        RuleConditionalTransferLightMultiToken rule = new RuleConditionalTransferLightMultiToken(DEFAULT_ADMIN_ADDRESS);
+        assertEq(rule.version(), EXPECTED_VERSION);
+    }
+
+    function testVersionRuleMintAllowance() public {
+        RuleMintAllowance rule = new RuleMintAllowance(DEFAULT_ADMIN_ADDRESS);
         assertEq(rule.version(), EXPECTED_VERSION);
     }
 }

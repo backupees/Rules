@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {MetaTxModuleStandalone, ERC2771Context} from "../../../../modules/MetaTxModuleStandalone.sol";
 import {RuleAddressSetInternal} from "./RuleAddressSetInternal.sol";
 import {RuleAddressSetInvariantStorage} from "./invariantStorage/RuleAddressSetInvariantStorage.sol";
+import {RuleAddressSetRolesStorage} from "./invariantStorage/RuleAddressSetRolesStorage.sol";
 /* ==== Interfaces === */
 import {IIdentityRegistryContains} from "../../../interfaces/IIdentityRegistry.sol";
 import {IAddressList} from "../../../interfaces/IAddressList.sol";
@@ -20,6 +21,7 @@ import {IAddressList} from "../../../interfaces/IAddressList.sol";
 abstract contract RuleAddressSet is
     MetaTxModuleStandalone,
     RuleAddressSetInvariantStorage,
+    RuleAddressSetRolesStorage,
     RuleAddressSetInternal,
     IAddressList
 {

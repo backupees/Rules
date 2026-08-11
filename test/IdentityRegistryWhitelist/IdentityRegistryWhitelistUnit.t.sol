@@ -119,4 +119,28 @@ contract IdentityRegistryWhitelistUnit is Test, HelperContract, IdentityRegistry
         vm.prank(ATTACKER);
         registry.deleteIdentity(ADDRESS1);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        NO INERT ROLES ON THE ABI
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice The registry reuses `RuleAddressSetInternal` for storage, but must NOT advertise the
+     *         address-list roles that gate `RuleAddressSet`'s public `addAddress` / `removeAddress`.
+     *         It never enforces them -- registration is gated on `IDENTITY_REGISTRAR_ROLE` -- so
+     *         exposing them would invite an operator to grant a privilege that authorises nothing,
+     *         with no on-chain signal that the grant had no effect.
+     * @dev Static-called rather than asserted through the type system, because the whole point is
+     *      that these selectors are absent: referencing them in Solidity would not compile.
+     */
+    function testDoesNotExposeInertAddressListRoles() public view {
+        (bool addFound,) = address(registry).staticcall(abi.encodeWithSignature("ADDRESS_LIST_ADD_ROLE()"));
+        (bool removeFound,) = address(registry).staticcall(abi.encodeWithSignature("ADDRESS_LIST_REMOVE_ROLE()"));
+        assertFalse(addFound, "ADDRESS_LIST_ADD_ROLE must not be on the registry ABI");
+        assertFalse(removeFound, "ADDRESS_LIST_REMOVE_ROLE must not be on the registry ABI");
+
+        // The role it does enforce is present.
+        (bool registrarFound,) = address(registry).staticcall(abi.encodeWithSignature("IDENTITY_REGISTRAR_ROLE()"));
+        assertTrue(registrarFound, "IDENTITY_REGISTRAR_ROLE must be exposed");
+    }
 }

@@ -30,6 +30,9 @@ import {
     RuleAddressSetInvariantStorage
 } from "src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleAddressSetInvariantStorage.sol";
 import {
+    RuleAddressSetRolesStorage
+} from "src/rules/validation/abstract/RuleAddressSet/invariantStorage/RuleAddressSetRolesStorage.sol";
+import {
     RuleMaxTotalSupplyInvariantStorage
 } from "src/rules/validation/abstract/invariant/RuleMaxTotalSupplyInvariantStorage.sol";
 import {
@@ -54,6 +57,7 @@ abstract contract HelperContract is
     RuleWhitelistInvariantStorage,
     RuleBlacklistInvariantStorage,
     RuleAddressSetInvariantStorage,
+    RuleAddressSetRolesStorage,
     RuleSanctionsListInvariantStorage,
     RuleMaxTotalSupplyInvariantStorage,
     RuleChainlinkPoRInvariantStorage,
