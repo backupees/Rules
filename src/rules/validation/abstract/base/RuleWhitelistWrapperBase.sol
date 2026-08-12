@@ -264,26 +264,25 @@ abstract contract RuleWhitelistWrapperBase is
         returns (bool[] memory)
     {
         uint256 rulesLength = rulesCount();
-        bool[] memory result = new bool[](targetAddress.length);
+        uint256 targetsLength = targetAddress.length;
+        bool[] memory result = new bool[](targetsLength);
+        // Number of targets not yet found in any child. Decremented the first time a target is
+        // resolved, so the early exit below is an O(1) test rather than a full rescan of `result`
+        // on every child rule. The observable result is identical.
+        uint256 unresolved = targetsLength;
         for (uint256 i = 0; i < rulesLength; ++i) {
             // Call the whitelist rules
             // Gas cost grows with the number of rules. Keep the wrapper list bounded.
             bool[] memory isListed = IAddressList(rule(i)).areAddressesListed(targetAddress);
-            for (uint256 j = 0; j < targetAddress.length; ++j) {
-                if (isListed[j]) {
+            for (uint256 j = 0; j < targetsLength; ++j) {
+                if (isListed[j] && !result[j]) {
                     result[j] = true;
+                    --unresolved;
                 }
             }
 
             // Break early if all listed
-            bool allListed = true;
-            for (uint256 k = 0; k < result.length; ++k) {
-                if (!result[k]) {
-                    allListed = false;
-                    break;
-                }
-            }
-            if (allListed) {
+            if (unresolved == 0) {
                 break;
             }
         }

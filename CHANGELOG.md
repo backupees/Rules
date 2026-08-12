@@ -47,7 +47,18 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 ## Unreleased
 
-_Nothing yet._
+### Changed
+
+- **`RuleWhitelistWrapper`: the child-rule scan's early exit is now O(1) instead of a full rescan** (`FEEDBACK_12.md` A-2). `_detectTransferRestrictionForTargets` used to re-derive "have all targets been resolved?" by walking the whole `result` array after every child rule; it now maintains a counter of unresolved targets and breaks when it reaches zero. Behaviour is identical — including the documented consequence that a pair already resolved by an earlier child never reaches a later, broken child (`RESULT.md` WW-2). Saves ~85 gas per child scanned (~1% of the ~8.8k per-child cost, which is dominated by the external `STATICCALL`); ~850 gas on a rejected transfer through a 10-child wrapper, paid by the transferring user.
+  - The resolved-counter form needs a `!result[j]` guard so an address listed in several children is counted once. Without it the counter would reach zero early and break out of the scan before a later child could resolve a *different* target, rejecting a valid transfer. Pinned by `testDetectTransferRestrictionOkWhenAddressListedInSeveralChildRules`, which covers both the 2-target and the `checkSpender` 3-target paths.
+
+### Testing
+
+- New `testDetectTransferRestrictionOkWhenAddressListedInSeveralChildRules` in `test/RuleWhitelist/WhitelistWrapper.t.sol`. Branch coverage of `RuleWhitelistWrapperBase.sol` stays at 100% (19/19) with the added condition.
+
+### Documentation
+
+- `doc/technical/RuleWhitelistWrapper.md`: the scan snippet in *Gas cost of the child-rule scan* now matches the implementation, with a note that the published cost table is a marginally conservative upper bound after the change.
 
 ## v0.5.0 - 2026-08-12
 
