@@ -75,15 +75,14 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @notice Returns true if the address is listed in at least one child whitelist rule.
-     * @dev Delegates to the same child-rule scan used by transfer restriction checks.
+     * @dev Delegates to {_isListedInAnyChild}, the same single-address resolution the mint and burn
+     *      branches of {_detectTransferRestriction} use, so the ERC-3643 eligibility view and the
+     *      transfer check can never disagree about an address.
      * @param targetAddress The address to check across all child whitelist rules.
      * @return True if the address is listed in at least one child rule.
      */
     function isVerified(address targetAddress) public view virtual override(IIdentityRegistryVerified) returns (bool) {
-        address[] memory targets = new address[](1);
-        targets[0] = targetAddress;
-        bool[] memory result = _detectTransferRestrictionForTargets(targets);
-        return result[0];
+        return _isListedInAnyChild(targetAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
