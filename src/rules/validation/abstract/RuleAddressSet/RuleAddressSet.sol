@@ -60,7 +60,7 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_ADD_ROLE`.
      * @param targetAddresses Array of addresses to be added.
      */
-    function addAddresses(address[] calldata targetAddresses) public onlyAddressListAdd {
+    function addAddresses(address[] calldata targetAddresses) public virtual onlyAddressListAdd {
         _addAddresses(targetAddresses);
         emit AddAddresses(targetAddresses);
     }
@@ -72,7 +72,7 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_REMOVE_ROLE`.
      * @param targetAddresses Array of addresses to remove.
      */
-    function removeAddresses(address[] calldata targetAddresses) public onlyAddressListRemove {
+    function removeAddresses(address[] calldata targetAddresses) public virtual onlyAddressListRemove {
         _removeAddresses(targetAddresses);
         emit RemoveAddresses(targetAddresses);
     }
@@ -84,7 +84,7 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_ADD_ROLE`.
      * @param targetAddress The address to be added.
      */
-    function addAddress(address targetAddress) public onlyAddressListAdd {
+    function addAddress(address targetAddress) public virtual onlyAddressListAdd {
         require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
         require(!_isAddressListed(targetAddress), RuleAddressSet_AddressAlreadyListed());
         _addAddress(targetAddress);
@@ -98,7 +98,7 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_REMOVE_ROLE`.
      * @param targetAddress The address to be removed.
      */
-    function removeAddress(address targetAddress) public onlyAddressListRemove {
+    function removeAddress(address targetAddress) public virtual onlyAddressListRemove {
         require(_isAddressListed(targetAddress), RuleAddressSet_AddressNotFound());
         _removeAddress(targetAddress);
         emit RemoveAddress(targetAddress);

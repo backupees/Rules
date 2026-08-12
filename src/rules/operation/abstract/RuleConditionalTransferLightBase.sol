@@ -112,6 +112,7 @@ abstract contract RuleConditionalTransferLightBase is
      */
     function approveAndTransferIfAllowed(address from, address to, uint256 value)
         public
+        virtual
         onlyTransferApprover
         returns (bool)
     {
@@ -132,6 +133,7 @@ abstract contract RuleConditionalTransferLightBase is
      */
     function transferred(address from, address to, uint256 value)
         public
+        virtual
         override(IERC3643IComplianceContract)
         onlyTransferExecutor
     {
@@ -149,6 +151,7 @@ abstract contract RuleConditionalTransferLightBase is
         uint256 value
     )
         public
+        virtual
         override(IRuleEngine)
         onlyTransferExecutor
     {
@@ -174,7 +177,7 @@ abstract contract RuleConditionalTransferLightBase is
      *      {unbindRuleEngine} before rebinding.
      * @param token The ERC-20 token to bind to this rule.
      */
-    function bindToken(address token) public override onlyComplianceManager {
+    function bindToken(address token) public virtual override onlyComplianceManager {
         require(getTokenBound() == address(0), RuleConditionalTransferLight_TokenAlreadyBound());
         _bindToken(token);
     }

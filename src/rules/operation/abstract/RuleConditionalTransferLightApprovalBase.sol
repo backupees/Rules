@@ -51,7 +51,7 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
      * @param to The recipient of the transfer to approve.
      * @param value The amount of the transfer to approve.
      */
-    function approveTransfer(address from, address to, uint256 value) public onlyTransferApprover {
+    function approveTransfer(address from, address to, uint256 value) public virtual onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
         uint256 newCount = approvalCounts[transferHash] + 1;
         approvalCounts[transferHash] = newCount;
@@ -64,7 +64,7 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
      * @param to The recipient of the transfer whose approval is cancelled.
      * @param value The amount of the transfer whose approval is cancelled.
      */
-    function cancelTransferApproval(address from, address to, uint256 value) public onlyTransferApprover {
+    function cancelTransferApproval(address from, address to, uint256 value) public virtual onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
         uint256 count = approvalCounts[transferHash];
         require(count != 0, TransferApprovalNotFound());

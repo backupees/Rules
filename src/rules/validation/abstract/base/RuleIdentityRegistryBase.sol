@@ -101,7 +101,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
      * @notice Sets the identity registry consulted during transfer checks.
      * @param newRegistry New identity registry address; must not be the zero address.
      */
-    function setIdentityRegistry(address newRegistry) public onlyIdentityRegistryManager {
+    function setIdentityRegistry(address newRegistry) public virtual onlyIdentityRegistryManager {
         require(newRegistry != address(0), RuleIdentityRegistry_RegistryAddressZeroNotAllowed());
         identityRegistry = IIdentityRegistryVerified(newRegistry);
         emit IdentityRegistryUpdated(newRegistry);
@@ -131,7 +131,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     /**
      * @notice Clears the identity registry, disabling identity checks (all transfers pass this rule).
      */
-    function clearIdentityRegistry() public onlyIdentityRegistryManager {
+    function clearIdentityRegistry() public virtual onlyIdentityRegistryManager {
         identityRegistry = IIdentityRegistryVerified(address(0));
         emit IdentityRegistryUpdated(address(0));
     }

@@ -60,7 +60,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @notice Updates the maximum total supply.
      * @param newMaxTotalSupply New maximum total supply value.
      */
-    function setMaxTotalSupply(uint256 newMaxTotalSupply) public onlyMaxTotalSupplyManager {
+    function setMaxTotalSupply(uint256 newMaxTotalSupply) public virtual onlyMaxTotalSupplyManager {
         maxTotalSupply = newMaxTotalSupply;
         emit MaxTotalSupplyUpdated(newMaxTotalSupply);
     }
@@ -69,7 +69,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @notice Updates the token contract whose total supply is checked.
      * @param newTokenContract New token contract address; must not be the zero address.
      */
-    function setTokenContract(address newTokenContract) public onlyMaxTotalSupplyManager {
+    function setTokenContract(address newTokenContract) public virtual onlyMaxTotalSupplyManager {
         _validateTokenContract(newTokenContract);
         tokenContract = ITotalSupply(newTokenContract);
         emit TokenContractUpdated(newTokenContract);

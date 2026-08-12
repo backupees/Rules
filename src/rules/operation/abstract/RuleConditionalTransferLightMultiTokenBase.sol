@@ -96,7 +96,11 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      * @param to The recipient of the transfer to approve.
      * @param value The amount of the transfer to approve.
      */
-    function approveTransfer(address token, address from, address to, uint256 value) public onlyTransferApprover {
+    function approveTransfer(address token, address from, address to, uint256 value)
+        public
+        virtual
+        onlyTransferApprover
+    {
         _approveTransfer(token, from, to, value);
     }
 
@@ -109,6 +113,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function cancelTransferApproval(address token, address from, address to, uint256 value)
         public
+        virtual
         onlyTransferApprover
     {
         _cancelTransferApproval(token, from, to, value);
@@ -125,6 +130,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function approveAndTransferIfAllowed(address token, address from, address to, uint256 value)
         public
+        virtual
         onlyTransferApprover
         returns (bool)
     {
@@ -146,6 +152,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function transferred(address from, address to, uint256 value)
         public
+        virtual
         override(IERC3643IComplianceContract)
         onlyTransferExecutor
     {
@@ -163,6 +170,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
         uint256 value
     )
         public
+        virtual
         override(IRuleEngine)
         onlyTransferExecutor
     {
