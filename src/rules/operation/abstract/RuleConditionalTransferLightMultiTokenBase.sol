@@ -338,8 +338,9 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
     function _approveTransfer(address token, address from, address to, uint256 value) internal virtual {
         require(isTokenBound(token), RuleConditionalTransferLightMultiToken_InvalidToken());
         bytes32 transferHash = _transferHash(token, from, to, value);
-        approvalCounts[transferHash] += 1;
-        emit TransferApproved(token, from, to, value, approvalCounts[transferHash]);
+        uint256 newCount = approvalCounts[transferHash] + 1;
+        approvalCounts[transferHash] = newCount;
+        emit TransferApproved(token, from, to, value, newCount);
     }
 
     /**

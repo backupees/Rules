@@ -16,6 +16,12 @@ contract MultiTokenSurface is Test, HelperContract {
     ///      constants clash with the multi-token variant's.
     error RuleConditionalTransferLightMultiToken_TransferApprovalNotFound();
 
+    /// @dev Redeclared for the same reason as the error above: the single-token `TransferApproved`
+    ///      inherited via `HelperContract` has a different signature (no `token` parameter).
+    event TransferApproved(
+        address indexed token, address indexed from, address indexed to, uint256 value, uint256 count
+    );
+
     uint8 private constant CODE_NOT_APPROVED = 46;
 
     RuleConditionalTransferLightMultiToken private rule;
@@ -34,6 +40,27 @@ contract MultiTokenSurface is Test, HelperContract {
     function test_CanReturnTransferRestrictionCode() public view {
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_NOT_APPROVED));
         assertFalse(rule.canReturnTransferRestrictionCode(CODE_NONEXISTENT));
+    }
+
+    /**
+     * @notice The approval count carried by {TransferApproved} must be the post-increment value.
+     * @dev `_approveTransfer` keeps the new count in a local rather than reading the slot back after
+     *      storing it. Equivalent by construction, but nothing else asserts the event payload, so
+     *      this pins it: a second approval of the same transfer must report 2, not 1 and not 0.
+     */
+    function test_ApproveTransferEmitsPostIncrementCount() public {
+        vm.expectEmit(true, true, true, true);
+        emit TransferApproved(ADDRESS1, ADDRESS2, ADDRESS3, 10, 1);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.approveTransfer(ADDRESS1, ADDRESS2, ADDRESS3, 10);
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferApproved(ADDRESS1, ADDRESS2, ADDRESS3, 10, 2);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.approveTransfer(ADDRESS1, ADDRESS2, ADDRESS3, 10);
+
+        // The event and the getter must agree.
+        assertEq(rule.approvedCount(ADDRESS1, ADDRESS2, ADDRESS3, 10), 2);
     }
 
     function test_MessageForTransferRestriction() public view {

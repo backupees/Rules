@@ -53,8 +53,9 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
      */
     function approveTransfer(address from, address to, uint256 value) public onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
-        approvalCounts[transferHash] += 1;
-        emit TransferApproved(from, to, value, approvalCounts[transferHash]);
+        uint256 newCount = approvalCounts[transferHash] + 1;
+        approvalCounts[transferHash] = newCount;
+        emit TransferApproved(from, to, value, newCount);
     }
 
     /**
