@@ -51,7 +51,7 @@ CMTAT_B.setRuleEngine(rule);   rule.bindToken(address(CMTAT_B));
 rule.approveTransfer(address(CMTAT_A), alice, bob, 100);  // usable on CMTAT_A only
 ```
 
-Supporting true per-token scoping behind a `RuleEngine` would require the token address to be threaded into `IRuleEngine.transferred(...)`, which is an upstream RuleEngine interface change and is not possible from this repository. See `RESULT.md` finding **F-4**.
+Supporting true per-token scoping behind a `RuleEngine` would require the token address to be threaded into `IRuleEngine.transferred(...)`, which is an upstream RuleEngine interface change and is not possible from this repository. See `CLAUDE_AUDIT.md` finding **F-4**.
 
 ## Schema
 
@@ -123,7 +123,7 @@ Boolean counterpart of `detectTransferRestrictionForToken`. Prefer it over `canT
 
 ### `detectTransferRestriction(from, to, value)` / `canTransfer(from, to, value)`
 
-⚠️ **Caller-dependent; prefer the `…ForToken` views above.** These ERC-1404 / ERC-3643 views derive the token key from `msg.sender`, so they only return a meaningful answer when invoked *by the bound token*. Any other caller always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46) / `false`, even for a transfer that is approved and will succeed. They are fail-closed, but carry no signal for third-party pre-flight. See `RESULT.md` finding **F-8**.
+⚠️ **Caller-dependent; prefer the `…ForToken` views above.** These ERC-1404 / ERC-3643 views derive the token key from `msg.sender`, so they only return a meaningful answer when invoked *by the bound token*. Any other caller always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46) / `false`, even for a transfer that is approved and will succeed. They are fail-closed, but carry no signal for third-party pre-flight. See `CLAUDE_AUDIT.md` finding **F-8**.
 
 The standardized signatures are kept as-is (the token cannot be added to them without breaking ERC-1404), and both the implicit and explicit views are backed by the same internal helper, so for the bound token they can never disagree.
 

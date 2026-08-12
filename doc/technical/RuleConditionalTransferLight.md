@@ -94,7 +94,7 @@ rule.bindToken(address(cmtat));          // the ERC-20 target
 rule.bindRuleEngine(address(ruleEngine)); // the authorized caller
 ```
 
-> **Why two bindings?** They were originally one slot, which had to be *both* the ERC-20 target and the authorized caller. In direct mode those coincide, so it worked. Behind a RuleEngine they are different addresses, and a single slot could only hold one: binding the engine broke `approveAndTransferIfAllowed` (the engine is not an ERC-20), while binding the token left the engine unauthorized and reverted **every** transfer and mint. Splitting the roles fixes both. See `RESULT.md` finding **F-3**.
+> **Why two bindings?** They were originally one slot, which had to be *both* the ERC-20 target and the authorized caller. In direct mode those coincide, so it worked. Behind a RuleEngine they are different addresses, and a single slot could only hold one: binding the engine broke `approveAndTransferIfAllowed` (the engine is not an ERC-20), while binding the token left the engine unauthorized and reverted **every** transfer and mint. Splitting the roles fixes both. See `CLAUDE_AUDIT.md` finding **F-3**.
 
 Always bind the **token** with `bindToken` — putting the RuleEngine there instead makes `getTokenBound()` a non-ERC-20 and `approveAndTransferIfAllowed` will revert.
 

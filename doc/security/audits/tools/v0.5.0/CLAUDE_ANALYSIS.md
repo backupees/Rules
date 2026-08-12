@@ -780,7 +780,7 @@ assembly ("memory-safe") {
 }
 ```
 
-The assembly is sound — the encoding is injective, so there is no collision risk, and `RESULT.md` F-12 already verified that. The problem is the comment. `abi.encodePacked(from, to, value)` is **72 bytes** with no padding; `abi.encode(from, to, value)` is 96 bytes with the addresses *right*-aligned. This hashes 96 bytes with the addresses *left*-aligned — a third, project-specific encoding that matches neither.
+The assembly is sound — the encoding is injective, so there is no collision risk, and `CLAUDE_AUDIT.md` F-12 already verified that. The problem is the comment. `abi.encodePacked(from, to, value)` is **72 bytes** with no padding; `abi.encode(from, to, value)` is 96 bytes with the addresses *right*-aligned. This hashes 96 bytes with the addresses *left*-aligned — a third, project-specific encoding that matches neither.
 
 Anyone who reads "hash packed values" and reimplements the key off-chain as `keccak256(abi.encodePacked(from, to, value))` — to pre-compute an approval key for a subgraph, a monitoring bot or a test fixture — gets a different hash and a silent mismatch. The `approvedCount(from, to, value)` getter is the supported way to query, so nothing on-chain breaks, but the comment actively points readers at the wrong equivalence. Reword it to state the layout explicitly.
 
@@ -855,7 +855,7 @@ Two costs, one of which matters:
 - **Gas: ~109 per call**, measured with each variant in its own single-function contract so dispatch is identical — assembly 1 032, `abi.encodePacked` 1 141, `abi.encode` 1 149. `_transferHash` is called from `_transferred`, i.e. on the **transfer write path**, so this is paid by the transferring holder on every conditional transfer, not by an operator.
 - **It changes every storage key.** The approval mapping is keyed by this hash, so switching the encoding orphans every outstanding approval in any already-deployed instance. For a fresh deployment that is harmless; as an upgrade to a live rule it would silently strand approvals that `resetApproval` could then no longer reach, because the caller would compute the *new* key. That makes it a change to do only alongside a version bump and a migration note.
 
-**Recommendation: option 1.** The encoding is sound — `RESULT.md` F-12 already verified its injectivity, so there is no collision risk — it is cheaper than the alternatives on a holder-paid path, and it is now fully documented above. What was broken was the comment, not the code. Reword it to state the 96-byte layout, add the two equivalent formulations to the NatSpec so the one genuine use case (storage-slot derivation) is served, and keep the assembly.
+**Recommendation: option 1.** The encoding is sound — `CLAUDE_AUDIT.md` F-12 already verified its injectivity, so there is no collision risk — it is cheaper than the alternatives on a holder-paid path, and it is now fully documented above. What was broken was the comment, not the code. Reword it to state the 96-byte layout, add the two equivalent formulations to the NatSpec so the one genuine use case (storage-slot derivation) is served, and keep the assembly.
 
 > **Status: done.**
 >
@@ -917,13 +917,13 @@ The consequence worth stating is what happens one level up. `RuleEngineBase._det
 
 The 4-argument path is fine: `RuleEngineBase._detectTransferRestrictionFrom` (`:159-173`) calls each rule's `detectTransferRestrictionFrom`, which for this rule does consult `mintAllowance`. So the mitigation already exists and is the one `CLAUDE.md` prescribes — `canTransferFrom(minter, address(0), to, value)`. It is worth saying explicitly in the README that this holds *through the engine*, not just when querying the rule directly, because the engine is the address integrators actually call.
 
-The same shape appears in `RuleConditionalTransferLightMultiTokenBase.detectTransferRestriction` (`:222-229`), which is caller-dependent and returns "not approved" to any off-chain `eth_call` — that one is documented at length and is `RESULT.md` F-4. Neither is a new defect; both are worth a single "views that are not authoritative" table in the README so integrators meet them once rather than per rule.
+The same shape appears in `RuleConditionalTransferLightMultiTokenBase.detectTransferRestriction` (`:222-229`), which is caller-dependent and returns "not approved" to any off-chain `eth_call` — that one is documented at length and is `CLAUDE_AUDIT.md` F-4. Neither is a new defect; both are worth a single "views that are not authoritative" table in the README so integrators meet them once rather than per rule.
 
 ---
 
 #### What is already covered, and what is not
 
-This is **not** a new discovery at the rule level: `RESULT.md` **F-7** records it (threat `MA-1`, PoC `test_MA1_HardcodedEligibilityViewsDisagreeWithEnforcement_CurrentBehaviour`), and resolution **I-8** already added a bold callout plus an *"Eligibility views: which one is authoritative"* table to `doc/technical/RuleMintAllowance.md`, with matching warnings at `README.md:338` and `:754`. Do not redo that work.
+This is **not** a new discovery at the rule level: `CLAUDE_AUDIT.md` **F-7** records it (threat `MA-1`, PoC `test_MA1_HardcodedEligibilityViewsDisagreeWithEnforcement_CurrentBehaviour`), and resolution **I-8** already added a bold callout plus an *"Eligibility views: which one is authoritative"* table to `doc/technical/RuleMintAllowance.md`, with matching warnings at `README.md:338` and `:754`. Do not redo that work.
 
 What none of those say is **how far the blind spot travels**. Every existing sentence is phrased about querying *the rule*. The call chain is three levels deep, and each level inherits the hard `true`:
 
@@ -934,7 +934,7 @@ What none of those say is **how far the blind spot travels**. Every existing sen
 | Token | `cmtat.detectTransferRestriction(0, to, value)` → `ruleEngine.detectTransferRestriction(...)` (`ValidationModuleERC1404.sol:98-108`) | ❌ |
 | Token, 4-arg | `cmtat.detectTransferRestrictionFrom(minter, 0, to, value)` → engine `:114-128` → rule | ✅ **real answer** |
 
-The **token** is the address a wallet, explorer or issuance UI actually calls — not the rule, and not usually the engine. So the audience most likely to be misled is the one furthest from the documentation that warns them. That gap is what F-6 adds over `RESULT.md` F-7.
+The **token** is the address a wallet, explorer or issuance UI actually calls — not the rule, and not usually the engine. So the audience most likely to be misled is the one furthest from the documentation that warns them. That gap is what F-6 adds over `CLAUDE_AUDIT.md` F-7.
 
 #### Options considered
 
@@ -949,7 +949,7 @@ The **token** is the address a wallet, explorer or issuance UI actually calls �
 
 **Option 2 — return a restriction code on the 3-arg mint path.** Tempting, because it converts a false "allowed" into something safe-looking. It is worse than the status quo. ERC-1404 has no "cannot answer" code: every non-zero value reads as *blocked*, so the engine's aggregate — and therefore the token's view — would report **every mint as forbidden**, including the overwhelming majority that will succeed. A false "no" on every issuance breaks mint UIs and pre-flight gating far more often than a false "yes" misleads. Trading a rare wrong-positive for a constant wrong-negative is not a fix.
 
-**Option 3 — use `_msgSender()` as the minter.** This is precisely the defect `RESULT.md` F-8 already records against `RuleConditionalTransferLightMultiToken.detectTransferRestriction`, where the token is derived from `msg.sender` and every off-chain `eth_call` therefore gets a meaningless answer. Importing a pattern this codebase has already identified as a problem, to fix a different instance of the same problem, would be a step backwards.
+**Option 3 — use `_msgSender()` as the minter.** This is precisely the defect `CLAUDE_AUDIT.md` F-8 already records against `RuleConditionalTransferLightMultiToken.detectTransferRestriction`, where the token is derived from `msg.sender` and every off-chain `eth_call` therefore gets a meaningless answer. Importing a pattern this codebase has already identified as a problem, to fix a different instance of the same problem, would be a step backwards.
 
 **Option 4 — `detectTransferRestrictionForMinter(minter, to, value)` / `canTransferForMinter(...)`.** This is the shape the multi-token rule adopted (`detectTransferRestrictionForToken` / `canTransferForToken`) for exactly this class of problem, so there is precedent. But the capability **already exists**: `canTransferFrom(minter, address(0), to, value)` is the same function with a different name. The gain is discoverability — a named function states "pass the minter", whereas `canTransferFrom(minter, address(0), …)` requires knowing that `address(0)` means "mint". The cost is two more functions to keep in sync on a rule whose surface is already documented. Worth doing only if integrator confusion shows up in practice; not worth doing pre-emptively.
 
@@ -977,7 +977,7 @@ All four steps done; `git diff src/` is empty, as the option requires.
 
 **And it empirically settles the argument against option 2.** Temporarily changing `detectTransferRestriction` to return `CODE_MINTER_ALLOWANCE_EXCEEDED` on the mint path — exactly option 2 — makes the test fail with `70 != 0` at the engine level, confirming that the code propagates all the way out to the token and would make `cmtat.detectTransferRestriction` report **every** mint as forbidden, including mints that will succeed. That is no longer an argument from reasoning; it is a measured outcome. The rule was restored immediately afterwards.
 
-**The test is a `_CurrentBehaviour` guard, not an endorsement.** It asserts what the audit considers wrong. If the rule, `RuleEngineBase`, or CMTAT is ever changed to close the gap, it fails — forcing whoever does that to update `CLAUDE_ANALYSIS.md` F-6, `RESULT.md` F-7 and both documentation tables in the same change.
+**The test is a `_CurrentBehaviour` guard, not an endorsement.** It asserts what the audit considers wrong. If the rule, `RuleEngineBase`, or CMTAT is ever changed to close the gap, it fails — forcing whoever does that to update `CLAUDE_ANALYSIS.md` F-6, `CLAUDE_AUDIT.md` F-7 and both documentation tables in the same change.
 
 
 

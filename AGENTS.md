@@ -26,7 +26,7 @@ Operation rules that treat `msg.sender` or `getTokenBound()` as a *token identit
 `CMTAT._mintOverride` calls `_checkTransferred(_msgSender(), address(0), to, value)`, so **on every mint the minter's address arrives at each rule as `spender`** via the 4-arg `transferred` overload. Plain `transfer()` passes `spender == address(0)` and takes the 3-arg path.
 
 - `RuleWhitelist`, `RuleSpenderWhitelist`, `RuleWhitelistWrapper` explicitly exempt mint/burn from the spender check.
-- `RuleIdentityRegistry`, `RuleBlacklist`, `RuleSanctionsList`, `RuleERC2980` do **not** — they screen the minter. For the deny-lists this is intended; for `RuleIdentityRegistry` it means the minter must itself be identity-verified (see `RESULT.md` F-1).
+- `RuleIdentityRegistry`, `RuleBlacklist`, `RuleSanctionsList`, `RuleERC2980` do **not** — they screen the minter. For the deny-lists this is intended; for `RuleIdentityRegistry` it means the minter must itself be identity-verified (see `CLAUDE_AUDIT.md` F-1).
 - `RuleMintAllowance` is the only rule that *uses* the mint spender: it debits `mintAllowance[spender]`.
 - `RuleMaxTotalSupply` and `RuleChainlinkPoR` ignore the spender entirely — they cap *supply*, not identities, and act only when `from == address(0)`.
 
@@ -76,7 +76,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `RuleERC2980Ownable2Step` | Ownable2Step variant of RuleERC2980 |
 | `RuleConditionalTransferLight` | Require operator approval before each transfer; bound to exactly one token at a time (`bindToken` reverts if a token is already bound; use `unbindToken` first to migrate) |
 | `RuleConditionalTransferLightOwnable2Step` | Owner-only approval and execution for conditional transfers |
-| `RuleConditionalTransferLightMultiToken` / `…Ownable2Step` | Conditional transfers with approvals keyed `(token, from, to, value)`. **Direct-binding-only (Topology B)** — approvals are *consumed* under `msg.sender`, so this rule must NOT be added to a RuleEngine; behind an engine it either reverts or loses all per-token isolation. See `RESULT.md` F-4 and `doc/technical/RuleConditionalTransferLightMultiToken.md` |
+| `RuleConditionalTransferLightMultiToken` / `…Ownable2Step` | Conditional transfers with approvals keyed `(token, from, to, value)`. **Direct-binding-only (Topology B)** — approvals are *consumed* under `msg.sender`, so this rule must NOT be added to a RuleEngine; behind an engine it either reverts or loses all per-token isolation. See `CLAUDE_AUDIT.md` F-4 and `doc/technical/RuleConditionalTransferLightMultiToken.md` |
 | `RuleMintAllowance` / `RuleMintAllowanceOwnable2Step` | Per-minter mint quota, debited on the 4-arg `transferred(spender, from=0, to, value)` path. Requires CMTAT ≥ v3.3. `canTransfer` is **not** authoritative for this rule — use `canTransferFrom(minter, address(0), to, value)` |
 | `AccessControlModuleStandalone` | Base RBAC module; admin implicitly holds all roles |
 | `MetaTxModuleStandalone` | ERC-2771 meta-transaction support. Note: the operation rules deliberately do **not** inherit this, so `_msgSender()` used as a binding identity is never forwarder-controlled |
@@ -154,14 +154,12 @@ sees stay context-free. Hardhat compiles only `src/` (Foundry's `src`), so it ne
 - Use `require(condition, CustomError(...))` for custom errors; avoid direct `revert CustomError(...)`.
 - **No emoji in code comments or NatSpec.** Use a plain word marker instead: `WARNING:`, `NOTE:`, `IMPORTANT:`. Emoji render inconsistently across editors, terminals, `forge doc` output and diffs; they are not searchable (`grep WARNING` finds the marker, `grep ⚠️` depends on the shell); and they encode as multi-byte sequences that can be silently mangled by tooling. This applies to `src/`, `test/` and `script/`. Markdown documentation may use emoji freely — the restriction is Solidity comments only.
 - `AGENTS.md` and `CLAUDE.md` are identical — always update both together.
-- Always update README.md with the latest change
-- New rule or features implemented: create/update technical documentation in `doc/technical`, update README, create/update test (target: 100% of code coverage), update CHANGELOG.md. Code coverage, run `forge coverage --report summary`
+- **Two READMEs.** `README.md` at the root is a short summary (purpose, architecture, rule list, quick start) and is the GitHub front page; `doc/README.md` is the full reference. Update `doc/README.md` with the latest change, and the root `README.md` only when the summary itself becomes wrong (a new rule, a changed code range, a moved document). Links inside `doc/README.md` are relative to `doc/`.
+- New rule or features implemented: create/update technical documentation in `doc/technical`, update `doc/README.md` (and the root summary if the rule table or code ranges change), create/update test (target: 100% of code coverage), update CHANGELOG.md. Code coverage, run `forge coverage --report summary`
 - After each implemented feature or fix, provide a one-line GitHub commit message for all changes since the last commit.
 
 ## Security Findings Reference
-- [`THREAT_MODEL.md`](THREAT_MODEL.md) — trust model, 30 catalogued threats with IDs, data-flow diagrams, 12 invariants.
-- [`RESULT.md`](RESULT.md) — findings (0 High/Medium, 2 Low, 8 Info), invariant and access-control verification, disposition of every threat ID.
-- [`TEST_IMPROVEMENT.md`](TEST_IMPROVEMENT.md) — test-gap analysis and the deferred test backlog.
+- [`doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md`](doc/security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) — the v0.4.0 security audit: trust model, catalogued threats and invariants, findings (0 High/Medium, 2 Low, 8 Info), and the disposition of every threat ID. Source comments cite it by bare filename, `CLAUDE_AUDIT.md`.
 - [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md) — code-quality review (duplication, missing events, gas, `virtual` convention, behaviour at odds with the library's purpose). 28 findings with the disposition and commit for each, including two whose gas claims were wrong and one whose proposed remedy did not work. Source comments cite it by bare filename, `CLAUDE_ANALYSIS.md`, so the path can move.
 - [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md) — deployment-script review (`script/`). 12 findings, all implemented, including three scripts that reverted under `forge script` and a test-methodology gap that hid it. Source comments cite it by bare filename, `CLAUDE_ANALYSIS_SCRIPT.md`, so the path can move.
 - [`test/ThreatModel/ThreatModelTests.t.sol`](test/ThreatModel/ThreatModelTests.t.sol) — 18 PoCs. Tests suffixed `_CurrentBehaviour` assert behaviour the audit considers wrong; **fixing the underlying issue must make them fail**, at which point update the test and the finding together.

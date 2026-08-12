@@ -137,7 +137,7 @@ Re-run these yourself before trusting a change to either rule: if you mutate the
 
 ## 5. Coverage map
 
-Invariant IDs refer to [`THREAT_MODEL.md`](../../THREAT_MODEL.md) §8; verification status is tracked in [`RESULT.md`](../../RESULT.md).
+Invariant IDs and their verification status are recorded in [`CLAUDE_AUDIT.md`](../security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md).
 
 | Invariant (threat model) | Property | Covered by |
 |---|---|---|
@@ -150,7 +150,7 @@ Invariant IDs refer to [`THREAT_MODEL.md`](../../THREAT_MODEL.md) §8; verificat
 - `INV-1`, `INV-2`, `INV-3`, `INV-9`: properties of *stateless* view functions; unit and fuzz tests are the right tool (`test/ThreatModel/ThreatModelTests.t.sol`).
 - `INV-6` (`_transferHash` injectivity): a pure function; covered by `testFuzz_HASH1_ApprovalBucketsAreDistinct`.
 - `INV-4`, `INV-11` (access control): covered by the per-rule access-control suites.
-- `INV-10` (ERC-2771 binding identity): currently holds by static reasoning; a live regression test is the open item **I-10a** in [`RULE_IMPROVEMENT.md`](../../RULE_IMPROVEMENT.md).
+- `INV-10` (ERC-2771 binding identity): currently holds by static reasoning; a live regression test remains an open item.
 
 ---
 

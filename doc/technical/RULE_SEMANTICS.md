@@ -109,4 +109,4 @@ The `tokenId` parameter is **always ignored** by the rules that accept it — `R
 
 ---
 
-See [`../../RESULT.md`](../../RESULT.md) for the findings referenced above and [`../../THREAT_MODEL.md`](../../THREAT_MODEL.md) for the threat IDs.
+See [`CLAUDE_AUDIT.md`](../security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) for the findings referenced above.

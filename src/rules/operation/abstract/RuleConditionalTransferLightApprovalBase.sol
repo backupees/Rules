@@ -177,7 +177,7 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
     function _transferHash(address from, address to, uint256 value) internal pure virtual returns (bytes32 hash) {
         // Hand-rolled rather than `abi.encodePacked` on the linter's `asm-keccak256` advice: this is
         // on the transfer write path, and the assembly is ~109 gas cheaper per call. Injectivity is
-        // verified in `RESULT.md` F-12; the exact layout is documented above.
+        // verified in `CLAUDE_AUDIT.md` F-12; the exact layout is documented above.
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, shl(96, from))

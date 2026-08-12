@@ -10,7 +10,7 @@ import {MintAllowanceHandler} from "./MintAllowanceHandler.sol";
 /**
  * @title ConditionalTransferInvariants
  * @notice Stateful invariant suite over {RuleConditionalTransferLight}'s approval state machine.
- * @dev Covers INV-5 (approvals are conserved and never underflow) — see TEST_IMPROVEMENT.md I-10b.
+ * @dev Covers INV-5 (approvals are conserved and never underflow).
  */
 contract ConditionalTransferInvariants is Test {
     address private constant ADMIN = address(1);
@@ -69,7 +69,7 @@ contract ConditionalTransferInvariants is Test {
 /**
  * @title MintAllowanceInvariants
  * @notice Stateful invariant suite over {RuleMintAllowance}'s quota accounting.
- * @dev Covers INV-7 (quota is exact, monotonically consumed, never underflows) — TEST_IMPROVEMENT.md I-10b.
+ * @dev Covers INV-7 (quota is exact, monotonically consumed, never underflows).
  */
 contract MintAllowanceInvariants is Test {
     address private constant ADMIN = address(1);

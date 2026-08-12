@@ -22,7 +22,7 @@ import {RuleMintAllowance} from "src/rules/operation/RuleMintAllowance.sol";
 
 /**
  * @title ThreatModelTests
- * @notice Proof-of-concept tests backing the findings recorded in THREAT_MODEL.md / RESULT.md.
+ * @notice Proof-of-concept tests backing the findings recorded in `CLAUDE_AUDIT.md`.
  * @dev Each test names the threat ID it exercises. Tests that assert a *current, undesirable*
  *      behaviour are named `*_CurrentBehaviour` so a future fix flags them for update.
  */
@@ -518,7 +518,7 @@ contract ThreatModelTests is Test, HelperContract {
      *
      *      `_CurrentBehaviour`: this asserts what the audit considers wrong. If the rule, the engine
      *      or CMTAT is ever changed to close the gap, this test must fail — at which point update it
-     *      together with `CLAUDE_ANALYSIS.md` F-6, `RESULT.md` F-7 and the two documentation tables.
+     *      together with `CLAUDE_ANALYSIS.md` F-6, `CLAUDE_AUDIT.md` F-7 and the two documentation tables.
      */
     function test_MA1_EngineAndTokenInheritTheHardcodedAllowedView_CurrentBehaviour() public {
         cmtatDeployment = new CMTATDeployment();
