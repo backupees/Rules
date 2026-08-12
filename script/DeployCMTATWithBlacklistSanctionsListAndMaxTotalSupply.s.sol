@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {Script} from "forge-std/Script.sol";
-import {ICMTATConstructor, CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
-import {IERC1643CMTAT} from "CMTAT/interfaces/tokenization/draft-IERC1643CMTAT.sol";
+import {CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
 import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
 import {RuleMaxTotalSupply} from "src/rules/validation/deployment/RuleMaxTotalSupply.sol";
 import {RuleSanctionsList} from "src/rules/validation/deployment/RuleSanctionsList.sol";
 import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
+import {CMTATDeploymentBase} from "./base/CMTATDeploymentBase.sol";
 
 /**
  * @title DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply
@@ -40,7 +39,7 @@ import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
  *      then sanctions, then the supply cap, so an address-level rejection is reported in preference
  *      to a supply-level one.
  */
-contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is Script {
+contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is CMTATDeploymentBase {
     /**
      * @notice Deploys and wires the whole set.
      * @dev `deployer` is passed explicitly rather than read as `address(this)`, because the two
@@ -79,20 +78,10 @@ contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is Script {
             RuleMaxTotalSupply ruleMaxTotalSupply
         )
     {
-        ICMTATConstructor.ERC20Attributes memory erc20Attributes =
-            ICMTATConstructor.ERC20Attributes("CMTA Token", "CMTAT", 0);
-        ICMTATConstructor.ExtraInformationAttributes memory extraInformationAttributes =
-            ICMTATConstructor.ExtraInformationAttributes(
-                "CMTAT_ISIN",
-                IERC1643CMTAT.DocumentInfo(
-                    "Terms", "https://cmta.ch", 0x9ff867f6592aa9d6d039e7aad6bd71f1659720cbc4dd9eae1554f6eab490098b
-                ),
-                "CMTAT_info"
-            );
-        ICMTATConstructor.Engine memory engines = ICMTATConstructor.Engine(IRuleEngine(address(0)));
-
         // 1. The token, with the deployer as temporary admin so the wiring below is permitted.
-        token = new CMTATStandardStandalone(forwarder, deployer, erc20Attributes, extraInformationAttributes, engines);
+        token = new CMTATStandardStandalone(
+            forwarder, deployer, _erc20Attributes(), _extraInformationAttributes(), _emptyEngine()
+        );
 
         // 2-3. Address-screening rules; each is owned by the intended admin from the start.
         ruleBlacklist = new RuleBlacklist(admin, forwarder);
@@ -114,11 +103,17 @@ contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is Script {
 
         // 7. Hand over, and drop the deployer's rights so the deployment key is not a standing risk.
         if (admin != deployer) {
-            ruleEngine.grantRole(bytes32(0), admin);
-            ruleEngine.renounceRole(bytes32(0), deployer);
-            token.grantRole(bytes32(0), admin);
-            token.renounceRole(bytes32(0), deployer);
+            ruleEngine.grantRole(ruleEngine.DEFAULT_ADMIN_ROLE(), admin);
+            ruleEngine.renounceRole(ruleEngine.DEFAULT_ADMIN_ROLE(), deployer);
+            token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
+            token.renounceRole(token.DEFAULT_ADMIN_ROLE(), deployer);
         }
+
+        _logDeployment("CMTAT token       ", address(token));
+        _logDeployment("RuleEngine        ", address(ruleEngine));
+        _logDeployment("RuleBlacklist     ", address(ruleBlacklist));
+        _logDeployment("RuleSanctionsList ", address(ruleSanctionsList));
+        _logDeployment("RuleMaxTotalSupply", address(ruleMaxTotalSupply));
     }
 
     /**
@@ -129,6 +124,7 @@ contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is Script {
      */
     function run()
         external
+        virtual
         returns (
             CMTATStandardStandalone token,
             RuleEngine ruleEngine,
@@ -140,8 +136,13 @@ contract DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply is Script {
         vm.startBroadcast();
         // The broadcaster is both the final admin and the acting deployer, so the hand-over below
         // is a no-op and no temporary rights outlive the transaction.
-        (token, ruleEngine, ruleBlacklist, ruleSanctionsList, ruleMaxTotalSupply) =
-            deploy(msg.sender, msg.sender, address(0), ISanctionsList(address(0)), 1_000_000);
+        (token, ruleEngine, ruleBlacklist, ruleSanctionsList, ruleMaxTotalSupply) = deploy(
+            msg.sender,
+            msg.sender,
+            _forwarder(),
+            ISanctionsList(vm.envOr("SANCTIONS_ORACLE", address(0))),
+            vm.envOr("CMTAT_MAX_SUPPLY", uint256(1_000_000))
+        );
         vm.stopBroadcast();
     }
 }
