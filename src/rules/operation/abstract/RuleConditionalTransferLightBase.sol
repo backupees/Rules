@@ -303,7 +303,7 @@ abstract contract RuleConditionalTransferLightBase is
      *         execution hooks. Both topologies are therefore supported without conflating the two
      *         roles of the binding — see {ruleEngine}.
      */
-    function _authorizeTransferExecution() internal view override {
+    function _authorizeTransferExecution() internal view virtual override {
         require(
             isTransferExecutor(_msgSender()), RuleConditionalTransferLight_TransferExecutorUnauthorized(_msgSender())
         );

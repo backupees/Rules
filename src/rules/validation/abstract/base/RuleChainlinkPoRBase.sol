@@ -371,6 +371,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
@@ -400,6 +401,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     function _detectTransferRestrictionFrom(address, address from, address to, uint256 value)
         internal
         view
+        virtual
         override
         returns (uint8)
     {

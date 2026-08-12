@@ -145,6 +145,7 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {

@@ -118,6 +118,7 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
@@ -140,6 +141,7 @@ abstract contract RuleBlacklistBase is RuleAddressSet, RuleNFTAdapter, RuleBlack
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
+        virtual
         override
         returns (uint8)
     {

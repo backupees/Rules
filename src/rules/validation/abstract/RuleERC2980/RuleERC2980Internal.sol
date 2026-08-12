@@ -43,6 +43,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _addWhitelistAddresses(address[] calldata addressesToAdd)
         internal
+        virtual
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
@@ -65,6 +66,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _removeWhitelistAddresses(address[] calldata addressesToRemove)
         internal
+        virtual
         returns (uint256 removed, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToRemove.length; ++i) {
@@ -104,6 +106,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _addFrozenlistAddresses(address[] calldata addressesToAdd)
         internal
+        virtual
         returns (uint256 added, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
@@ -126,6 +129,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _removeFrozenlistAddresses(address[] calldata addressesToRemove)
         internal
+        virtual
         returns (uint256 removed, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToRemove.length; ++i) {

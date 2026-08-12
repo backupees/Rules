@@ -191,6 +191,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
@@ -226,6 +227,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
+        virtual
         override
         returns (uint8)
     {

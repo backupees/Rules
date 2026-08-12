@@ -38,7 +38,11 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
      * @return added The number of newly added addresses.
      * @return skipped The number of addresses that were already listed.
      */
-    function _addAddresses(address[] calldata addressesToAdd) internal returns (uint256 added, uint256 skipped) {
+    function _addAddresses(address[] calldata addressesToAdd)
+        internal
+        virtual
+        returns (uint256 added, uint256 skipped)
+    {
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
             // The zero address is the mint/burn sentinel, never a participant. It is REJECTED
             // rather than skipped: the batch convention skips *duplicates* (an idempotent no-op that
@@ -66,6 +70,7 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
      */
     function _removeAddresses(address[] calldata addressesToRemove)
         internal
+        virtual
         returns (uint256 removed, uint256 skipped)
     {
         for (uint256 i = 0; i < addressesToRemove.length; ++i) {
