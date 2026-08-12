@@ -398,6 +398,8 @@ forge test
 3. Add rules to the RuleEngine, or set the rule directly on the CMTAT token.
 4. Verify the transfer flow end-to-end with a small test transfer before enabling production flows.
 
+Full technical documentation for these scripts, including limitations, is in [`doc/technical/DEPLOYMENT_SCRIPTS.md`](./doc/technical/DEPLOYMENT_SCRIPTS.md).
+
 Deployment scripts:
 - `script/DeployCMTATWithWhitelist.s.sol` — CMTAT + whitelist rule, bound directly to the token
 - `script/DeployCMTATWithBlacklist.s.sol` — CMTAT + blacklist rule, bound directly to the token
@@ -508,6 +510,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleConditionalTransferLight | [RuleConditionalTransferLight.md](./doc/technical/RuleConditionalTransferLight.md) |
 | RuleConditionalTransferLightMultiToken | [RuleConditionalTransferLightMultiToken.md](./doc/technical/RuleConditionalTransferLightMultiToken.md) |
 | RuleMintAllowance | [RuleMintAllowance.md](./doc/technical/RuleMintAllowance.md) |
+| Deployment scripts | [DEPLOYMENT_SCRIPTS.md](./doc/technical/DEPLOYMENT_SCRIPTS.md) |
 
 ### Operational Notes
 

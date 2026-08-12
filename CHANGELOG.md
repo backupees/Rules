@@ -71,7 +71,8 @@ token that could not be issued at all (mint rejected with code `24` even to a wh
 now allows mint and burn. Shared token metadata moved to the new
 `script/base/CMTATDeploymentBase.sol`, which also adds environment-variable configuration (`CMTAT_NAME`,
 `CMTAT_SYMBOL`, `SANCTIONS_ORACLE`, `CMTAT_MAX_SUPPLY` and others, all with the previous constants as
-defaults) and labelled address logging. CI now runs every script as a local dry run, which is the only
+defaults) and labelled address logging. The scripts are documented in the new
+`doc/technical/DEPLOYMENT_SCRIPTS.md`. CI now runs every script as a local dry run, which is the only
 faithful harness: Foundry refuses to combine a prank with a broadcast, so no unit test can exercise
 `run()`.
 

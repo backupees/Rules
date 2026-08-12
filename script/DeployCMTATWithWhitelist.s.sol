@@ -36,7 +36,7 @@ contract DeployCMTATWithWhitelist is CMTATDeploymentBase {
      *        is rejected with code 24 (`CODE_MINT_NOT_ALLOWED`) even to a whitelisted investor. The
      *        script previously hard-coded `false` and shipped a token nobody could issue
      *        (CLAUDE_ANALYSIS_SCRIPT.md S-3); {run} now passes `true`. Recoverable either way with
-     *        `setAllowMint` / `setAllowBurn`, which require `MINT_BURN_MANAGER`.
+     *        `setAllowMint` / `setAllowBurn`, gated on `DEFAULT_ADMIN_ROLE`.
      * @return token The deployed CMTAT.
      * @return rule The whitelist rule bound to it.
      */
