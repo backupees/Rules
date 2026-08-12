@@ -42,29 +42,8 @@ abstract contract RuleWhitelistWrapperBase is
     }
 
     /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyCheckSpenderManager() {
-        _authorizeCheckSpenderManager();
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Sets whether the rule should enforce spender-based checks.
-     * @dev
-     *  - Restricted to holders of the manager role.
-     *  - Updates the internal `checkSpender` flag.
-     *  - Emits a {CheckSpenderUpdated} event.
-     * @param value The new state of the `checkSpender` flag.
-     */
-    function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
-        _setCheckSpender(value);
-    }
 
     /**
      * @inheritdoc RuleTransferValidation
@@ -88,25 +67,6 @@ abstract contract RuleWhitelistWrapperBase is
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Internal helper to update the `checkSpender` flag and emit {CheckSpenderUpdated}.
-     * @dev The event lives here rather than at the call site so the constructor announces the
-     *      initial value too, matching {_setAllowMintBurn}. See {RuleWhitelistBase}.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-        emit CheckSpenderUpdated(value);
-    }
-
-    /**
-     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
-     *      Declaring it `view` makes that a compiler-enforced invariant rather than a convention.
-     */
-    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Go through all the whitelist rules to know if a restriction exists on the transfer

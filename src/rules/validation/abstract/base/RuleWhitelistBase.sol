@@ -41,15 +41,6 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Enables or disables spender verification on delegated transfers.
-     * @dev Restricted to the check-spender manager; emits {CheckSpenderUpdated}.
-     * @param value The new state of the `checkSpender` flag.
-     */
-    function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
-        _setCheckSpender(value);
-    }
-
-    /**
      * @inheritdoc IIdentityRegistryVerified
      */
     function isVerified(address targetAddress)
@@ -76,32 +67,9 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    modifier onlyCheckSpenderManager() {
-        _authorizeCheckSpenderManager();
-        _;
-    }
-
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Internal helper to update the `checkSpender` flag and emit {CheckSpenderUpdated}.
-     * @dev The event lives here rather than at the call site so the constructor announces the
-     *      initial value too, matching {_setAllowMintBurn}. Without it an indexer could reconstruct
-     *      `allowMint` and `allowBurn` from genesis but had to special-case `checkSpender`.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-        emit CheckSpenderUpdated(value);
-    }
-
-    /**
-     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     */
-    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Detects whether a direct transfer is restricted by the whitelist.
