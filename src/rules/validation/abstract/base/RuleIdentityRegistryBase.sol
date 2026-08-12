@@ -249,13 +249,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         }
 
         // OPT-IN, stricter than ERC-3643 ("`transferFrom` works the same way" — receiver only).
-        // Mint (from == 0) and burn (to == 0) are exempt: the minter/burner acts on its own
-        // authority, not as a delegated ERC-20 spender. This is what makes an unverified MINTER
-        // able to mint to a verified recipient, exactly as the specification requires.
-        if (
-            checkSpender && spender != address(0) && from != address(0) && to != address(0)
-                && !registry.isVerified(spender)
-        ) {
+        // Mint (from == 0) is exempt: the minter acts on its own authority, not as a delegated
+        // ERC-20 spender. This is what makes an unverified MINTER able to mint to a verified
+        // recipient, exactly as the specification requires.
+        // Burn (to == 0) is exempt too, but by the early return above -- do NOT re-test `to` here.
+        // The condition would be dead, and re-stating it reads as though burn were handled at this
+        // point rather than six lines earlier.
+        if (checkSpender && spender != address(0) && from != address(0) && !registry.isVerified(spender)) {
             return CODE_ADDRESS_SPENDER_NOT_VERIFIED;
         }
         return _detectTransferRestriction(from, to, value);
