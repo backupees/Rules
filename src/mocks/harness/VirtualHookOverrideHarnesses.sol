@@ -104,4 +104,33 @@ contract BlacklistQuarantineHarness is RuleBlacklist {
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
     }
+
+    /**
+     * @notice Hard-denies the fungible `canTransfer` view (`FEEDBACK_12.md` E-2).
+     * @dev Deliberately contradicts {detectTransferRestriction} so the test can prove the override is
+     *      what answers, rather than the inherited implementation.
+     */
+    function canTransfer(address from, address to, uint256 amount) public view virtual override returns (bool isValid) {
+        from;
+        to;
+        amount;
+        return false;
+    }
+
+    /**
+     * @notice Hard-denies the ERC-7943 `canTransfer` overload (`FEEDBACK_12.md` E-2).
+     */
+    function canTransfer(address from, address to, uint256 tokenId, uint256 amount)
+        public
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        from;
+        to;
+        tokenId;
+        amount;
+        return false;
+    }
 }

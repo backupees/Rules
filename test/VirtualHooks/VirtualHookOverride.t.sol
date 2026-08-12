@@ -70,4 +70,33 @@ contract VirtualHookOverride is Test, HelperContract {
         rule.addAddress(ADDRESS1);
         assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), CODE_ADDRESS_FROM_IS_BLACKLISTED);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                    canTransfer (both overloads)
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice `canTransfer` was the only non-`virtual` view in `RuleTransferValidation`, and its
+     *         ERC-7943 twin the only one in `RuleNFTAdapter` (`FEEDBACK_12.md` E-2).
+     * @dev The harness makes both overloads return `false` unconditionally, contradicting
+     *      `detectTransferRestriction`. If the override were not in effect the inherited
+     *      implementation would delegate to the restriction hook and return `true` here, so this
+     *      distinguishes a reached override from a silently ignored one.
+     */
+    function testSubclassCanOverrideBothCanTransferOverloads() public {
+        BlacklistQuarantineHarness rule =
+            new BlacklistQuarantineHarness(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, QUARANTINED);
+
+        // The restriction hook still says the transfer is fine...
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 10), TRANSFER_OK);
+        assertEq(rule.detectTransferRestriction(ADDRESS1, ADDRESS2, 0, 10), TRANSFER_OK);
+
+        // ...but the overridden views answer for themselves.
+        assertFalse(rule.canTransfer(ADDRESS1, ADDRESS2, 10));
+        assertFalse(rule.canTransfer(ADDRESS1, ADDRESS2, 0, 10));
+
+        // `canTransferFrom` was already `virtual` and is not overridden here, so it still tracks
+        // the restriction hook -- confirming only the intended functions changed.
+        assertTrue(rule.canTransferFrom(ADDRESS3, ADDRESS1, ADDRESS2, 10));
+    }
 }

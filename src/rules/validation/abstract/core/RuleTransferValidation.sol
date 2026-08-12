@@ -67,6 +67,7 @@ abstract contract RuleTransferValidation is
     function canTransfer(address from, address to, uint256 amount)
         public
         view
+        virtual
         override(IERC3643ComplianceRead)
         returns (bool isValid)
     {
