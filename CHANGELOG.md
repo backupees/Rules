@@ -73,6 +73,10 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
   - **Screening of real participants is unchanged.** A mint to a sanctioned recipient is still rejected with code `31`, a burn from a sanctioned holder with code `30`, and the **minter is still screened as the `spender`** on the 4-argument mint path.
   - Side effect: a mint or burn now makes one oracle call instead of two — 2,478 gas versus 3,405 for a two-participant transfer, so roughly 900 gas saved per issuance and redemption.
 
+- **`RuleIdentityRegistry`: the registry address is read from storage once per check instead of up to five times** (`FEEDBACK_12.md` B-3), the same treatment as `RuleSanctionsList` above and safe for the same reason — both functions are `view`, so `isVerified` is reached by `STATICCALL` and cannot write `identityRegistry`. Behaviour unchanged. Measured: **113 gas** saved on a receiver-only transfer (the ERC-3643 default) and on a mint, **219** with `checkSender` enabled, **320** on a `transferFrom` with both flags on.
+  - The path where no registry is configured is **5 gas more expensive** — loading the slot into a typed local before comparing costs a couple of stack operations. Accepted: that is the path where the rule is switched off and does nothing, against 108–320 gas saved wherever it actually screens.
+  - The duplicated null-registry and burn guards between `_detectTransferRestrictionFrom` and `_detectTransferRestriction` were deliberately left in place, as with `RuleSanctionsList`: collapsing them needs a helper that takes the registry as a parameter, which would stop a subclass's override of the direct hook from applying to `transferFrom`.
+
 ### Testing
 
 - New `test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol` (8 tests) for the change above. The oracle in it deliberately sanctions `address(0)`; four of the tests fail against the previous implementation (mint blocked with code `30`, burn with `31`, and the write path reverting), while the four asserting unchanged behaviour pass either way — verified by reverting the guards and re-running.

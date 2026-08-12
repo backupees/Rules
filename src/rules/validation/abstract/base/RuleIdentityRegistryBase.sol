@@ -195,7 +195,10 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         override
         returns (uint8)
     {
-        if (address(identityRegistry) == address(0)) {
+        // Read the registry address once. Safe to cache across the calls below: this function is
+        // `view`, so those are STATICCALLs and cannot write `identityRegistry`.
+        IIdentityRegistryVerified registry = identityRegistry;
+        if (address(registry) == address(0)) {
             return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
         }
         // ERC-3643: "The `burn` function bypasses all checks on eligibility."
@@ -204,13 +207,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         }
 
         // OPT-IN, stricter than ERC-3643. Mints carry no sender, so they are exempt.
-        if (checkSender && from != address(0) && !identityRegistry.isVerified(from)) {
+        if (checkSender && from != address(0) && !registry.isVerified(from)) {
             return CODE_ADDRESS_FROM_NOT_VERIFIED;
         }
 
         // MANDATED by ERC-3643: the receiver must be verified. This is the only required check,
         // and it applies identically to `transfer`, `transferFrom` and `mint`.
-        if (!identityRegistry.isVerified(to)) {
+        if (!registry.isVerified(to)) {
             return CODE_ADDRESS_TO_NOT_VERIFIED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
@@ -231,7 +234,8 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         override
         returns (uint8)
     {
-        if (address(identityRegistry) == address(0)) {
+        IIdentityRegistryVerified registry = identityRegistry;
+        if (address(registry) == address(0)) {
             return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
         }
         // ERC-3643: burn bypasses all eligibility checks.
@@ -245,7 +249,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         // able to mint to a verified recipient, exactly as the specification requires.
         if (
             checkSpender && spender != address(0) && from != address(0) && to != address(0)
-                && !identityRegistry.isVerified(spender)
+                && !registry.isVerified(spender)
         ) {
             return CODE_ADDRESS_SPENDER_NOT_VERIFIED;
         }
