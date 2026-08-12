@@ -5,8 +5,9 @@ pragma solidity ^0.8.20;
  * @title IIdentity — minimal stand-in for ONCHAINID's `IIdentity`.
  * @notice ERC-3643 imports `@onchain-id/solidity/contracts/interface/IIdentity.sol`. That package
  * is an npm dependency, not a git submodule, so it is not vendored here. This file supplies the
- * only member ERC-3643 actually *calls* — `keyHasPurpose`, in `Token.recoveryAddress` — and is
- * wired in through a context-scoped remapping that applies to `lib/ERC-3643/` only.
+ * members ERC-3643 actually *calls* — `keyHasPurpose` in `Token.recoveryAddress`, and `getClaim` in
+ * `IdentityRegistry.isVerified` — and is wired in through a context-scoped remapping that applies to
+ * `lib/ERC-3643/` only.
  *
  * @dev Same approach as `src/rules/interfaces/AggregatorV3Interface.sol`: redeclare the slice of a
  * third-party interface that is genuinely used rather than vendor the whole package. Everywhere
@@ -25,4 +26,27 @@ interface IIdentity {
      * @return True if the key holds the purpose.
      */
     function keyHasPurpose(bytes32 _key, uint256 _purpose) external view returns (bool);
+
+    /**
+     * @notice Returns a claim held by this identity (ERC-735).
+     * @dev Called by `IdentityRegistry.isVerified` once the token requires at least one claim topic.
+     * @param _claimId `keccak256(abi.encode(issuer, topic))`.
+     * @return topic The claim topic.
+     * @return scheme The signature scheme.
+     * @return issuer The claim issuer.
+     * @return signature The claim signature.
+     * @return data The claim data.
+     * @return uri A URI pointing at the claim.
+     */
+    function getClaim(bytes32 _claimId)
+        external
+        view
+        returns (
+            uint256 topic,
+            uint256 scheme,
+            address issuer,
+            bytes memory signature,
+            bytes memory data,
+            string memory uri
+        );
 }
