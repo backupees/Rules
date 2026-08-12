@@ -51,6 +51,22 @@ jobs:
           forge test -vvv
         id: test-erc3643
 
+      # `forge build` compiles the deployment scripts but never executes them, and the unit tests
+      # call deploy() directly rather than run(), so neither exercises the broadcast context. That
+      # gap let three scripts revert on every real deployment while CI stayed green
+      # (SCRIPT_FEEDBACK.md S-1/S-2). A test cannot cover this: Foundry refuses to combine a prank
+      # with a broadcast, so `forge script` itself is the only faithful harness. No key or RPC is
+      # needed -- without --broadcast this is a local simulation.
+      - name: Run deployment scripts (dry run)
+        run: |
+          for s in script/*.s.sol; do
+            name=$(basename "$s" .s.sol)
+            echo "::group::$name"
+            forge script "$s:$name"
+            echo "::endgroup::"
+          done
+        id: scripts
+
       - name: Setup NodeJS 20.5.0
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 #v4.4.0
         with:

@@ -399,9 +399,41 @@ forge test
 4. Verify the transfer flow end-to-end with a small test transfer before enabling production flows.
 
 Deployment scripts:
-- `script/DeployCMTATWithWhitelist.s.sol`
-- `script/DeployCMTATWithBlacklist.s.sol`
+- `script/DeployCMTATWithWhitelist.s.sol` — CMTAT + whitelist rule, bound directly to the token
+- `script/DeployCMTATWithBlacklist.s.sol` — CMTAT + blacklist rule, bound directly to the token
 - `script/DeployCMTATWithBlacklistAndSanctionsList.s.sol` — CMTAT + RuleEngine with blacklist and sanctions rules
+- `script/DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply.s.sol` — the same plus a supply cap
+
+Each script deploys with the caller as both deployer and final admin, hands over every admin role, and
+renounces the deployer's, so no temporary rights outlive the transaction. Run one with:
+
+```bash
+forge script script/DeployCMTATWithBlacklist.s.sol:DeployCMTATWithBlacklist \
+  --rpc-url <RPC> --broadcast
+```
+
+Omitting `--broadcast` simulates locally, which is what CI does for every script on each run.
+
+#### Script configuration
+
+Values are read from the environment, with the defaults below applied when a variable is unset, so the
+scripts run unconfigured. Shared settings live in `script/base/CMTATDeploymentBase.sol`.
+
+| Variable | Default | Applies to |
+| --- | --- | --- |
+| `CMTAT_NAME` | `CMTA Token` | all |
+| `CMTAT_SYMBOL` | `CMTAT` | all |
+| `CMTAT_DECIMALS` | `0` | all |
+| `CMTAT_TOKEN_ID` | `CMTAT_ISIN` | all |
+| `CMTAT_TERMS_NAME` / `CMTAT_TERMS_URI` / `CMTAT_TERMS_HASH` | example document | all |
+| `CMTAT_INFORMATION` | `CMTAT_info` | all |
+| `CMTAT_FORWARDER` | `address(0)` (meta-transactions off) | all |
+| `SANCTIONS_ORACLE` | `address(0)` | the two sanctions scripts |
+| `CMTAT_MAX_SUPPLY` | `1000000` | the max-total-supply script |
+
+> ⚠️ **An unset `SANCTIONS_ORACLE` fails open.** `RuleSanctionsList` is registered and reports no error,
+> and every transfer passes it until `setSanctionListOracle` is called. The oracle address is
+> chain-specific, so there is no safe default. Set it before the token goes live.
 
 ### Choosing a Rule Variant
 
@@ -1904,18 +1936,11 @@ AI-assisted static analysis was performed with [Wake Arena](https://getwake.io) 
 ## Development
 
 Parts of this project were written with the help of AI coding assistants, principally **Claude Code**
-(Anthropic) and **Codex** (OpenAI). They contributed to contract code, tests, and documentation.
-
-Everything they produced was reviewed before it landed, and the project's usual gates apply to it without
-exception: the full Foundry suite on both profiles, 100% line and branch coverage targets, the static-analysis
-passes recorded under [`doc/security/audits/tools/`](./doc/security/audits/tools/), and the threat model in
-[`THREAT_MODEL.md`](./THREAT_MODEL.md). Where an assistant's own reasoning turned out to be wrong, the
-correction is recorded next to the original claim rather than quietly replacing it; the code-quality review in
-[`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md`](./doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md)
-carries several such corrections, including two gas measurements that were overstated and one proposed fix that
-did not work.
-
-Responsibility for the code rests with the maintainers, not with the tools.
+(Anthropic) and **Codex** (OpenAI), covering contract code, tests, and documentation. Everything they
+produced was reviewed before it landed and is subject to the project's usual gates: the full test suite on
+both profiles, the static analysis under [`doc/security/audits/tools/`](./doc/security/audits/tools/), and
+the threat model in [`THREAT_MODEL.md`](./THREAT_MODEL.md). Responsibility for the code rests with the
+maintainers.
 
 ## Intellectual property
 
