@@ -184,13 +184,14 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
         returns (uint8)
     {
         ISanctionsList oracle = sanctionsList;
-        if (address(oracle) != address(0)) {
-            if (oracle.isSanctioned(spender)) {
-                return CODE_ADDRESS_SPENDER_IS_SANCTIONED;
-            }
-            return _detectTransferRestriction(from, to, value);
+        // The oracle guard scopes ONLY the spender check; the delegation below is unconditional, as
+        // in every sibling rule. Nesting the delegation inside the guard -- as this function used to
+        // -- silently drops any check in {_detectTransferRestriction} that does not depend on the
+        // oracle, including one added by a subclass overriding that hook.
+        if (address(oracle) != address(0) && oracle.isSanctioned(spender)) {
+            return CODE_ADDRESS_SPENDER_IS_SANCTIONED;
         }
-        return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        return _detectTransferRestriction(from, to, value);
     }
 
     /**

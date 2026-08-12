@@ -37,7 +37,9 @@ contract ConstructorEvents is Test, HelperContract {
     bytes32 private constant TOKEN_METADATA_UPDATED = keccak256("TokenMetadataUpdated(address,uint8)");
     bytes32 private constant MAX_STALENESS_UPDATED = keccak256("MaxStalenessSecondsUpdated(uint256)");
 
-    /** @dev Number of recorded logs whose `topic0` matches `sig`. */
+    /**
+     * @dev Number of recorded logs whose `topic0` matches `sig`.
+     */
     function _count(Vm.Log[] memory logs, bytes32 sig) internal pure returns (uint256 n) {
         for (uint256 i = 0; i < logs.length; ++i) {
             if (logs[i].topics.length != 0 && logs[i].topics[0] == sig) {
@@ -46,7 +48,9 @@ contract ConstructorEvents is Test, HelperContract {
         }
     }
 
-    /** @dev The single log matching `sig`; reverts the test if there is not exactly one. */
+    /**
+     * @dev The single log matching `sig`; reverts the test if there is not exactly one.
+     */
     function _only(Vm.Log[] memory logs, bytes32 sig) internal pure returns (Vm.Log memory found) {
         uint256 seen;
         for (uint256 i = 0; i < logs.length; ++i) {

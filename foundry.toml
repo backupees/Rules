@@ -26,6 +26,16 @@ evm_version = 'prague'
 # cleared here or this profile would skip the very tests it exists to run.
 skip = []
 match_path = 'test/ERC3643Real/*'
+# ERC-3643 imports `@onchain-id/solidity`, an npm package rather than a submodule, so it is not
+# vendored. `test/utils/onchainid/` holds minimal IIdentity / IClaimIssuer stubs, wired in by a
+# CONTEXT-SCOPED remapping (the `lib/ERC-3643/:` prefix) so they apply to the ERC-3643 build only.
+#
+# It lives here rather than in `remappings.txt` on purpose. `forge remappings` prints that file for
+# every profile, and `hardhat-foundry` runs exactly that command and rejects any line containing a
+# `:` with "remapping contexts are not allowed" -- which broke `npx hardhat test` in CI. Declared as
+# profile config it is applied only when this profile is selected, so the default profile Hardhat
+# sees stays context-free. Do not move it back.
+remappings = ['lib/ERC-3643/:@onchain-id/solidity/contracts/=test/utils/onchainid/']
 
 [invariant]
 runs = 64
