@@ -93,7 +93,8 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
      */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override returns (bool) {
         return restrictionCode == CODE_RESERVES_EXCEEDED || restrictionCode == CODE_RESERVES_FEED_STALE
-            || restrictionCode == CODE_RESERVES_ANSWER_INVALID || restrictionCode == CODE_TOTAL_SUPPLY_UNAVAILABLE;
+            || restrictionCode == CODE_RESERVES_ANSWER_INVALID || restrictionCode == CODE_RESERVES_FEED_UNAVAILABLE
+            || restrictionCode == CODE_TOTAL_SUPPLY_UNAVAILABLE;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -182,6 +183,8 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             return TEXT_RESERVES_FEED_STALE;
         } else if (restrictionCode == CODE_RESERVES_ANSWER_INVALID) {
             return TEXT_RESERVES_ANSWER_INVALID;
+        } else if (restrictionCode == CODE_RESERVES_FEED_UNAVAILABLE) {
+            return TEXT_RESERVES_FEED_UNAVAILABLE;
         } else if (restrictionCode == CODE_TOTAL_SUPPLY_UNAVAILABLE) {
             return TEXT_TOTAL_SUPPLY_UNAVAILABLE;
         }
@@ -287,12 +290,12 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         try feed.decimals() returns (uint8 decimals_) {
             currentFeedDecimals = decimals_;
         } catch {
-            return (CODE_RESERVES_ANSWER_INVALID, 0);
+            return (CODE_RESERVES_FEED_UNAVAILABLE, 0);
         }
         // Re-checked at read time, not just at configuration: a feed that raised its decimals past
         // the bound would otherwise overflow the scaling exponent and revert this view.
         if (currentFeedDecimals > MAX_FEED_DECIMALS) {
-            return (CODE_RESERVES_ANSWER_INVALID, 0);
+            return (CODE_RESERVES_FEED_UNAVAILABLE, 0);
         }
         try feed.latestRoundData() returns (uint80, int256 answer, uint256, uint256 updatedAt, uint80) {
             // A negative reserve is meaningless and `updatedAt == 0` marks a round that never completed.
@@ -308,7 +311,7 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
             uint256 backed = _scaleReserve(uint256(answer), currentFeedDecimals);
             return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), backed);
         } catch {
-            return (CODE_RESERVES_ANSWER_INVALID, 0);
+            return (CODE_RESERVES_FEED_UNAVAILABLE, 0);
         }
     }
 

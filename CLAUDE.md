@@ -128,7 +128,7 @@ types appear as parameters or event fields, which canonicalise to `address` and 
 | RuleERC2980 | 60–63, 64 (mint not allowed), 65 (burn not allowed) |
 | RuleSpenderWhitelist | 66 |
 | RuleMintAllowance | 70 |
-| RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (feed answer invalid), 78 (total supply unavailable) |
+| RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (answer returned but unusable), 78 (total supply unavailable), 79 (feed unreadable) |
 | RuleReceiverWhitelist | 81 |
 
 ## Conventions

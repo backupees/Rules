@@ -293,7 +293,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         feed.setRevertOnLatestRoundData(true);
         token.setTotalSupply(0);
         resUint8 = rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1);
-        assertEq(resUint8, CODE_RESERVES_ANSWER_INVALID);
+        assertEq(resUint8, CODE_RESERVES_FEED_UNAVAILABLE);
     }
 
     function testDetectRestriction_ZeroReserveBlocksAnyMint() public {
@@ -440,9 +440,9 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         token.setTotalSupply(0);
 
         (uint8 code, uint256 backedSupply) = rule.maxBackedSupply();
-        assertEq(code, CODE_RESERVES_ANSWER_INVALID);
+        assertEq(code, CODE_RESERVES_FEED_UNAVAILABLE);
         assertEq(backedSupply, 0);
-        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_FEED_UNAVAILABLE);
     }
 
     /**
@@ -455,8 +455,8 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         token.setTotalSupply(0);
 
         (uint8 code,) = rule.maxBackedSupply();
-        assertEq(code, CODE_RESERVES_ANSWER_INVALID);
-        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+        assertEq(code, CODE_RESERVES_FEED_UNAVAILABLE);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_FEED_UNAVAILABLE);
     }
 
     /**
@@ -465,7 +465,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
     function testLiveDecimals_MaxUint8DecimalsBlockMintWithoutReverting() public {
         feed.setDecimals(type(uint8).max);
         token.setTotalSupply(0);
-        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_FEED_UNAVAILABLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -512,7 +512,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
     function testMaxBackedSupply_ReportsFeedFailure() public {
         feed.setRevertOnLatestRoundData(true);
         (uint8 code, uint256 backedSupply) = rule.maxBackedSupply();
-        assertEq(code, CODE_RESERVES_ANSWER_INVALID);
+        assertEq(code, CODE_RESERVES_FEED_UNAVAILABLE);
         assertEq(backedSupply, 0);
     }
 
@@ -565,6 +565,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_EXCEEDED));
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_FEED_STALE));
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_ANSWER_INVALID));
+        assertTrue(rule.canReturnTransferRestrictionCode(CODE_RESERVES_FEED_UNAVAILABLE));
         assertTrue(rule.canReturnTransferRestrictionCode(CODE_TOTAL_SUPPLY_UNAVAILABLE));
         assertFalse(rule.canReturnTransferRestrictionCode(CODE_NONEXISTENT));
     }
@@ -573,6 +574,7 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_EXCEEDED), TEXT_RESERVES_EXCEEDED);
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_FEED_STALE), TEXT_RESERVES_FEED_STALE);
         assertEq(rule.messageForTransferRestriction(CODE_RESERVES_ANSWER_INVALID), TEXT_RESERVES_ANSWER_INVALID);
+        assertEq(rule.messageForTransferRestriction(CODE_RESERVES_FEED_UNAVAILABLE), TEXT_RESERVES_FEED_UNAVAILABLE);
         assertEq(rule.messageForTransferRestriction(CODE_TOTAL_SUPPLY_UNAVAILABLE), TEXT_TOTAL_SUPPLY_UNAVAILABLE);
         assertEq(rule.messageForTransferRestriction(CODE_NONEXISTENT), TEXT_CODE_NOT_FOUND);
     }
@@ -616,6 +618,30 @@ contract RuleChainlinkPoRUnit is Test, HelperContract {
         assertEq(code, TRANSFER_OK);
         bool exceeds = currentSupply > backedSupply || value > backedSupply - currentSupply;
         assertEq(resUint8, exceeds ? CODE_RESERVES_EXCEEDED : TRANSFER_OK);
+    }
+
+    /**
+     * @notice The two feed-failure codes are deliberately distinct. `79` means no usable response
+     *         could be obtained at all; `77` means a round WAS returned and its contents are
+     *         unusable. Both block the mint, but they tell an operator different things: check feed
+     *         liveness versus check that the configured address is really a PoR feed.
+     */
+    function testFeedFailureCodesDistinguishUnreachableFromUnusableAnswer() public {
+        token.setTotalSupply(0);
+
+        // No usable response -> 79.
+        feed.setRevertOnLatestRoundData(true);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_FEED_UNAVAILABLE);
+        feed.setRevertOnLatestRoundData(false);
+
+        // A response arrived, but the answer is unusable -> 77.
+        feed.setAnswer(-1);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
+
+        // Same for an incomplete round.
+        feed.setAnswer(RESERVE_1000);
+        feed.setUpdatedAt(0);
+        assertEq(rule.detectTransferRestriction(ZERO_ADDRESS, ADDRESS1, 1), CODE_RESERVES_ANSWER_INVALID);
     }
 }
 

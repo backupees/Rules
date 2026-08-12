@@ -96,7 +96,8 @@ Setting the threshold to `0` disables the check — the rule then accepts reserv
 | --- | --- | --- |
 | `CODE_RESERVES_EXCEEDED` | 75 | `totalSupply + value` would exceed the backed supply |
 | `CODE_RESERVES_FEED_STALE` | 76 | The feed has not been updated within `maxStalenessSeconds` |
-| `CODE_RESERVES_ANSWER_INVALID` | 77 | The feed has no code, its `decimals()` or `latestRoundData()` reverted, it reports more than `MAX_FEED_DECIMALS`, returned a negative answer, or reported an incomplete round (`updatedAt == 0`) |
+| `CODE_RESERVES_ANSWER_INVALID` | 77 | A round **was** returned but cannot be used: a negative reserve, or an incomplete round (`updatedAt == 0`) |
+| `CODE_RESERVES_FEED_UNAVAILABLE` | 79 | **No usable response** could be obtained: `decimals()` or `latestRoundData()` reverted, or the feed reports more than `MAX_FEED_DECIMALS` |
 | `CODE_TOTAL_SUPPLY_UNAVAILABLE` | 78 | `tokenContract.totalSupply()` reverted, or the token has lost its code |
 
 ## Access Control
@@ -139,11 +140,12 @@ Forwards the feed's current `decimals()`, so it always agrees with what the rest
 For a mint (`from == address(0)`):
 
 1. Read `decimals()` and then `latestRoundData()` from `reservesFeed`.
-2. Reject with `CODE_RESERVES_ANSWER_INVALID` if the feed has no code, either call reverts, the feed reports more than `MAX_FEED_DECIMALS`, `answer < 0`, or `updatedAt == 0`.
-3. Reject with `CODE_RESERVES_FEED_STALE` if `maxStalenessSeconds != 0` and `block.timestamp - updatedAt > maxStalenessSeconds`.
-4. Scale the answer from the feed's live decimals to `tokenDecimals` to obtain `backedSupply`.
-5. Read `tokenContract.totalSupply()`; reject with `CODE_TOTAL_SUPPLY_UNAVAILABLE` if it reverts or the token has lost its code.
-6. Reject with `CODE_RESERVES_EXCEEDED` if `totalSupply + value > backedSupply`.
+2. Reject with `CODE_RESERVES_FEED_UNAVAILABLE` if either call reverts or the feed reports more than `MAX_FEED_DECIMALS` — there is no answer to judge.
+3. Reject with `CODE_RESERVES_ANSWER_INVALID` if a round was returned but `answer < 0` or `updatedAt == 0`.
+4. Reject with `CODE_RESERVES_FEED_STALE` if `maxStalenessSeconds != 0` and `block.timestamp - updatedAt > maxStalenessSeconds`.
+5. Scale the answer from the feed's live decimals to `tokenDecimals` to obtain `backedSupply`.
+6. Read `tokenContract.totalSupply()`; reject with `CODE_TOTAL_SUPPLY_UNAVAILABLE` if it reverts or the token has lost its code.
+7. Reject with `CODE_RESERVES_EXCEEDED` if `totalSupply + value > backedSupply`.
 
 Anything else returns `TRANSFER_OK`. `detectTransferRestrictionFrom` delegates to the same logic and **ignores the spender**: this rule caps supply, it does not screen the minter.
 
@@ -157,6 +159,20 @@ Anything else returns `TRANSFER_OK`. `detectTransferRestrictionFrom` delegates t
 - bounds `tokenDecimals` at 18 at configuration time, so the scale-up factor is at most `10 ** 18`;
 - compares against the remaining headroom (`value > backedSupply - currentSupply`) instead of computing `currentSupply + value`, which could overflow;
 - wraps `tokenContract.totalSupply()` in `try/catch`, yielding code `78` instead of reverting.
+
+#### Why two feed-failure codes
+
+`79` and `77` both block the mint, so the *token* behaves identically. They are separated because they tell an
+operator different things, and the restriction code is the only channel available — the read path cannot revert
+with data, and a view cannot emit an event.
+
+| Code | Meaning | What an operator checks |
+| --- | --- | --- |
+| `79` | The feed could not be read at all | Feed liveness; is the configured address a compatible `AggregatorV3Interface`? |
+| `77` | A round came back and its contents are unusable | Is this really a Proof of Reserve feed (a price feed can legitimately go negative)? Or wait for the round to complete. |
+
+`80` is left reserved. Splitting `79` further — "reverted" versus "decimals out of range" — was considered and
+rejected: both mean the configured feed cannot be used, so the remedy is the same.
 
 #### Deployment precondition: EIP-6780 (Cancun or later)
 

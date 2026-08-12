@@ -196,7 +196,8 @@ Here is the list of codes used by the different rules
 |                              | CODE_RESERVES_FEED_STALE             | 76    |
 |                              | CODE_RESERVES_ANSWER_INVALID         | 77    |
 |                              | CODE_TOTAL_SUPPLY_UNAVAILABLE        | 78    |
-|                              | Reserved slot                        | 79-80 |
+|                              | CODE_RESERVES_FEED_UNAVAILABLE       | 79    |
+|                              | Reserved slot                        | 80    |
 | RuleReceiverWhitelist        | CODE_ADDRESS_RECEIVER_NOT_WHITELISTED | 81   |
 |                              | Reserved slot                        | 82-84 |
 
@@ -466,7 +467,7 @@ Validation (read-only) rules have no binding requirement: they hold no per-trans
 
 - `RuleChainlinkPoR`: trusts the configured `tokenContract` to report an **accurate** `totalSupply()`, but not to stay callable — a reverting or codeless token yields code 78 instead of breaking the MUST-NOT-revert views. Configuration rejects a non-contract token and probes that `totalSupply()` is callable.
 - `RuleChainlinkPoR`: the feed's `decimals()` is read **live on every check**, never cached. Caching would save ~2,900 gas per mint but a feed that changed its decimals would then be mis-scaled by `10 ** delta` with no on-chain signal, overstating reserves and authorising unbacked minting. See [the rationale](./doc/technical/RuleChainlinkPoR.md#why-the-decimals-are-read-live-and-what-it-costs).
-- `RuleChainlinkPoR`: a broken, reverting, negative-answer, over-precision or stale feed blocks **mints only** (codes 77 / 76). Transfers and burns short-circuit before any feed access, so a lapsed feed never traps holders and costs them nothing.
+- `RuleChainlinkPoR`: feed problems block **mints only**, reported by kind — `79` when no usable response could be obtained (`decimals()` / `latestRoundData()` reverted, or decimals above the bound), `77` when a round was returned but is unusable (negative reserve, incomplete round), `76` when the answer is stale. Transfers and burns short-circuit before any feed access, so a lapsed feed never traps holders and costs them nothing.
 - `RuleChainlinkPoR`: **one instance protects exactly one token, and nothing on-chain enforces that.** The rule always reads `totalSupply()` from the configured `tokenContract`, never from whichever token triggered the check — it cannot learn that identity, since behind a RuleEngine the caller is the engine and the callback carries no token address. Adding one instance to two RuleEngines therefore evaluates *both* tokens against the first token's supply and feed, which can silently over-mint the second one or freeze it, with no revert or event to signal it. Deploy one instance per protected token. `RuleMaxTotalSupply` has the same exposure. See [One instance per protected token](./doc/technical/RuleChainlinkPoR.md#one-instance-per-protected-token).
 - `RuleChainlinkPoR`: the feed cannot be cleared and cannot be the zero address; disable the rule by removing it from the RuleEngine or token.
 - `RuleChainlinkPoR`: set `maxStalenessSeconds` from the feed's **heartbeat**; `0` disables the staleness check entirely.
@@ -670,7 +671,7 @@ The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link
 - **Limit = reserves, exactly** — no margin, buffer or headroom parameter. For a safety cushion, report conservative reserves on the feed or compose with `RuleMaxTotalSupply`.
 - **Staleness threshold** — `maxStalenessSeconds` rejects mints when the feed has not been updated recently; pick it from the feed's heartbeat. `0` disables the check.
 - **Mints only** — transfers and burns always pass, including while the feed is stale or unavailable, so a lapsed feed never traps holders.
-- **Views never revert** — a feed with no code, a reverting call, a negative answer or an incomplete round returns code 77; a stale feed returns code 76; a token whose `totalSupply()` reverts returns code 78.
+- **Views never revert** — an unreadable feed returns code 79, an unusable answer 77, a stale feed 76, and a token whose `totalSupply()` reverts 78.
 
 Use `maxBackedSupply()` to preview the current limit without simulating a mint.
 
@@ -1747,6 +1748,32 @@ Proofs live in [`test/ThreatModel/ThreatModelTests.t.sol`](./test/ThreatModel/Th
 ### Automated Analysis
 
 See the consolidated [Audit & Security-Analysis Overview](./doc/security/audits/AUDIT_OVERVIEW.md) for the full index and triage. Latest tool outputs (including feedback documents) are in [`doc/security/audits/tools/v0.4.0/`](./doc/security/audits/tools/v0.4.0/).
+
+#### Static analysis (v0.5.0)
+
+Re-run **2026-08-11** for the v0.5.0 release. Full reports and per-finding triage in
+[`doc/security/audits/tools/v0.5.0/`](./doc/security/audits/tools/v0.5.0/); consolidated view in
+[`AUDIT_OVERVIEW.md`](./doc/security/audits/AUDIT_OVERVIEW.md).
+
+| Tool | High | Medium | Low | Info | Anything to fix? |
+|---|---|---|---|---|---|
+| [Slither](https://github.com/crytic/slither) 0.11.5 | 2 | 11 | 17 | 16 | **No** — [feedback](./doc/security/audits/tools/v0.5.0/slither-report-feedback.md) |
+| [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5 | 0 | 0 | 10 categories | 0 | **No** — [feedback](./doc/security/audits/tools/v0.5.0/aderyn-report-feedback.md) |
+
+**Nothing to fix.** Every increase over v0.4.0 is proportional to the three contracts this release adds; the two
+new Slither categories (`uninitialized-local`, `timestamp`) were each verified against the source and are a
+`try`/`catch` assignment pattern and the Proof-of-Reserve staleness check respectively.
+
+Commands used for `v0.5.0` (mocks excluded):
+
+```bash
+slither . --checklist --filter-paths "node_modules,lib,test,forge-std,mocks" \
+  > doc/security/audits/tools/v0.5.0/slither-report.md
+aderyn -x mocks --output doc/security/audits/tools/v0.5.0/aderyn-report.md
+```
+
+> The Slither filter must list **`lib`**: this is a Foundry project, so omitting it pulls the whole vendored
+> dependency tree into scope and inflates the result count roughly four-fold with OpenZeppelin-internal findings.
 
 Commands used for `v0.4.0` (mocks excluded):
 

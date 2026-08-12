@@ -34,9 +34,13 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
      */
     string constant TEXT_RESERVES_FEED_STALE = "Proof of reserve data is stale";
     /**
-     * @notice Restriction message returned when the feed answer is unusable.
+     * @notice Restriction message returned when the feed answered but the answer is unusable.
      */
     string constant TEXT_RESERVES_ANSWER_INVALID = "Proof of reserve answer is invalid";
+    /**
+     * @notice Restriction message returned when the feed could not be read at all.
+     */
+    string constant TEXT_RESERVES_FEED_UNAVAILABLE = "Proof of reserve feed is unavailable";
     /**
      * @notice Restriction message returned when the token's total supply cannot be read.
      */
@@ -54,8 +58,11 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
      */
     uint8 public constant CODE_RESERVES_FEED_STALE = 76;
     /**
-     * @notice Restriction code returned when the feed answer is negative, from an incomplete round,
-     * or the feed call reverts / has no code.
+     * @notice Restriction code returned when the feed responded but the answer cannot be used:
+     * a negative reserve, or an incomplete round (`updatedAt == 0`).
+     * @dev Distinct from {CODE_RESERVES_FEED_UNAVAILABLE}: here a round *was* returned, so the feed
+     * is reachable and the problem is the data. An operator seeing this checks whether the
+     * configured address is really a Proof of Reserve feed, or waits for the round to complete.
      */
     uint8 public constant CODE_RESERVES_ANSWER_INVALID = 77;
     /**
@@ -65,6 +72,14 @@ abstract contract RuleChainlinkPoRInvariantStorage is RuleSharedInvariantStorage
      * blocked rather than assumed safe.
      */
     uint8 public constant CODE_TOTAL_SUPPLY_UNAVAILABLE = 78;
+    /**
+     * @notice Restriction code returned when no usable response could be obtained from the feed at
+     * all: `decimals()` or `latestRoundData()` reverted, or the feed reports more than
+     * {MAX_FEED_DECIMALS}.
+     * @dev Distinct from {CODE_RESERVES_ANSWER_INVALID}: there is no answer to judge. An operator
+     * seeing this checks feed liveness and whether the address is a compatible aggregator.
+     */
+    uint8 public constant CODE_RESERVES_FEED_UNAVAILABLE = 79;
 
     /* ============ Events ============ */
 
