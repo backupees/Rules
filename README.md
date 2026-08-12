@@ -38,15 +38,12 @@ A rule answers two questions about a proposed token movement.
 
 Two integration topologies, and the choice determines what `msg.sender` is inside a rule:
 
-```
-Topology A -- RuleEngine (compose several rules)
-  CMTAT --transferred(spender,from,to,value)--> RuleEngine --transferred(...)--> Rule
-                                                              msg.sender == RuleEngine
+![The two integration topologies](./doc/schema/architecture-topologies.png)
 
-Topology B -- direct binding (a single rule)
-  CMTAT --transferred(spender,from,to,value)--> Rule
-                                                 msg.sender == CMTAT token
-```
+_Diagram source: [`doc/schema/architecture-topologies.puml`](./doc/schema/architecture-topologies.puml)._
+
+Behind a RuleEngine the engine returns the **first non-zero** restriction code, so rule order decides which
+code a rejection reports. In direct mode the rule is installed with `token.setRuleEngine(rule)`.
 
 This matters for **operation rules**, which keep state keyed on the caller. `RuleConditionalTransferLightMultiToken` is direct-binding only; `RuleMintAllowance` requires the engine path. Validation rules work under either.
 
