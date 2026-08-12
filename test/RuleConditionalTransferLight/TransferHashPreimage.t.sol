@@ -8,7 +8,7 @@ import {RuleConditionalTransferLightMultiToken} from "src/rules/operation/RuleCo
 
 /**
  * @title TransferHashPreimage
- * @notice Pins the approval-key preimage documented on `_transferHash` (`FEEDBACK_12.md` F-4).
+ * @notice Pins the approval-key preimage documented on `_transferHash` (`CLAUDE_ANALYSIS.md` F-4).
  * @dev The key is a project-specific encoding — 32-byte words with each address LEFT-aligned and
  *      right-padded — which is neither `abi.encodePacked` nor `abi.encode`. Anyone deriving the
  *      storage slot off-chain (`eth_getStorageAt`, a state proof, an indexer reading storage rather

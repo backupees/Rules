@@ -15,7 +15,7 @@ import {
 /**
  * @title VirtualHookOverride
  * @notice Pins the `virtual` convention for functions that used to be non-`virtual`
- *         (`FEEDBACK_12.md` E-1 internal hooks, E-2 `canTransfer`, E-3 public mutating functions).
+ *         (`CLAUDE_ANALYSIS.md` E-1 internal hooks, E-2 `canTransfer`, E-3 public mutating functions).
  * @dev Two layers of protection. Compiling `VirtualHookOverrideHarnesses.sol` at all proves the
  *      functions are overridable -- removing `virtual` breaks the build. The assertions below prove
  *      the overrides are actually *reached*, which a compile-only check would not.
@@ -82,7 +82,7 @@ contract VirtualHookOverride is Test, HelperContract {
 
     /**
      * @notice `canTransfer` was the only non-`virtual` view in `RuleTransferValidation`, and its
-     *         ERC-7943 twin the only one in `RuleNFTAdapter` (`FEEDBACK_12.md` E-2).
+     *         ERC-7943 twin the only one in `RuleNFTAdapter` (`CLAUDE_ANALYSIS.md` E-2).
      * @dev The harness makes both overloads return `false` unconditionally, contradicting
      *      `detectTransferRestriction`. If the override were not in effect the inherited
      *      implementation would delegate to the restriction hook and return `true` here, so this

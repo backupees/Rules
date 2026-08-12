@@ -162,6 +162,7 @@ sees stay context-free. Hardhat compiles only `src/` (Foundry's `src`), so it ne
 - [`THREAT_MODEL.md`](THREAT_MODEL.md) — trust model, 30 catalogued threats with IDs, data-flow diagrams, 12 invariants.
 - [`RESULT.md`](RESULT.md) — findings (0 High/Medium, 2 Low, 8 Info), invariant and access-control verification, disposition of every threat ID.
 - [`TEST_IMPROVEMENT.md`](TEST_IMPROVEMENT.md) — test-gap analysis and the deferred test backlog.
+- [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md) — code-quality review (duplication, missing events, gas, `virtual` convention, behaviour at odds with the library's purpose). 28 findings with the disposition and commit for each, including two whose gas claims were wrong and one whose proposed remedy did not work. Source comments cite it by bare filename, `CLAUDE_ANALYSIS.md`, so the path can move.
 - [`test/ThreatModel/ThreatModelTests.t.sol`](test/ThreatModel/ThreatModelTests.t.sol) — 18 PoCs. Tests suffixed `_CurrentBehaviour` assert behaviour the audit considers wrong; **fixing the underlying issue must make them fail**, at which point update the test and the finding together.
 
 Gotchas worth knowing before you change anything:

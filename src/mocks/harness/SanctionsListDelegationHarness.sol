@@ -8,7 +8,7 @@ import {RuleSanctionsList} from "../../rules/validation/deployment/RuleSanctions
 /**
  * @title SanctionsListExtraCheckHarness
  * @notice A subclass that adds a screening check which does NOT depend on the sanctions oracle
- *         (`FEEDBACK_12.md` F-2).
+ *         (`CLAUDE_ANALYSIS.md` F-2).
  * @dev This is the shape that exposes the defect. `_detectTransferRestrictionFrom` used to nest its
  *      delegation to {_detectTransferRestriction} inside the `oracle != address(0)` branch, so with
  *      no oracle configured the `transferFrom` path returned `TRANSFER_OK` without ever calling the

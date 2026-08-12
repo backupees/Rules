@@ -10,7 +10,7 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
  * @dev The two rules answer different questions -- a static ceiling versus a Chainlink Proof of
  * Reserve figure -- but they share one concern exactly: *read `totalSupply()` from a foreign contract
  * on a path that MUST NOT revert*. That concern was implemented twice, byte for byte, along with the
- * reasoning behind it (`FEEDBACK_12.md` D-2).
+ * reasoning behind it (`CLAUDE_ANALYSIS.md` D-2).
  *
  * ## Why the token is a hook rather than state here
  * This contract declares **no storage**. Each rule keeps its own `tokenContract` variable and

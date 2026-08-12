@@ -17,7 +17,7 @@ import {RuleWhitelistWrapper} from "src/rules/validation/deployment/RuleWhitelis
  * @title ConstructorEvents
  * @notice Every configuration value assigned at deployment must be announced, so a rule that is
  *         configured once and never touched can still be reconstructed from events alone
- *         (`FEEDBACK_12.md` C-1, C-2, C-3).
+ *         (`CLAUDE_ANALYSIS.md` C-1, C-2, C-3).
  * @dev Matched on `topic0` rather than through `vm.expectEmit` so the assertions do not depend on
  *      event-declaration visibility, and so an event that is emitted the *wrong number of times* is
  *      caught as well as one that is missing. `RuleChainlinkPoR` is included although it was already

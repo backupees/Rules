@@ -510,7 +510,7 @@ contract ThreatModelTests is Test, HelperContract {
     /**
      * @notice MA-1, one level up: the hardcoded "allowed" is not confined to the rule. It propagates
      *         through the RuleEngine's aggregate and out to the token's own ERC-1404 views, which is
-     *         the API an integrator actually calls (`FEEDBACK_12.md` F-6).
+     *         the API an integrator actually calls (`CLAUDE_ANALYSIS.md` F-6).
      * @dev `RuleEngineBase._detectTransferRestriction` aggregates by calling each rule's 3-argument
      *      view and returning the first non-zero code; this rule always contributes `0`. CMTAT's
      *      `ValidationModuleERC1404` then forwards the token's views to the engine. The 4-argument
@@ -518,7 +518,7 @@ contract ThreatModelTests is Test, HelperContract {
      *
      *      `_CurrentBehaviour`: this asserts what the audit considers wrong. If the rule, the engine
      *      or CMTAT is ever changed to close the gap, this test must fail — at which point update it
-     *      together with `FEEDBACK_12.md` F-6, `RESULT.md` F-7 and the two documentation tables.
+     *      together with `CLAUDE_ANALYSIS.md` F-6, `RESULT.md` F-7 and the two documentation tables.
      */
     function test_MA1_EngineAndTokenInheritTheHardcodedAllowedView_CurrentBehaviour() public {
         cmtatDeployment = new CMTATDeployment();

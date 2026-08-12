@@ -10,7 +10,7 @@ import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
 /**
  * @title RuleSanctionsListDelegation
  * @notice The `transferFrom` path must always consult the direct restriction check, whether or not
- *         an oracle is configured (`FEEDBACK_12.md` F-2).
+ *         an oracle is configured (`CLAUDE_ANALYSIS.md` F-2).
  * @dev The subclass under test adds an oracle-independent check. With no oracle configured, the
  *      previous implementation returned `TRANSFER_OK` from `detectTransferRestrictionFrom` without
  *      ever reaching `_detectTransferRestriction`, so the subclass's check applied to `transfer` but

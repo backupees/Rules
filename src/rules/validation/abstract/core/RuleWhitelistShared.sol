@@ -169,7 +169,7 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
      * @dev The event lives here rather than at the call site so the constructors of the inheriting
      *      rules announce the initial value too, matching {_setAllowMintBurn}. Without it an indexer
      *      could reconstruct `allowMint` and `allowBurn` from genesis but had to special-case
-     *      `checkSpender` (`FEEDBACK_12.md` C-2).
+     *      `checkSpender` (`CLAUDE_ANALYSIS.md` C-2).
      * @param value New flag value.
      */
     function _setCheckSpender(bool value) internal virtual {

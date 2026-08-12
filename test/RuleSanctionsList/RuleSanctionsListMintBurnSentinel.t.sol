@@ -9,7 +9,7 @@ import {RuleSanctionsList, ISanctionsList} from "src/rules/validation/deployment
 /**
  * @title RuleSanctionsListMintBurnSentinel
  * @notice The zero address is the ERC-20 mint/burn sentinel and must never be sent to the oracle
- *         (`FEEDBACK_12.md` F-1).
+ *         (`CLAUDE_ANALYSIS.md` F-1).
  * @dev The oracle here sanctions `address(0)` itself -- a degenerate input a real oracle has never
  *      been asked about, and one it is free to answer either way. Before the fix the rule forwarded
  *      the sentinel to the oracle, so a `true` answer blocked EVERY mint and EVERY burn on every

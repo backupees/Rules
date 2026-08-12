@@ -9,7 +9,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  * @dev Extracted because the same two loops were written three times: once in
  * {RuleAddressSetInternal} and twice in `RuleERC2980Internal`, for its whitelist and its frozenlist.
  * The copies had already drifted -- only the `RuleAddressSetInternal` one was covered by a test for
- * the zero-address rejection (`FEEDBACK_12.md` D-1, F-5).
+ * the zero-address rejection (`CLAUDE_ANALYSIS.md` D-1, F-5).
  *
  * Only the two *loops* live here. `add` / `remove` / `contains` / `length` on a single address stay
  * in the inheriting contracts as one-line delegations to {EnumerableSet}: routing those through a

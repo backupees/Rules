@@ -11,7 +11,7 @@ import {RuleMaxTotalSupply} from "../../rules/validation/deployment/RuleMaxTotal
 /**
  * @title VirtualHookOverrideHarnesses
  * @notice Proves that the `virtual` convention actually holds for functions that were previously
- *         non-`virtual` and therefore impossible to override (`FEEDBACK_12.md` E-1, E-2, E-3).
+ *         non-`virtual` and therefore impossible to override (`CLAUDE_ANALYSIS.md` E-1, E-2, E-3).
  * @dev These contracts exist to be compiled: dropping `virtual` from any function they override
  *      makes the whole project fail to build, which is the only way a convention with no runtime
  *      behaviour can be regression-tested. The accompanying tests additionally check that the
@@ -46,11 +46,11 @@ contract ConditionalTransferLightCustomExecutorHarness is RuleConditionalTransfe
     }
 
     /**
-     * @notice Counts calls that reached the overridden public entrypoints (`FEEDBACK_12.md` E-3).
+     * @notice Counts calls that reached the overridden public entrypoints (`CLAUDE_ANALYSIS.md` E-3).
      */
     uint256 public approveTransferOverrideCalls;
     /**
-     * @notice Counts calls that reached the overridden `transferred` hook (`FEEDBACK_12.md` E-3).
+     * @notice Counts calls that reached the overridden `transferred` hook (`CLAUDE_ANALYSIS.md` E-3).
      */
     uint256 public transferredOverrideCalls;
 
@@ -81,7 +81,7 @@ contract ConditionalTransferLightCustomExecutorHarness is RuleConditionalTransfe
 }
 
 /**
- * @notice Overrides a rule-configuration setter (`FEEDBACK_12.md` E-3).
+ * @notice Overrides a rule-configuration setter (`CLAUDE_ANALYSIS.md` E-3).
  * @dev `setMaxTotalSupply` was non-`virtual` while the equivalent setters on the sibling
  *      `RuleChainlinkPoR` were `virtual` -- the inconsistency E-3 calls out.
  */
@@ -110,7 +110,7 @@ contract MaxTotalSupplyCappedSetterHarness is RuleMaxTotalSupply {
 }
 
 /**
- * @notice Overrides an identity-registry configuration setter (`FEEDBACK_12.md` E-3).
+ * @notice Overrides an identity-registry configuration setter (`CLAUDE_ANALYSIS.md` E-3).
  */
 contract IdentityRegistryPinnedHarness is RuleIdentityRegistry {
     /**
@@ -131,7 +131,7 @@ contract IdentityRegistryPinnedHarness is RuleIdentityRegistry {
 }
 
 /**
- * @notice Overrides an ERC-2980 list write (`FEEDBACK_12.md` E-3).
+ * @notice Overrides an ERC-2980 list write (`CLAUDE_ANALYSIS.md` E-3).
  * @dev Representative of the eight near-identical list functions on `RuleERC2980Base`.
  */
 contract ERC2980SelfWhitelistBlockHarness is RuleERC2980 {
@@ -221,7 +221,7 @@ contract BlacklistQuarantineHarness is RuleBlacklist {
     }
 
     /**
-     * @notice Hard-denies the fungible `canTransfer` view (`FEEDBACK_12.md` E-2).
+     * @notice Hard-denies the fungible `canTransfer` view (`CLAUDE_ANALYSIS.md` E-2).
      * @dev Deliberately contradicts {detectTransferRestriction} so the test can prove the override is
      *      what answers, rather than the inherited implementation.
      */
@@ -233,7 +233,7 @@ contract BlacklistQuarantineHarness is RuleBlacklist {
     }
 
     /**
-     * @notice Hard-denies the ERC-7943 `canTransfer` overload (`FEEDBACK_12.md` E-2).
+     * @notice Hard-denies the ERC-7943 `canTransfer` overload (`CLAUDE_ANALYSIS.md` E-2).
      */
     function canTransfer(address from, address to, uint256 tokenId, uint256 amount)
         public
@@ -251,7 +251,7 @@ contract BlacklistQuarantineHarness is RuleBlacklist {
 
     /**
      * @notice Rejects listing the quarantined address, then defers to the base set write.
-     * @dev Representative of the four `RuleAddressSet` write functions (`FEEDBACK_12.md` E-3).
+     * @dev Representative of the four `RuleAddressSet` write functions (`CLAUDE_ANALYSIS.md` E-3).
      */
     function addAddress(address targetAddress) public virtual override {
         require(targetAddress != QUARANTINED, CannotListQuarantined());
