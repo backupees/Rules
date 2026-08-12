@@ -91,8 +91,14 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 - New `testDetectTransferRestrictionOkWhenAddressListedInSeveralChildRules` in `test/RuleWhitelist/WhitelistWrapper.t.sol`. Branch coverage of `RuleWhitelistWrapperBase.sol` stays at 100% (19/19) with the added condition.
 - New `testApproveTransfer_EmitsPostIncrementCount` (`test/RuleConditionalTransferLight/RuleConditionalTransferLightUnit.t.sol`) and `test_ApproveTransferEmitsPostIncrementCount` (`test/RuleConditionalTransferLightMultiToken/MultiTokenSurface.t.sol`). The approval-counter change is pure codegen with identical event data, but **no test asserted the `TransferApproved` payload at all** — the suites only checked `approvedCount()`. Both new tests approve the same transfer twice and require the event to report 1 then 2, so a pre-increment or uninitialised value would now fail.
 
+### Fixed
+
+- **CI now runs the ERC-3643 test suite.** `.github/workflows/test.yml` ran only `forge test`, which uses the default profile — and `test/ERC3643Real/**` is in that profile's `skip` list. The 18 tests built by `[profile.erc3643]`, including the parity suite that runs against the real vendored `Token.sol`, were therefore never executed in CI, despite `AGENTS.md` / `CLAUDE.md` stating that both commands are required. Added a `Run Forge tests (ERC-3643 profile)` step with a step-level `FOUNDRY_PROFILE: erc3643`, which overrides the workflow-level `ci` for that step only.
+- **CI: `npx hardhat test` no longer fails on the ERC-3643 remapping.** The context-scoped remapping `lib/ERC-3643/:@onchain-id/solidity/contracts/=test/utils/onchainid/` moved out of `remappings.txt` and into `remappings = [...]` under `[profile.erc3643]` in `foundry.toml`. `forge remappings` prints `remappings.txt` for every profile, and `hardhat-foundry` runs exactly that command and rejects any line containing a `:` — `HardhatFoundryError: Invalid remapping ..., remapping contexts are not allowed` — which aborted the workflow's last step. Declared as profile config the remapping applies only when that profile is selected, so the default and `ci` profiles Hardhat sees are context-free while `FOUNDRY_PROFILE=erc3643` still resolves the ONCHAINID stubs. No Solidity changed and no build output moved; `forge test` (691) and `FOUNDRY_PROFILE=erc3643 forge test` (18) are unaffected.
+
 ### Documentation
 
+- `CLAUDE.md` / `AGENTS.md`: the toolchain section now records **where** the ONCHAINID remapping is declared and why it must not go back into `remappings.txt`.
 - `doc/technical/RuleWhitelistWrapper.md`: the scan snippet in *Gas cost of the child-rule scan* now matches the implementation, with a note that the published cost table is a marginally conservative upper bound after the change.
 
 ## v0.5.0 - 2026-08-12

@@ -116,6 +116,13 @@ not vendored. `test/utils/onchainid/` holds minimal `IIdentity` / `IClaimIssuer`
 so they apply to the ERC-3643 build only. Only `keyHasPurpose` is ever called; everywhere else those
 types appear as parameters or event fields, which canonicalise to `address` and affect no selector.
 
+That remapping is declared as `remappings = [...]` inside `[profile.erc3643]` in `foundry.toml`, **not
+in `remappings.txt`** — and it must stay there. `forge remappings` prints `remappings.txt` for every
+profile; `hardhat-foundry` runs exactly that command and rejects any line containing a `:` with
+*"remapping contexts are not allowed"*, which breaks `npx hardhat test` (a CI step). As profile
+config it is applied only when that profile is selected, so the default and `ci` profiles Hardhat
+sees stay context-free. Hardhat compiles only `src/` (Foundry's `src`), so it never needs the stubs.
+
 ## Restriction Code Ranges
 | Rule | Codes |
 |---|---|
