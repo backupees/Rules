@@ -145,6 +145,23 @@ _Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 - `*InvariantStorage` contracts group constants, custom errors, and events.
 - `*Common` contracts provide shared helper logic across variants (legacy naming retained for compatibility).
 
+### Zero address in batch operations
+
+Every address-list rule (`RuleWhitelist`, `RuleReceiverWhitelist`, `RuleBlacklist`, `RuleSpenderWhitelist`, `RuleERC2980`) offers single and batch write functions. The two differ in exactly one way, and it is worth stating precisely because it is easy to assume otherwise:
+
+| Input | Single (`addAddress`) | Batch (`addAddresses`) |
+| --- | --- | --- |
+| New address | added | added |
+| Already listed | **reverts** | skipped, counted |
+| Not listed, on removal | **reverts** | skipped, counted |
+| `address(0)` | **reverts** | **reverts — the whole batch** |
+
+So "batch operations are non-reverting" holds for duplicates and missing entries only. `address(0)` is rejected on **every** add path.
+
+That is deliberate, not an oversight. The batch convention skips duplicates because a duplicate is an idempotent no-op that the emitted event still describes truthfully. Silently dropping `address(0)` would not be truthful: `AddAddresses` echoes the input array, so the event would name the zero address as a set member when it is not one, re-polluting the exact off-chain view the guard exists to keep clean. The zero address is the ERC-20 mint/burn sentinel, never a participant — mint and burn permission is governed by the `allowMint` / `allowBurn` flags, never by list membership.
+
+**Operationally:** an operator submitting a batch that happens to contain a zero entry — a truncated CSV column, an unset field in a spreadsheet export — loses the entire batch to a revert rather than having 999 of 1000 addresses applied. Filter the input before submitting.
+
 ### Directory Layout
 
 - `src/modules/`: reusable modules shared across rules (`AccessControlModuleStandalone`, `MetaTxModuleStandalone`, `VersionModule`).
@@ -639,7 +656,7 @@ Restriction codes:
 | `CODE_MINT_NOT_ALLOWED` | 64 | Minting is disabled (`allowMint == false`) |
 | `CODE_BURN_NOT_ALLOWED` | 65 | Burning is disabled (`allowBurn == false`) |
 
-**Deviation from spec**: the ERC-2980 `Whitelistable` / `Freezable` example interfaces define single-address management functions that return `bool` and do not revert on duplicates or missing entries. This implementation reverts on invalid single-item operations, consistent with the codebase convention. Batch operations remain non-reverting.
+**Deviation from spec**: the ERC-2980 `Whitelistable` / `Freezable` example interfaces define single-address management functions that return `bool` and do not revert on duplicates or missing entries. This implementation reverts on invalid single-item operations, consistent with the codebase convention. Batch operations remain non-reverting **for duplicates and missing entries**, which are skipped — but **`address(0)` reverts the whole batch**, as it does on every add path in the library (see [Zero address in batch operations](#zero-address-in-batch-operations)).
 
 **Usage scenario**
 

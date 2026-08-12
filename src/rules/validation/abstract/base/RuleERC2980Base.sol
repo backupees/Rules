@@ -103,7 +103,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Adds multiple addresses to the whitelist.
-     * @dev Does not revert if an address is already listed.
+     * @dev Does not revert if an address is already listed; duplicates are skipped. REVERTS on
+     *      `address(0)`, rejecting the whole batch -- see {addWhitelistAddress}.
      * @param targetAddresses Addresses to add to the whitelist.
      */
     function addWhitelistAddresses(address[] calldata targetAddresses) public virtual onlyWhitelistAdd {
@@ -158,7 +159,8 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Adds multiple addresses to the frozenlist.
-     * @dev Does not revert if an address is already listed.
+     * @dev Does not revert if an address is already listed; duplicates are skipped. REVERTS on
+     *      `address(0)`, rejecting the whole batch -- see {addFrozenlistAddress}.
      * @param targetAddresses Addresses to add to the frozenlist.
      */
     function addFrozenlistAddresses(address[] calldata targetAddresses) public virtual onlyFrozenlistAdd {

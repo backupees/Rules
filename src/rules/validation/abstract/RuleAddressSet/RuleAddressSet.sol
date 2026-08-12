@@ -56,7 +56,10 @@ abstract contract RuleAddressSet is
     /**
      * @notice Adds multiple addresses to the set.
      * @dev
-     * - Does not revert if an address is already listed.
+     * - Does not revert if an address is already listed; duplicates are skipped.
+     * - REVERTS on `address(0)`, rejecting the WHOLE batch. The mint/burn sentinel is never a list
+     *   member, and skipping it would make the {AddAddresses} event -- which echoes the input array
+     *   -- name it as one. Filter the input before submitting a large batch.
      * - Accessible only by accounts with the `ADDRESS_LIST_ADD_ROLE`.
      * @param targetAddresses Array of addresses to be added.
      */

@@ -34,6 +34,7 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
      * @dev
      * - Does not revert if an address is already listed.
      * - Skips existing entries silently.
+     * - REVERTS on `address(0)`, rejecting the whole batch; see the inline comment below.
      * @param addressesToAdd The array of addresses to add.
      * @return added The number of newly added addresses.
      * @return skipped The number of addresses that were already listed.

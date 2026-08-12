@@ -37,6 +37,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
 
     /**
      * @notice Adds multiple addresses to the whitelist, skipping any already present.
+     * @dev REVERTS on `address(0)`, rejecting the whole batch; see the inline comment below.
      * @param addressesToAdd Addresses to add to the whitelist.
      * @return added Number of addresses newly added.
      * @return skipped Number of addresses that were already whitelisted.
@@ -100,6 +101,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
 
     /**
      * @notice Adds multiple addresses to the frozenlist, skipping any already present.
+     * @dev REVERTS on `address(0)`, rejecting the whole batch; see the inline comment below.
      * @param addressesToAdd Addresses to add to the frozenlist.
      * @return added Number of addresses newly added.
      * @return skipped Number of addresses that were already frozen.
