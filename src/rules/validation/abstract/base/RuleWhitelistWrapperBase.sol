@@ -37,7 +37,7 @@ abstract contract RuleWhitelistWrapperBase is
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         MetaTxModuleStandalone(forwarderIrrevocable)
     {
-        checkSpender = checkSpender_;
+        _setCheckSpender(checkSpender_);
         _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
@@ -64,7 +64,6 @@ abstract contract RuleWhitelistWrapperBase is
      */
     function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
         _setCheckSpender(value);
-        emit CheckSpenderUpdated(value);
     }
 
     /**
@@ -92,11 +91,14 @@ abstract contract RuleWhitelistWrapperBase is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Internal helper to update the `checkSpender` flag.
+     * @notice Internal helper to update the `checkSpender` flag and emit {CheckSpenderUpdated}.
+     * @dev The event lives here rather than at the call site so the constructor announces the
+     *      initial value too, matching {_setAllowMintBurn}. See {RuleWhitelistBase}.
      * @param value New flag value.
      */
     function _setCheckSpender(bool value) internal virtual {
         checkSpender = value;
+        emit CheckSpenderUpdated(value);
     }
 
     /**

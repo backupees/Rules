@@ -32,7 +32,7 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleAddressSet(forwarderIrrevocable)
     {
-        checkSpender = checkSpender_;
+        _setCheckSpender(checkSpender_);
         _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
@@ -47,7 +47,6 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
      */
     function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
         _setCheckSpender(value);
-        emit CheckSpenderUpdated(value);
     }
 
     /**
@@ -87,11 +86,15 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Internal helper to update the `checkSpender` flag.
+     * @notice Internal helper to update the `checkSpender` flag and emit {CheckSpenderUpdated}.
+     * @dev The event lives here rather than at the call site so the constructor announces the
+     *      initial value too, matching {_setAllowMintBurn}. Without it an indexer could reconstruct
+     *      `allowMint` and `allowBurn` from genesis but had to special-case `checkSpender`.
      * @param value New flag value.
      */
     function _setCheckSpender(bool value) internal virtual {
         checkSpender = value;
+        emit CheckSpenderUpdated(value);
     }
 
     /**

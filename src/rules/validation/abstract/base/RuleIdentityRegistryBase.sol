@@ -61,8 +61,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
      * @param checkSpender_ When true, also verify the spender on `transferFrom` (STRICTER than ERC-3643).
      */
     constructor(address identityRegistry_, bool checkSender_, bool checkSpender_) {
+        // Every value actually assigned here is announced, so the deployed configuration can be
+        // reconstructed from events alone. The registry is only assigned when non-zero -- a zero
+        // argument leaves the default untouched, so there is nothing to report, matching
+        // {RuleSanctionsListBase}'s constructor.
         if (identityRegistry_ != address(0)) {
             identityRegistry = IIdentityRegistryVerified(identityRegistry_);
+            emit IdentityRegistryUpdated(identityRegistry_);
         }
         checkSender = checkSender_;
         checkSpender = checkSpender_;

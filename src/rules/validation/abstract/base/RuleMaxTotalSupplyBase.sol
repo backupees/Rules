@@ -30,13 +30,16 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
 
     /**
      * @notice Initializes the rule with the token to observe and the supply cap.
+     * @dev Routes through the same internal setters the public API uses, so the initial
+     * configuration is announced by {TokenContractUpdated} and {MaxTotalSupplyUpdated} exactly like
+     * every later change. A cap that is set once at deployment and never touched would otherwise
+     * have no on-chain event trail at all.
      * @param tokenContract_ Address of the token whose `totalSupply` is checked; must not be the zero address.
      * @param maxTotalSupply_ Maximum total supply allowed.
      */
     constructor(address tokenContract_, uint256 maxTotalSupply_) {
-        _validateTokenContract(tokenContract_);
-        tokenContract = ITotalSupply(tokenContract_);
-        maxTotalSupply = maxTotalSupply_;
+        _setTokenContract(tokenContract_);
+        _setMaxTotalSupply(maxTotalSupply_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -61,8 +64,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @param newMaxTotalSupply New maximum total supply value.
      */
     function setMaxTotalSupply(uint256 newMaxTotalSupply) public virtual onlyMaxTotalSupplyManager {
-        maxTotalSupply = newMaxTotalSupply;
-        emit MaxTotalSupplyUpdated(newMaxTotalSupply);
+        _setMaxTotalSupply(newMaxTotalSupply);
     }
 
     /**
@@ -70,9 +72,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @param newTokenContract New token contract address; must not be the zero address.
      */
     function setTokenContract(address newTokenContract) public virtual onlyMaxTotalSupplyManager {
-        _validateTokenContract(newTokenContract);
-        tokenContract = ITotalSupply(newTokenContract);
-        emit TokenContractUpdated(newTokenContract);
+        _setTokenContract(newTokenContract);
     }
 
     /**
@@ -123,6 +123,28 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Stores the supply cap and emits {MaxTotalSupplyUpdated}.
+     * @dev Shared by the constructor and {setMaxTotalSupply} so the event is emitted on every
+     * assignment, including the initial one.
+     * @param newMaxTotalSupply The new maximum total supply.
+     */
+    function _setMaxTotalSupply(uint256 newMaxTotalSupply) internal virtual {
+        maxTotalSupply = newMaxTotalSupply;
+        emit MaxTotalSupplyUpdated(newMaxTotalSupply);
+    }
+
+    /**
+     * @notice Validates and stores the observed token and emits {TokenContractUpdated}.
+     * @dev Shared by the constructor and {setTokenContract}; see {_setMaxTotalSupply}.
+     * @param newTokenContract The new token contract.
+     */
+    function _setTokenContract(address newTokenContract) internal virtual {
+        _validateTokenContract(newTokenContract);
+        tokenContract = ITotalSupply(newTokenContract);
+        emit TokenContractUpdated(newTokenContract);
+    }
 
     /**
      * @notice Validates a candidate token contract before it is stored.
