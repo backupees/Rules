@@ -143,13 +143,41 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
 
     /**
      * @notice Computes the storage key identifying a (from, to, value) transfer.
+     * @dev The preimage is a project-specific encoding: **96 bytes, three words, each address
+     * LEFT-aligned and right-padded with 12 zero bytes.**
+     *
+     * ```
+     * word 0 : from  (20 bytes) || 0x00 x 12
+     * word 1 : to    (20 bytes) || 0x00 x 12
+     * word 2 : value (32 bytes, big-endian)
+     * ```
+     *
+     * WARNING: this is NEITHER `abi.encodePacked` NOR `abi.encode`. `abi.encodePacked(from, to,
+     * value)` is 72 bytes with no padding; `abi.encode(from, to, value)` is 96 bytes with the
+     * addresses RIGHT-aligned. Reimplementing the key off-chain as either produces a different hash,
+     * and because the result is a mapping key the mistake is silent: the lookup simply returns 0,
+     * which is indistinguishable from "no approval exists".
+     *
+     * To recompute the key off-chain, either of these reproduces it exactly:
+     * ```solidity
+     * keccak256(abi.encodePacked(from, bytes12(0), to, bytes12(0), value))
+     * keccak256(abi.encode(bytes32(bytes20(from)), bytes32(bytes20(to)), value))
+     * ```
+     * Pinned by `testDocumentedPreimageMatchesTheStorageKey` in
+     * `test/RuleConditionalTransferLight/TransferHashPreimage.t.sol`.
+     *
+     * You rarely need this: {approvedCount} already resolves (from, to, value) to the count, and the
+     * approval events carry the same fields. It matters only when deriving the storage slot directly
+     * -- `eth_getStorageAt`, a state proof, or an indexer reading storage rather than events.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.
      * @param value The amount of the transfer.
      * @return hash The keccak256 hash uniquely identifying the transfer.
      */
     function _transferHash(address from, address to, uint256 value) internal pure virtual returns (bytes32 hash) {
-        // Linter suggestion (`asm-keccak256`): hash packed values in assembly to avoid abi.encodePacked overhead.
+        // Hand-rolled rather than `abi.encodePacked` on the linter's `asm-keccak256` advice: this is
+        // on the transfer write path, and the assembly is ~109 gas cheaper per call. Injectivity is
+        // verified in `RESULT.md` F-12; the exact layout is documented above.
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, shl(96, from))
