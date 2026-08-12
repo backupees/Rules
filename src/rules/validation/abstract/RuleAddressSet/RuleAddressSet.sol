@@ -89,8 +89,7 @@ abstract contract RuleAddressSet is
      */
     function addAddress(address targetAddress) public virtual onlyAddressListAdd {
         require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        require(!_isAddressListed(targetAddress), RuleAddressSet_AddressAlreadyListed());
-        _addAddress(targetAddress);
+        require(_addAddress(targetAddress), RuleAddressSet_AddressAlreadyListed());
         emit AddAddress(targetAddress);
     }
 
@@ -102,8 +101,7 @@ abstract contract RuleAddressSet is
      * @param targetAddress The address to be removed.
      */
     function removeAddress(address targetAddress) public virtual onlyAddressListRemove {
-        require(_isAddressListed(targetAddress), RuleAddressSet_AddressNotFound());
-        _removeAddress(targetAddress);
+        require(_removeAddress(targetAddress), RuleAddressSet_AddressNotFound());
         emit RemoveAddress(targetAddress);
     }
 

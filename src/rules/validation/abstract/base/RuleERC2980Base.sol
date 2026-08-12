@@ -133,8 +133,7 @@ abstract contract RuleERC2980Base is
      */
     function addWhitelistAddress(address targetAddress) public virtual onlyWhitelistAdd {
         require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
-        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
-        _addWhitelistAddress(targetAddress);
+        require(_addWhitelistAddress(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
         emit AddWhitelistAddress(targetAddress);
     }
 
@@ -148,8 +147,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to remove from the whitelist.
      */
     function removeWhitelistAddress(address targetAddress) public virtual onlyWhitelistRemove {
-        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotWhitelisted());
-        _removeWhitelistAddress(targetAddress);
+        require(_removeWhitelistAddress(targetAddress), RuleERC2980_AddressNotWhitelisted());
         emit RemoveWhitelistAddress(targetAddress);
     }
 
@@ -189,8 +187,7 @@ abstract contract RuleERC2980Base is
      */
     function addFrozenlistAddress(address targetAddress) public virtual onlyFrozenlistAdd {
         require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
-        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyFrozen());
-        _addFrozenlistAddress(targetAddress);
+        require(_addFrozenlistAddress(targetAddress), RuleERC2980_AddressAlreadyFrozen());
         emit AddFrozenlistAddress(targetAddress);
     }
 
@@ -204,8 +201,7 @@ abstract contract RuleERC2980Base is
      * @param targetAddress Address to remove from the frozenlist.
      */
     function removeFrozenlistAddress(address targetAddress) public virtual onlyFrozenlistRemove {
-        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFrozen());
-        _removeFrozenlistAddress(targetAddress);
+        require(_removeFrozenlistAddress(targetAddress), RuleERC2980_AddressNotFrozen());
         emit RemoveFrozenlistAddress(targetAddress);
     }
 

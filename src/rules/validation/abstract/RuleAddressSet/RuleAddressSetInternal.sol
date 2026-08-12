@@ -84,18 +84,24 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
 
     /**
      * @notice Adds a single address to the set.
+     * @dev Forwards {EnumerableSet}'s "did this change anything" result so the caller can reject a
+     * duplicate without a second lookup: the membership test the caller would otherwise perform is
+     * the same one `add` already does internally (`FEEDBACK_12.md` B-4).
      * @param targetAddress The address to add.
+     * @return True when the address was not already listed.
      */
-    function _addAddress(address targetAddress) internal virtual {
-        _listedAddresses.add(targetAddress);
+    function _addAddress(address targetAddress) internal virtual returns (bool) {
+        return _listedAddresses.add(targetAddress);
     }
 
     /**
      * @notice Removes a single address from the set.
+     * @dev Forwards {EnumerableSet}'s result; see {_addAddress}.
      * @param targetAddress The address to remove.
+     * @return True when the address was listed and has been removed.
      */
-    function _removeAddress(address targetAddress) internal virtual {
-        _listedAddresses.remove(targetAddress);
+    function _removeAddress(address targetAddress) internal virtual returns (bool) {
+        return _listedAddresses.remove(targetAddress);
     }
 
     /**

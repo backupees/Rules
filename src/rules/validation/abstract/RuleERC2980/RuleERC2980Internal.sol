@@ -70,16 +70,16 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      * @notice Adds a single address to the whitelist.
      * @param targetAddress Address to add to the whitelist.
      */
-    function _addWhitelistAddress(address targetAddress) internal virtual {
-        _whitelist.add(targetAddress);
+    function _addWhitelistAddress(address targetAddress) internal virtual returns (bool) {
+        return _whitelist.add(targetAddress);
     }
 
     /**
      * @notice Removes a single address from the whitelist.
      * @param targetAddress Address to remove from the whitelist.
      */
-    function _removeWhitelistAddress(address targetAddress) internal virtual {
-        _whitelist.remove(targetAddress);
+    function _removeWhitelistAddress(address targetAddress) internal virtual returns (bool) {
+        return _whitelist.remove(targetAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -119,16 +119,16 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      * @notice Adds a single address to the frozenlist.
      * @param targetAddress Address to add to the frozenlist.
      */
-    function _addFrozenlistAddress(address targetAddress) internal virtual {
-        _frozenlist.add(targetAddress);
+    function _addFrozenlistAddress(address targetAddress) internal virtual returns (bool) {
+        return _frozenlist.add(targetAddress);
     }
 
     /**
      * @notice Removes a single address from the frozenlist.
      * @param targetAddress Address to remove from the frozenlist.
      */
-    function _removeFrozenlistAddress(address targetAddress) internal virtual {
-        _frozenlist.remove(targetAddress);
+    function _removeFrozenlistAddress(address targetAddress) internal virtual returns (bool) {
+        return _frozenlist.remove(targetAddress);
     }
 
     /**

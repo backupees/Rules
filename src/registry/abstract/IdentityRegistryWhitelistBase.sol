@@ -81,8 +81,7 @@ abstract contract IdentityRegistryWhitelistBase is
         // Same guards, same errors as the whitelist rules: the zero address is the mint/burn
         // sentinel and must never be listed, or `isVerified(address(0))` would return true.
         require(_userAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        require(!_isAddressListed(_userAddress), RuleAddressSet_AddressAlreadyListed());
-        _addAddress(_userAddress);
+        require(_addAddress(_userAddress), RuleAddressSet_AddressAlreadyListed());
         emit IdentityRegistered(_userAddress, _identity);
     }
 
@@ -91,8 +90,7 @@ abstract contract IdentityRegistryWhitelistBase is
      * @dev Reverts if the wallet is not registered.
      */
     function deleteIdentity(address _userAddress) external virtual override onlyIdentityRegistrar {
-        require(_isAddressListed(_userAddress), RuleAddressSet_AddressNotFound());
-        _removeAddress(_userAddress);
+        require(_removeAddress(_userAddress), RuleAddressSet_AddressNotFound());
         emit IdentityRemoved(_userAddress);
     }
 
