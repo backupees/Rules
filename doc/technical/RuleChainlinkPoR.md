@@ -10,6 +10,15 @@ Only mint operations (`from == address(0)`) are gated. Plain transfers do not ch
 
 The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link/ace/reference/policy-library/secure-mint-policy) from the ACE policy library, re-expressed as an ERC-1404 / ERC-3643 compliance rule for this library and deliberately simplified: the ACE policy's configurable reserve margin is not carried over.
 
+## Token compatibility: ERC-20 only
+
+`RuleChainlinkPoR` is **not usable with an ERC-721 or ERC-1155 token**, for two independent reasons:
+
+- **No ERC-7943 entrypoints.** The rule inherits `RuleTransferValidation` directly, not `RuleNFTAdapter`, so the `tokenId`-carrying overloads (`detectTransferRestriction(from, to, tokenId, amount)`, `transferred(from, to, tokenId, value)`, …) and the `ITransferContext` struct entrypoints do not exist on it, and it does not advertise `IERC7943NonFungibleComplianceExtend` through ERC-165. See the overload matrix in [`RULE_SEMANTICS.md`](./RULE_SEMANTICS.md#3-overload-surface-erc-7943-tokenid--itransfercontext).
+- **An aggregate `totalSupply()` is mandatory.** Configuration probes it and reverts with `RuleChainlinkPoR_TokenTotalSupplyUnavailable` when it is absent. Plain ERC-721 has no `totalSupply()` — only `ERC721Enumerable` does — and ERC-1155 supply is per token id (`ERC1155Supply.totalSupply(id)`), so an aggregate figure mixes every id together and a reserve cap derived from it means nothing for a multi-id collection.
+
+This is a design choice, not an omission: the rule caps a *fungible supply* against a reserve figure, so a `tokenId` dimension carries no information for it. `RuleMaxTotalSupply` is ERC-20 only for the same reason. To cap issuance of a non-fungible asset, screen the participants with an address-based validation rule (`RuleWhitelist`, `RuleReceiverWhitelist`, …), all of which do expose the ERC-7943 overloads.
+
 ## Schema
 
 ### Graph

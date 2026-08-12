@@ -49,7 +49,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 _Nothing yet._
 
-## v0.5.0 - 2026-08-11
+## v0.5.0 - 2026-08-12
 
 Commit: _pending — not yet committed at the time of writing._
 
@@ -85,6 +85,7 @@ requires a second Foundry profile — **`forge test` alone no longer runs everyt
   - **Revert-free read path** — one `code.length` check covers both feed calls (Solidity's extcodesize revert on a `try` to a codeless address is uncatchable), `decimals()` and `latestRoundData()` are both wrapped in `try/catch`, `MAX_FEED_DECIMALS` is re-checked at read time so the scaling exponent cannot overflow, decimal scaling saturates rather than overflows, and the supply comparison uses remaining headroom. The ERC-1404 / ERC-3643 views therefore return a code instead of reverting under every feed failure mode.
   - **Token validated at configuration** — a non-contract address is rejected explicitly (`RuleChainlinkPoR_TokenIsNotAContract`) and `totalSupply()` is probed (`RuleChainlinkPoR_TokenTotalSupplyUnavailable`), so a token that cannot serve the restriction check fails loudly at setup instead of silently bricking the read path. At run time a reverting or codeless token yields code `78` rather than a revert.
   - `maxBackedSupply()` previews the current limit without simulating a mint.
+  - **ERC-20 only.** Like `RuleMaxTotalSupply`, the rule exposes no ERC-7943 `tokenId` overloads and no `ITransferContext` entrypoints — it inherits `RuleTransferValidation` rather than `RuleNFTAdapter` — and it requires an aggregate `totalSupply()`, which plain ERC-721 lacks and which is per-id for ERC-1155. Deliberate: a reserve cap on a fungible supply has no `tokenId` dimension. Recorded in the overload matrix in `RULE_SEMANTICS.md`.
   - **Documented:** one instance protects one token. The rule reads `totalSupply()` from its configured `tokenContract` rather than from the token that triggered the check, and has no binding to enforce the pairing — sharing an instance across RuleEngines silently evaluates both tokens against the first one's supply and feed. Same exposure as `RuleMaxTotalSupply`; see [One instance per protected token](./doc/technical/RuleChainlinkPoR.md#one-instance-per-protected-token).
 - **`RuleReceiverWhitelist`** — a whitelist that screens **only the receiver**, reproducing ERC-3643's eligibility rule as a CMTAT compliance rule. It fills the gap between `RuleWhitelist` (both parties) and `RuleSpenderWhitelist` (spender only). Restriction code `81`. Available as `RuleReceiverWhitelist` (AccessControl) and `RuleReceiverWhitelistOwnable2Step`.
   - The sender and the spender are **never** screened. That is the point, not an omission: screening the sender traps de-listed holders, and ERC-3643 checks only the receiver precisely so a lapsed investor can still exit their position.
@@ -111,7 +112,8 @@ requires a second Foundry profile — **`forge test` alone no longer runs everyt
 
 - New [`doc/technical/RuleReceiverWhitelist.md`](./doc/technical/RuleReceiverWhitelist.md), including why receiver-only screening is the conformant choice and how the parity suite tests it.
 - New [`doc/technical/IdentityRegistryWhitelist.md`](./doc/technical/IdentityRegistryWhitelist.md), including a table of which ERC-3643 token functions call the registry and how, the `recoveryAddress` call sequence, and five documented limitations.
-- New [`doc/technical/RuleChainlinkPoR.md`](./doc/technical/RuleChainlinkPoR.md), including a point-by-point comparison against Chainlink's `SecureMintPolicy 1.2.0` (vendored at `lib/chainlink-ace/`); `RULE_SEMANTICS.md` and `README.md` updated with the new rule.
+- New [`doc/technical/RuleChainlinkPoR.md`](./doc/technical/RuleChainlinkPoR.md), including a point-by-point comparison against Chainlink's `SecureMintPolicy 1.2.0` (vendored at `lib/chainlink-ace/`) and a *Token compatibility: ERC-20 only* section; `RULE_SEMANTICS.md` and `README.md` updated with the new rule.
+- **README ERC-721/ERC-1155 section corrected.** It listed only `RuleConditionalTransferLight` and `RuleMaxTotalSupply` as ERC-20 only, and described `IERC7943NonFungibleCompliance*` as "implemented by validation rules only" — a category claim that `RuleChainlinkPoR`, itself a validation rule, does not satisfy, so the README implied the opposite of the truth for the new rule. The exclusions are now named individually and the missing `totalSupply()` requirement is stated. The `ITransferContext` paragraph had the same defect and claimed `RuleMaxTotalSupply` exposes the fungible variant, which it does not — it exposes neither, as do `RuleChainlinkPoR` and `RuleMintAllowance`. `RULE_SEMANTICS.md` already had the correct matrix row for all of them; the README sections now link to it.
 
 ### Testing
 

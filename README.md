@@ -100,7 +100,12 @@ _Diagram source: doc/img/readme-erc3643-integration.puml._
 
 ### ERC-721/ERC-1155
 
-To improve compatibility with [ERC-721](https://eips.ethereum.org/EIPS/eip-721) and [ERC-1155](https://eips.ethereum.org/EIPS/eip-1155), most validation rules implement the interface `IERC7943NonFungibleComplianceExtend` which includes compliance functions with the `tokenId` argument. Operation rules (such as `RuleConditionalTransferLight`) are ERC-20 only and do not expose the ERC-721/1155 interfaces. `RuleMaxTotalSupply` is ERC-20 only as well and does not expose ERC-721/1155 interfaces.
+To improve compatibility with [ERC-721](https://eips.ethereum.org/EIPS/eip-721) and [ERC-1155](https://eips.ethereum.org/EIPS/eip-1155), most validation rules implement the interface `IERC7943NonFungibleComplianceExtend` which includes compliance functions with the `tokenId` argument. 
+
+- Operation rules (such as `RuleConditionalTransferLight`) are ERC-20 only and do not expose the ERC-721/1155 interfaces. 
+- The two supply-cap validation rules, `RuleMaxTotalSupply` and `RuleChainlinkPoR`, are ERC-20 only as well and do not expose the ERC-721/1155 interfaces. This is deliberate: they cap a fungible supply, so a `tokenId` dimension would be meaningless for them. Both also require the protected token to expose an aggregate `totalSupply()`, which plain ERC-721 does not (only `ERC721Enumerable` does) and which is not per-id for ERC-1155.
+
+The full per-rule overload matrix is in [`doc/technical/RULE_SEMANTICS.md`](./doc/technical/RULE_SEMANTICS.md#3-overload-surface-erc-7943-tokenid--itransfercontext).
 
 While no rules currently apply restriction on the token id, the validation interfaces can be used to implement flexible restriction on ERC-721 or ERC-1155 tokens.
 
@@ -120,7 +125,11 @@ function transferred(address from, address to, uint256 tokenId, uint256 value) e
 function transferred(address spender, address from, address to, uint256 tokenId, uint256 value) external;
 ```
 
-The diagram below shows a non-fungible transfer flowing through the `tokenId`-aware compliance signatures. For validation rules a single `transferred(...)` call both validates and reverts — it internally runs `detectTransferRestrictionFrom` and requires `TRANSFER_OK` — so no separate pre-check is required in the transfer path; the read-only `detectTransferRestriction*` / `canTransfer*` overloads remain available for off-chain queries. The `RuleNFTAdapter` carries the `tokenId` argument but currently delegates to the address-based checks (`from` / `to` / `spender`), so no rule restricts on the token id yet.
+The diagram below shows a non-fungible transfer flowing through the `tokenId`-aware compliance signatures. 
+
+For validation rules a single `transferred(...)` call both validates and reverts — it internally runs `detectTransferRestrictionFrom` and requires `TRANSFER_OK` — so no separate pre-check is required in the transfer path; the read-only `detectTransferRestriction*` / `canTransfer*` overloads remain available for off-chain queries. 
+
+The `RuleNFTAdapter` carries the `tokenId` argument but currently delegates to the address-based checks (`from` / `to` / `spender`), so no rule restricts on the token id yet.
 
 ![ERC-721 / ERC-1155 compliance interface flow](./doc/img/readme-erc721-erc1155-compliance.png)
 
@@ -222,7 +231,11 @@ This makes rules directly pluggable into CMTAT without any intermediary RuleEngi
 
 ### Transfer Context Helper
 
-Rules also expose an optional unified entrypoint using `MultiTokenTransferContext` / `FungibleTransferContext` (see `ITransferContext`) to pass a single struct instead of multiple arguments. This is a helper API inspired by [TokenF](https://github.com/dl-tokenf/contracts) and does not replace the standard ERC-3643 / RuleEngine interfaces. Validation rules generally expose both the non-fungible and fungible variants; `RuleConditionalTransferLight` and `RuleMaxTotalSupply` expose only the fungible variant.
+Rules also expose an optional unified entrypoint using `MultiTokenTransferContext` / `FungibleTransferContext` (see `ITransferContext`) to pass a single struct instead of multiple arguments. 
+
+This is a helper API inspired by [TokenF](https://github.com/dl-tokenf/contracts) and does not replace the standard ERC-3643 / RuleEngine interfaces. 
+
+Validation rules generally expose both the non-fungible and fungible variants. `RuleConditionalTransferLight` and `RuleConditionalTransferLightMultiToken` expose only the fungible variant, and `RuleMaxTotalSupply`, `RuleChainlinkPoR` and `RuleMintAllowance` expose neither — see the per-rule matrix in [`doc/technical/RULE_SEMANTICS.md`](./doc/technical/RULE_SEMANTICS.md#3-overload-surface-erc-7943-tokenid--itransfercontext).
 
 Two struct variants are available:
 
@@ -1286,7 +1299,7 @@ If the address does not exist in the whitelist, there is no change for this addr
 
 ### IERC7943NonFungibleCompliance
 
-Compliance interface for ERC-721 / ERC-1155–style non-fungible assets. This is implemented by validation rules only. `RuleConditionalTransferLight` and `RuleMaxTotalSupply` are ERC-20 only and do not implement this interface.
+Compliance interface for ERC-721 / ERC-1155–style non-fungible assets. It is implemented by the address-screening validation rules only: the operation rules (such as `RuleConditionalTransferLight`) and the supply-cap rules `RuleMaxTotalSupply` and `RuleChainlinkPoR` are ERC-20 only and do not implement this interface.
  For ERC-721, `amount` must always be `1`.
 
 ------
@@ -1339,7 +1352,7 @@ Verifies whether a token transfer is permitted according to the rule-based compl
 
 ### IERC7943NonFungibleComplianceExtend
 
-Extended compliance interface for ERC-721 / ERC-1155 non-fungible assets. This is implemented by validation rules only. `RuleConditionalTransferLight` and `RuleMaxTotalSupply` are ERC-20 only and do not implement this interface.
+Extended compliance interface for ERC-721 / ERC-1155 non-fungible assets. It is implemented by the address-screening validation rules only: the operation rules (such as `RuleConditionalTransferLight`) and the supply-cap rules `RuleMaxTotalSupply` and `RuleChainlinkPoR` are ERC-20 only and do not implement this interface.
  Adds restriction-code reporting, spender-aware checks, and a post-transfer hook.
 
 For ERC-721, `amount` / `value` must always be `1`.
