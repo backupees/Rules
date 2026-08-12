@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 /* ==== OpenZeppelin === */
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {AddressSetBatchLib} from "../RuleAddressSet/AddressSetBatchLib.sol";
 import {RuleERC2980InvariantStorage} from "./invariantStorage/RuleERC2980InvariantStorage.sol";
 
 /**
@@ -16,6 +17,7 @@ import {RuleERC2980InvariantStorage} from "./invariantStorage/RuleERC2980Invaria
  */
 abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using AddressSetBatchLib for EnumerableSet.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
                              STATE VARIABLES
@@ -47,16 +49,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
         virtual
         returns (uint256 added, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
-            // skipped, so the emitted batch event can never report it as a list member.
-            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
-            if (_whitelist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _whitelist.addBatch(addressesToAdd, _requireNotZeroAddress);
     }
 
     /**
@@ -70,13 +63,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
         virtual
         returns (uint256 removed, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            if (_whitelist.remove(addressesToRemove[i])) {
-                removed += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _whitelist.removeBatch(addressesToRemove);
     }
 
     /**
@@ -111,16 +98,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
         virtual
         returns (uint256 added, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
-            // skipped, so the emitted batch event can never report it as a list member.
-            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
-            if (_frozenlist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _frozenlist.addBatch(addressesToAdd, _requireNotZeroAddress);
     }
 
     /**
@@ -134,13 +112,7 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
         virtual
         returns (uint256 removed, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            if (_frozenlist.remove(addressesToRemove[i])) {
-                removed += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _frozenlist.removeBatch(addressesToRemove);
     }
 
     /**
@@ -157,6 +129,18 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _removeFrozenlistAddress(address targetAddress) internal virtual {
         _frozenlist.remove(targetAddress);
+    }
+
+    /**
+     * @notice Per-entry guard for both batch adders; reverts on the zero address.
+     * @dev The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
+     * skipped, so the emitted batch event can never report it as a list member. Passed to
+     * {AddressSetBatchLib.addBatch} as a function pointer so the shared loop rejects the sentinel
+     * with THIS rule's error rather than a generic one.
+     * @param targetAddress The candidate address.
+     */
+    function _requireNotZeroAddress(address targetAddress) internal pure {
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
     }
 
     /*//////////////////////////////////////////////////////////////

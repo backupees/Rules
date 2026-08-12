@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 /* ==== OpenZeppelin === */
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {AddressSetBatchLib} from "./AddressSetBatchLib.sol";
 import {RuleAddressSetInvariantStorage} from "./invariantStorage/RuleAddressSetInvariantStorage.sol";
 
 /**
@@ -15,6 +16,7 @@ import {RuleAddressSetInvariantStorage} from "./invariantStorage/RuleAddressSetI
  */
 abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using AddressSetBatchLib for EnumerableSet.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
                              STATE VARIABLES
@@ -44,20 +46,23 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
         virtual
         returns (uint256 added, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant. It is REJECTED
-            // rather than skipped: the batch convention skips *duplicates* (an idempotent no-op that
-            // the emitted event still describes truthfully), but silently dropping address(0) would
-            // make `AddAddresses` report a member that is not in the set — re-polluting the very
-            // off-chain view this guard exists to keep clean. Mint/burn is governed by
-            // allowMint/allowBurn, never by list membership.
-            require(addressesToAdd[i] != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-            if (_listedAddresses.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _listedAddresses.addBatch(addressesToAdd, _requireNotZeroAddress);
+    }
+
+    /**
+     * @notice Per-entry guard for {_addAddresses}; reverts on the zero address.
+     * @dev The zero address is the mint/burn sentinel, never a participant. It is REJECTED rather
+     * than skipped: the batch convention skips *duplicates* (an idempotent no-op that the emitted
+     * event still describes truthfully), but silently dropping address(0) would make `AddAddresses`
+     * report a member that is not in the set — re-polluting the very off-chain view this guard
+     * exists to keep clean. Mint/burn is governed by allowMint/allowBurn, never by list membership.
+     *
+     * Passed to {AddressSetBatchLib.addBatch} as a function pointer so the shared loop can reject
+     * the sentinel with THIS rule's error rather than a generic one.
+     * @param targetAddress The candidate address.
+     */
+    function _requireNotZeroAddress(address targetAddress) internal pure {
+        require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
     }
 
     /**
@@ -74,13 +79,7 @@ abstract contract RuleAddressSetInternal is RuleAddressSetInvariantStorage {
         virtual
         returns (uint256 removed, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            if (_listedAddresses.remove(addressesToRemove[i])) {
-                removed += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _listedAddresses.removeBatch(addressesToRemove);
     }
 
     /**
