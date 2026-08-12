@@ -9,6 +9,7 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
 import {IERC3643IComplianceContract} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
+import {TokenSupplyReader} from "../core/TokenSupplyReader.sol";
 
 /**
  * @title RuleChainlinkPoRBase
@@ -41,7 +42,7 @@ import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
  * fail-closed: mints are blocked. `tokenContract` is trusted to report an *accurate* supply, but it
  * is NOT trusted to stay callable -- that is guarded.
  */
-abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkPoRInvariantStorage {
+abstract contract RuleChainlinkPoRBase is RuleTransferValidation, TokenSupplyReader, RuleChainlinkPoRInvariantStorage {
     /**
      * @notice The Proof of Reserve data feed consulted before every mint.
      */
@@ -252,10 +253,9 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
         }
         // `totalSupply()` is mandatory, unlike `decimals()`: the restriction check cannot work
         // without it. Probing here turns a silent read-path failure into a configuration error.
-        try ITotalSupply(newTokenContract).totalSupply() returns (uint256) {}
-        catch {
-            revert RuleChainlinkPoR_TokenTotalSupplyUnavailable(newTokenContract);
-        }
+        require(
+            _probeTotalSupplyCallable(newTokenContract), RuleChainlinkPoR_TokenTotalSupplyUnavailable(newTokenContract)
+        );
         tokenContract = ITotalSupply(newTokenContract);
         tokenDecimals = newTokenDecimals;
         emit TokenMetadataUpdated(newTokenContract, newTokenDecimals);
@@ -316,22 +316,10 @@ abstract contract RuleChainlinkPoRBase is RuleTransferValidation, RuleChainlinkP
     }
 
     /**
-     * @notice Reads the protected token's current total supply.
-     * @dev Wrapped in `try/catch` so the ERC-1404 read path stays revert-free if the token breaks
-     * after configuration -- a proxy upgraded to something that reverts, or a pausable
-     * implementation that reverts while paused. Configuration already probes `totalSupply()`, so
-     * reaching the failure branch means the token changed behaviour since. No code-length check is
-     * needed: `_setTokenMetadata` requires code, and EIP-6780 prevents it disappearing.
-     * @return available True when the supply could be read.
-     * @return supply The total supply; meaningless when `available` is false.
+     * @inheritdoc TokenSupplyReader
      */
-    function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
-        ITotalSupply token = tokenContract;
-        try token.totalSupply() returns (uint256 totalSupply_) {
-            return (true, totalSupply_);
-        } catch {
-            return (false, 0);
-        }
+    function _supplyToken() internal view virtual override returns (ITotalSupply) {
+        return tokenContract;
     }
 
     /**

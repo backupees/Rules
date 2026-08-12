@@ -7,12 +7,17 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
 import {IERC3643IComplianceContract} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
+import {TokenSupplyReader} from "../core/TokenSupplyReader.sol";
 
 /**
  * @title RuleMaxTotalSupplyBase
  * @notice Restricts minting so that total supply never exceeds a maximum value.
  */
-abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotalSupplyInvariantStorage {
+abstract contract RuleMaxTotalSupplyBase is
+    RuleTransferValidation,
+    TokenSupplyReader,
+    RuleMaxTotalSupplyInvariantStorage
+{
     /**
      * @dev tokenContract is trusted to report an *accurate* totalSupply -- nothing on-chain can
      * verify that -- but it is NOT trusted to stay callable: a reverting or codeless token yields
@@ -157,32 +162,14 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     function _validateTokenContract(address candidate) internal view virtual {
         require(candidate != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
         require(candidate.code.length != 0, RuleMaxTotalSupply_TokenIsNotAContract(candidate));
-        try ITotalSupply(candidate).totalSupply() returns (uint256) {}
-        catch {
-            revert RuleMaxTotalSupply_TokenTotalSupplyUnavailable(candidate);
-        }
+        require(_probeTotalSupplyCallable(candidate), RuleMaxTotalSupply_TokenTotalSupplyUnavailable(candidate));
     }
 
     /**
-     * @notice Reads the tracked token's current total supply.
-     * @dev Wrapped in `try/catch` so the ERC-1404 read path stays revert-free if the token breaks
-     * after configuration -- a proxy upgraded to something that reverts, or a pausable
-     * implementation that reverts while paused. Configuration already probes `totalSupply()`, so
-     * reaching the failure branch means the token changed behaviour since.
-     *
-     * No code-length check here: `_validateTokenContract` requires code, and EIP-6780 (Cancun)
-     * makes that permanent, so the token cannot become codeless afterwards. A `try` to a codeless
-     * address would revert *uncatchably*, so this reasoning assumes a Cancun-or-later chain.
-     * @return available True when the supply could be read.
-     * @return supply The total supply; meaningless when `available` is false.
+     * @inheritdoc TokenSupplyReader
      */
-    function _currentSupply() internal view virtual returns (bool available, uint256 supply) {
-        ITotalSupply token = tokenContract;
-        try token.totalSupply() returns (uint256 totalSupply_) {
-            return (true, totalSupply_);
-        } catch {
-            return (false, 0);
-        }
+    function _supplyToken() internal view virtual override returns (ITotalSupply) {
+        return tokenContract;
     }
 
     /**
