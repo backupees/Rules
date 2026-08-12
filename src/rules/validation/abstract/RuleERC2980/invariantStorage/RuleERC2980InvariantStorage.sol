@@ -80,15 +80,21 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
 
     /* ============ Events ============ */
     /**
-     * @notice Emitted when multiple addresses are added to the whitelist.
-     * @param targetAddresses Addresses added to the whitelist.
+     * @notice Emitted when a batch whitelist add completes.
+     * @dev `targetAddresses` is the input as submitted, not the set that changed state; `added` and
+     * `skipped` describe the effect. See {IAddressList.AddAddresses}.
+     * @param targetAddresses The array submitted by the caller.
+     * @param added Number of addresses newly whitelisted.
+     * @param skipped Number of addresses already whitelisted.
      */
-    event AddWhitelistAddresses(address[] targetAddresses);
+    event AddWhitelistAddresses(address[] targetAddresses, uint256 added, uint256 skipped);
     /**
-     * @notice Emitted when multiple addresses are removed from the whitelist.
-     * @param targetAddresses Addresses removed from the whitelist.
+     * @notice Emitted when a batch whitelist remove completes.
+     * @param targetAddresses The array submitted by the caller.
+     * @param removed Number of addresses actually removed.
+     * @param skipped Number of addresses that were not whitelisted.
      */
-    event RemoveWhitelistAddresses(address[] targetAddresses);
+    event RemoveWhitelistAddresses(address[] targetAddresses, uint256 removed, uint256 skipped);
     /**
      * @notice Emitted when a single address is added to the whitelist.
      * @param targetAddress Address added to the whitelist.
@@ -101,15 +107,19 @@ abstract contract RuleERC2980InvariantStorage is RuleSharedInvariantStorage {
     event RemoveWhitelistAddress(address indexed targetAddress);
 
     /**
-     * @notice Emitted when multiple addresses are added to the frozenlist.
-     * @param targetAddresses Addresses added to the frozenlist.
+     * @notice Emitted when a batch frozenlist add completes.
+     * @param targetAddresses The array submitted by the caller.
+     * @param added Number of addresses newly frozen.
+     * @param skipped Number of addresses already frozen.
      */
-    event AddFrozenlistAddresses(address[] targetAddresses);
+    event AddFrozenlistAddresses(address[] targetAddresses, uint256 added, uint256 skipped);
     /**
-     * @notice Emitted when multiple addresses are removed from the frozenlist.
-     * @param targetAddresses Addresses removed from the frozenlist.
+     * @notice Emitted when a batch frozenlist remove completes.
+     * @param targetAddresses The array submitted by the caller.
+     * @param removed Number of addresses actually removed.
+     * @param skipped Number of addresses that were not frozen.
      */
-    event RemoveFrozenlistAddresses(address[] targetAddresses);
+    event RemoveFrozenlistAddresses(address[] targetAddresses, uint256 removed, uint256 skipped);
     /**
      * @notice Emitted when a single address is added to the frozenlist.
      * @param targetAddress Address added to the frozenlist.

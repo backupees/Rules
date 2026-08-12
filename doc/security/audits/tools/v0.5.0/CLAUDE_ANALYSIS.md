@@ -39,7 +39,7 @@ Every finding, its outcome, and the commit that carries it.
 | **C-1** | `RuleMaxTotalSupply` constructor emitted nothing | ✅ Fixed | `d354ae1` |
 | **C-2** | `checkSpender` initial value never announced | ✅ Fixed | `d354ae1` |
 | **C-3** | `RuleIdentityRegistry` constructor omitted `IdentityRegistryUpdated` | ✅ Fixed | `d354ae1` |
-| **C-4** | Batch events report the input array, not the effect; counters computed then discarded | ⬜ **Not implemented** | — |
+| **C-4** | Batch events report the input array, not the effect; counters computed then discarded | ✅ Fixed — the counters are now emitted. **Breaking**: six batch event signatures change, so `topic0` changes | `PENDING` |
 | **D-1** | `RuleERC2980Internal` duplicated `RuleAddressSetInternal` twice | ✅ Fixed — shared `AddressSetBatchLib`; storage layout verified identical | `bd3b6a7` |
 | **D-2** | `_currentSupply()` byte-identical in two rules | ✅ Fixed — stateless `TokenSupplyReader` base, −12 gas | `e4dd438` |
 | **D-3** | detect-then-`require` `_transferred` pair repeated in 9 rules | ⬜ **Left as is** — the per-rule custom error is the only variation and is worth keeping | — |
@@ -63,7 +63,6 @@ Every finding, its outcome, and the commit that carries it.
 | ID | Item | Why it is still open |
 |---|---|---|
 | **A-3** | `areAddressesListed(address[] memory)` → `external` + `calldata` | Not attempted this session |
-| **C-4** | Batch events echo the input array while the computed `added` / `skipped` counters are discarded | Not attempted this session. An indexer cannot distinguish a batch of 100 new entries from 100 no-ops |
 | **D-3** | detect-then-`require` pair in 9 rules | Deliberate: collapsing it would either lose the per-rule error or need a hook returning revert data |
 | **F-7c** | Redundant `allowance` read | Deliberate: diagnostic quality over ~2 600 gas |
 
@@ -90,7 +89,7 @@ Every finding, its outcome, and the commit that carries it.
 | **C-1** | Missing event | `RuleMaxTotalSupply` constructor emits nothing; its sibling `RuleChainlinkPoR` emits everything | ✅ **implemented** |
 | **C-2** | Missing event | `checkSpender`'s initial value never emitted, in both whitelist constructors | ✅ **implemented** |
 | **C-3** | Missing event | `RuleIdentityRegistry` constructor emits the two flags but not the registry address | ✅ **implemented** |
-| **C-4** | Missing event | Batch events report the *input array*, not the effect; the effect counters are computed then discarded | indexer cannot tell adds from no-ops |
+| **C-4** | Missing event | Batch events report the *input array*, not the effect; the effect counters are computed then discarded | ✅ **implemented** — counters emitted; **breaking event-signature change** |
 | **D-1** | Duplication | `RuleERC2980Internal` is `RuleAddressSetInternal` copied twice (~190 lines) | ✅ **implemented** — 3 loop pairs → 1; line count corrected below |
 | **D-2** | Duplication | `_currentSupply()` byte-identical in two rules; token validation near-identical | ✅ **implemented** — shared base, −12 gas |
 | **D-3** | Duplication | detect-then-`require` `_transferred` pair repeated in 8 rules | 8 copies |
@@ -377,7 +376,7 @@ Same shape as C-2: two of three config values are emitted. `IdentityRegistryUpda
 
 
 
-### C-4. Batch events describe the input, not the effect — and the effect is computed then thrown away
+### C-4. Batch events describe the input, not the effect — and the effect is computed then thrown away — ✅ IMPLEMENTED
 
 ```solidity
 // RuleAddressSet.sol:63-66
@@ -405,6 +404,34 @@ Two ways out, and either is an improvement over the current state:
 - **Drop them:** if the counts are genuinely not wanted, make the internals `void` and stop paying for the increments.
 
 Leaving the code as-is — computing, discarding, and emitting something less informative — is the one option with no argument in its favour.
+
+> **Status: fixed by the first option — the counters are now emitted.** All six batch events gained them:
+> `AddAddresses(address[], uint256 added, uint256 skipped)` and its `Remove` counterpart in `IAddressList`,
+> plus the four `RuleERC2980` whitelist/frozenlist equivalents. `added + skipped` always equals the input
+> length, which the fuzz test asserts.
+>
+> **This is a breaking change to the event ABI**, and it is the reason to make it now rather than later:
+> six signatures change, so `topic0` changes with them —
+> `AddAddresses(address[])` was `0xc81f47d2…`, `AddAddresses(address[],uint256,uint256)` is `0x986167d3…`.
+> Any indexer filtering on the old topic stops matching. v0.5.0 is unreleased, so nothing downstream is
+> relying on the old shape yet; after release this would need a major-version discussion instead.
+>
+> **Cost: +572 gas per batch call**, measured before and after on the real contracts with every dependent
+> file reverted for the baseline (997 155 → 997 727 on a 20-address add; 55 423 → 55 995 on the remove).
+> Note it is **constant, not per element** — two extra 32-byte log words — so it is 0.06% of a 20-address
+> add, which is dominated by cold `SSTORE`s, and 1.0% of the cheaper remove. The counters themselves were
+> already being computed, so nothing new is spent in the loop.
+>
+> **Verified, not assumed.** `test/Events/BatchEventEffect.t.sol` (9 tests) pins the case the input array
+> could never express — a batch that is *partly* or *wholly* a no-op — for both the shared `RuleAddressSet`
+> machinery and `RuleERC2980`'s separate copy of the same loops. A fuzz case asserts `added + skipped ==
+> input.length` and that `skipped` equals what was already present.
+>
+> **A pre-existing test defect surfaced.** `RuleWhitelistRemove.t.sol` contained three bare
+> `emit IAddressList.AddAddresses(...)` statements with **no `vm.expectEmit` before them** — they emitted an
+> event from the test contract and asserted nothing at all. The compiler flagged them only because the arity
+> changed. They are now real assertions, and the most useful of them checks a batch of 3 removals where only
+> 2 were present: `(removed = 2, skipped = 1)` — exactly the information this finding was about.
 
 ---
 

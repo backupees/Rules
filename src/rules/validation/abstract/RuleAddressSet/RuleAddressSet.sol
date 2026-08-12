@@ -64,8 +64,8 @@ abstract contract RuleAddressSet is
      * @param targetAddresses Array of addresses to be added.
      */
     function addAddresses(address[] calldata targetAddresses) public virtual onlyAddressListAdd {
-        _addAddresses(targetAddresses);
-        emit AddAddresses(targetAddresses);
+        (uint256 added, uint256 skipped) = _addAddresses(targetAddresses);
+        emit AddAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -76,8 +76,8 @@ abstract contract RuleAddressSet is
      * @param targetAddresses Array of addresses to remove.
      */
     function removeAddresses(address[] calldata targetAddresses) public virtual onlyAddressListRemove {
-        _removeAddresses(targetAddresses);
-        emit RemoveAddresses(targetAddresses);
+        (uint256 removed, uint256 skipped) = _removeAddresses(targetAddresses);
+        emit RemoveAddresses(targetAddresses, removed, skipped);
     }
 
     /**

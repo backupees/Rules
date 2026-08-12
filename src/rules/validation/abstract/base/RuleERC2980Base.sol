@@ -108,8 +108,8 @@ abstract contract RuleERC2980Base is
      * @param targetAddresses Addresses to add to the whitelist.
      */
     function addWhitelistAddresses(address[] calldata targetAddresses) public virtual onlyWhitelistAdd {
-        _addWhitelistAddresses(targetAddresses);
-        emit AddWhitelistAddresses(targetAddresses);
+        (uint256 added, uint256 skipped) = _addWhitelistAddresses(targetAddresses);
+        emit AddWhitelistAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -118,8 +118,8 @@ abstract contract RuleERC2980Base is
      * @param targetAddresses Addresses to remove from the whitelist.
      */
     function removeWhitelistAddresses(address[] calldata targetAddresses) public virtual onlyWhitelistRemove {
-        _removeWhitelistAddresses(targetAddresses);
-        emit RemoveWhitelistAddresses(targetAddresses);
+        (uint256 removed, uint256 skipped) = _removeWhitelistAddresses(targetAddresses);
+        emit RemoveWhitelistAddresses(targetAddresses, removed, skipped);
     }
 
     /**
@@ -162,8 +162,8 @@ abstract contract RuleERC2980Base is
      * @param targetAddresses Addresses to add to the frozenlist.
      */
     function addFrozenlistAddresses(address[] calldata targetAddresses) public virtual onlyFrozenlistAdd {
-        _addFrozenlistAddresses(targetAddresses);
-        emit AddFrozenlistAddresses(targetAddresses);
+        (uint256 added, uint256 skipped) = _addFrozenlistAddresses(targetAddresses);
+        emit AddFrozenlistAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -172,8 +172,8 @@ abstract contract RuleERC2980Base is
      * @param targetAddresses Addresses to remove from the frozenlist.
      */
     function removeFrozenlistAddresses(address[] calldata targetAddresses) public virtual onlyFrozenlistRemove {
-        _removeFrozenlistAddresses(targetAddresses);
-        emit RemoveFrozenlistAddresses(targetAddresses);
+        (uint256 removed, uint256 skipped) = _removeFrozenlistAddresses(targetAddresses);
+        emit RemoveFrozenlistAddresses(targetAddresses, removed, skipped);
     }
 
     /**
