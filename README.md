@@ -45,7 +45,7 @@ _Diagram source: [`doc/schema/architecture-topologies.puml`](./doc/schema/archit
 Behind a RuleEngine the engine returns the **first non-zero** restriction code, so rule order decides which
 code a rejection reports. In direct mode the rule is installed with `token.setRuleEngine(rule)`.
 
-This matters for **operation rules**, which keep state keyed on the caller. `RuleConditionalTransferLightMultiToken` is direct-binding only; `RuleMintAllowance` requires the engine path. Validation rules work under either.
+**Operation rules** keep state keyed on the caller, so the two are not interchangeable for them: `RuleConditionalTransferLightMultiToken` is direct-binding only, and `RuleMintAllowance` requires the engine path. Validation rules work under either.
 
 ### Layout
 
@@ -105,7 +105,7 @@ ERC-3643 decides who may hold a token by asking an **identity registry** one que
 `isVerified(wallet)` — is this a verified investor? A normal registry answers it by checking the wallet's
 on-chain identity contract (ONCHAINID) for the required claims.
 
-This library provides **both sides of that exchange**, which is the part worth getting straight:
+This library provides **both sides of that exchange**:
 
 | Contract | What it is | Where it plugs in |
 | --- | --- | --- |
@@ -168,7 +168,7 @@ Four scripts cover the common combinations. See
 
 ## Security
 
-No formal third-party audit has been carried out. What the code has had is automated static analysis and
+No formal third-party audit has been carried out. The code has had automated static analysis and
 AI-assisted review, each triaged by the project team:
 
 | Type | Tool | Latest run |
