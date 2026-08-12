@@ -335,7 +335,20 @@ Rules do **not** all treat the spender, mint/burn, or an unset oracle the same w
 
 - **Spender on mint.** `RuleWhitelist` / `RuleWhitelistWrapper` / `RuleSpenderWhitelist` **exempt** the minter; `RuleBlacklist` / `RuleSanctionsList` **screen** it (deny-list, by design); `RuleIdentityRegistry` also screens it, so the minter must itself be identity-verified; `RuleMintAllowance` **debits the minter's quota**.
 - **Unset oracle/registry.** `RuleSanctionsList` (oracle unset) and `RuleIdentityRegistry` (registry unset) **fail open** — all transfers pass. An empty `RuleWhitelistWrapper` **fails closed**. `RuleChainlinkPoR` cannot be left unset, and a broken or stale feed **fails closed for mints only** — transfers and burns still pass.
-- **Authoritative pre-flight view.** For `RuleMintAllowance`, `canTransfer` is not authoritative — use `canTransferFrom`. For `RuleConditionalTransferLightMultiToken`, `detectTransferRestriction` is `msg.sender`-dependent.
+- **Authoritative pre-flight view.** For `RuleMintAllowance`, `canTransfer` is not authoritative — use `canTransferFrom`. For `RuleConditionalTransferLightMultiToken`, `detectTransferRestriction` is `msg.sender`-dependent. Both are detailed below.
+
+### Views that are not authoritative
+
+Two rules answer the standard ERC-1404 / ERC-3643 read views with something other than the real answer. In both cases the reason is structural — the 3-argument signature cannot carry the information the rule needs — and in both cases a correct alternative exists. **The important part is that the misleading answer is not confined to the rule: it propagates through the `RuleEngine` to the token's own public views**, which is the API an integrator actually calls.
+
+| Rule | Not authoritative | Why | Use instead |
+| --- | --- | --- | --- |
+| `RuleMintAllowance` | `canTransfer` / `detectTransferRestriction` — hardcoded to allowed | The 3-arg signature carries no minter identity, and the quota is keyed on the minter | `canTransferFrom(minter, address(0), to, value)` or `detectTransferRestrictionFrom(...)` |
+| `RuleConditionalTransferLightMultiToken` | `canTransfer` / `detectTransferRestriction` — caller-dependent | The token key is derived from `msg.sender`, so any off-chain `eth_call` reads "not approved" even for an approved transfer | `canTransferForToken(token, from, to, value)` or `detectTransferRestrictionForToken(...)` |
+
+**Propagation.** `RuleEngineBase._detectTransferRestriction` aggregates by calling each rule's **3-argument** view and returning the first non-zero code, and CMTAT's `ValidationModuleERC1404` forwards the token's ERC-1404 views to the engine. So a `RuleMintAllowance` that returns `0` makes `ruleEngine.canTransfer(...)` **and** `cmtat.canTransfer(...)` report every mint as allowed, regardless of quota. The 4-argument chain (`detectTransferRestrictionFrom`) is unaffected at every level and carries the real answer.
+
+Neither is a defect to be fixed by returning a restriction code instead: ERC-1404 has no "cannot answer" value, so any non-zero code reads as *blocked*, and the token would then report every mint as forbidden — including the ones that will succeed. See [`doc/technical/RuleMintAllowance.md`](./doc/technical/RuleMintAllowance.md#eligibility-views-which-one-is-authoritative) and [`doc/technical/RuleConditionalTransferLightMultiToken.md`](./doc/technical/RuleConditionalTransferLightMultiToken.md).
 
 ### Validation Rules (Read-Only)
 

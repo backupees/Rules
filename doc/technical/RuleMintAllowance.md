@@ -120,6 +120,31 @@ Burns (`to == address(0)`) are not tracked by this rule. Minters do not recover 
 
 An integrator that pre-flights a mint with `canTransfer` will see "allowed" even when the mint will revert on the quota. This is intentional: the 3-arg views cannot see the minter. Always pre-flight mints with the spender-aware pair, passing the minter as the spender and `address(0)` as `from`.
 
+#### The blind spot propagates to the RuleEngine and to the token
+
+The table above describes calls made **directly on the rule**. In a normal deployment nobody does that: the rule sits inside a `RuleEngine`, which sits in the token's compliance slot, and an integrator holds only the **token** address. Every level in that chain forwards the 3-argument call unchanged, so every level inherits the hardcoded `true`:
+
+| You call | Which reaches | Quota checked? |
+| --- | --- | --- |
+| `cmtat.detectTransferRestriction(address(0), to, value)` | `ruleEngine.detectTransferRestriction(...)` → each rule's 3-arg view | ❌ **No** |
+| `cmtat.canTransfer(address(0), to, value)` | same 3-arg chain | ❌ **No** |
+| `ruleEngine.canTransfer(address(0), to, value)` | `_detectTransferRestriction` → first non-zero code; this rule contributes `0` | ❌ **No** |
+| `cmtat.detectTransferRestrictionFrom(minter, address(0), to, value)` | `ruleEngine.detectTransferRestrictionFrom(...)` → this rule's 4-arg view | ✅ **Yes** |
+| `ruleEngine.canTransferFrom(minter, address(0), to, value)` | same 4-arg chain | ✅ **Yes** |
+
+`RuleEngineBase._detectTransferRestriction` walks its rules calling each one's **3-argument** `detectTransferRestriction` and returns the first non-zero code. This rule always returns `0`, so it contributes nothing to the aggregate — the engine-level answer is "allowed" no matter what the minter's quota is, for **every token that engine serves**. CMTAT's `ValidationModuleERC1404` then forwards its own ERC-1404 views to the engine, carrying the blind spot to the token's public API.
+
+> ⚠️ **If you hold only the token address**, the authoritative mint pre-flight is
+> `cmtat.detectTransferRestrictionFrom(minter, address(0), to, value)` — or `canTransferFrom` with the
+> same arguments. `cmtat.canTransfer` and `cmtat.detectTransferRestriction` will report a mint as
+> allowed that then reverts with `RuleMintAllowance_AllowanceExceeded`.
+
+This is pinned by `test_MA1_EngineAndTokenInheritTheHardcodedAllowedView_CurrentBehaviour` in
+[`test/ThreatModel/ThreatModelTests.t.sol`](../../test/ThreatModel/ThreatModelTests.t.sol). Per the
+project convention, that test asserts behaviour the audit considers wrong: if the rule, the engine or
+the token is ever changed to close the gap, it fails, and the finding and documentation must be
+updated with it.
+
 ## Usage scenario
 
 An issuer deploys `RuleMintAllowance` and grants `ALLOWANCE_OPERATOR_ROLE` to a compliance officer. The officer assigns `setMintAllowance(alice, 100_000e18)` — Alice may mint up to 100 000 tokens. Each `cmtat.mint(recipient, amount)` call by Alice reduces her quota. Once exhausted, further mints by Alice revert. The officer can call `increaseMintAllowance(alice, 50_000e18)` to extend Alice's quota or `setMintAllowance(alice, 0)` to revoke it entirely.

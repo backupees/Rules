@@ -508,6 +508,60 @@ contract ThreatModelTests is Test, HelperContract {
     }
 
     /**
+     * @notice MA-1, one level up: the hardcoded "allowed" is not confined to the rule. It propagates
+     *         through the RuleEngine's aggregate and out to the token's own ERC-1404 views, which is
+     *         the API an integrator actually calls (`FEEDBACK_12.md` F-6).
+     * @dev `RuleEngineBase._detectTransferRestriction` aggregates by calling each rule's 3-argument
+     *      view and returning the first non-zero code; this rule always contributes `0`. CMTAT's
+     *      `ValidationModuleERC1404` then forwards the token's views to the engine. The 4-argument
+     *      chain is unaffected at every level and carries the real answer.
+     *
+     *      `_CurrentBehaviour`: this asserts what the audit considers wrong. If the rule, the engine
+     *      or CMTAT is ever changed to close the gap, this test must fail — at which point update it
+     *      together with `FEEDBACK_12.md` F-6, `RESULT.md` F-7 and the two documentation tables.
+     */
+    function test_MA1_EngineAndTokenInheritTheHardcodedAllowedView_CurrentBehaviour() public {
+        cmtatDeployment = new CMTATDeployment();
+        cmtatContract = cmtatDeployment.cmtat();
+
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        ruleEngineMock = new RuleEngine(DEFAULT_ADMIN_ADDRESS, ZERO_ADDRESS, address(cmtatContract));
+        RuleMintAllowance rule = new RuleMintAllowance(DEFAULT_ADMIN_ADDRESS);
+        rule.bindToken(address(ruleEngineMock));
+        ruleEngineMock.addRule(rule);
+        cmtatContract.setRuleEngine(ruleEngineMock);
+        cmtatContract.grantRole(keccak256("MINTER_ROLE"), MINTER);
+        vm.stopPrank();
+
+        // MINTER has no quota at all: every mint by them will revert.
+        assertEq(rule.mintAllowance(MINTER), 0);
+
+        // ENGINE level — the aggregate reports "allowed".
+        assertEq(ruleEngineMock.detectTransferRestriction(ZERO_ADDRESS, ADDRESS2, 100), TRANSFER_OK);
+        assertTrue(ruleEngineMock.canTransfer(ZERO_ADDRESS, ADDRESS2, 100));
+
+        // TOKEN level — CMTAT forwards to the engine, so it reports "allowed" too.
+        assertEq(cmtatContract.detectTransferRestriction(ZERO_ADDRESS, ADDRESS2, 100), TRANSFER_OK);
+        assertTrue(cmtatContract.canTransfer(ZERO_ADDRESS, ADDRESS2, 100));
+
+        // The 4-argument chain carries the real answer at BOTH levels.
+        assertEq(
+            ruleEngineMock.detectTransferRestrictionFrom(MINTER, ZERO_ADDRESS, ADDRESS2, 100),
+            CODE_MINTER_ALLOWANCE_EXCEEDED
+        );
+        assertFalse(ruleEngineMock.canTransferFrom(MINTER, ZERO_ADDRESS, ADDRESS2, 100));
+        assertEq(
+            cmtatContract.detectTransferRestrictionFrom(MINTER, ZERO_ADDRESS, ADDRESS2, 100),
+            CODE_MINTER_ALLOWANCE_EXCEEDED
+        );
+
+        // Enforcement agrees with the 4-arg views, not with the 3-arg ones.
+        vm.prank(MINTER);
+        vm.expectRevert();
+        cmtatContract.mint(ADDRESS2, 100);
+    }
+
+    /**
      * @notice MA-1: quota accounting never underflows and always matches consumed amounts.
      */
     function testFuzz_MA1_MintAllowanceAccountingIsExact(uint128 quota, uint128 mintA, uint128 mintB) public {
