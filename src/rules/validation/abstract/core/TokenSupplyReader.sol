@@ -29,7 +29,10 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
  *
  * ## Deployment precondition (both rules)
  * {_currentSupply} is `try/catch`-wrapped but performs **no code-length check**: a `try` call to a
- * codeless address reverts *uncatchably*, so the guard would be useless there anyway. Safety comes
+ * codeless address reverts *uncatchably*, so the guard would be useless there anyway. (The mechanism is the
+ * ABI decoder, not `EXTCODESIZE` — solc >= 0.8.10 skips the existence check when return data is expected, the
+ * CALL to a codeless account succeeds with 0 bytes, and decoding fails in THIS frame after the call returned,
+ * where `catch` cannot reach it. See `doc/technical/RuleMaxTotalSupply.md`.) Safety comes
  * from configuration instead -- each rule's setter rejects a candidate without code, and EIP-6780
  * (Cancun) makes that permanent, since `SELFDESTRUCT` can only clear an account created in the same
  * transaction. **This reasoning assumes a Cancun-or-later chain**, which `foundry.toml` targets.
@@ -70,7 +73,9 @@ abstract contract TokenSupplyReader {
      * `RuleChainlinkPoR` consults and treats as optional.
      *
      * WARNING: the caller MUST have already established that `candidate` has code. A `try` call to a
-     * codeless address reverts uncatchably and this probe cannot contain it.
+     * codeless address reverts uncatchably -- the ABI decoder fails in the caller's frame, outside `catch`'s
+     * reach -- and this probe cannot contain it. Note code alone is not sufficient either: a contract that
+     * returns 0 bytes fails the same way.
      * @param candidate The token contract to probe.
      * @return True when `totalSupply()` is callable.
      */

@@ -9,7 +9,7 @@ This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity
 > The specification mandates exactly one identity check:
 >
 > - *"The **receiver** MUST be whitelisted on the Identity Registry and verified"* (§ Transfer)
-> - *"`transferFrom` **works the same way**"* — receiver only
+> - *"`transferFrom` **works the same way**"*: receiver only
 > - *"`mint` and `forcedTransfer` **only require the receiver** to be whitelisted and verified"*
 > - *"The `burn` function **bypasses all checks** on eligibility"*
 >
@@ -84,11 +84,11 @@ Returns the current identity registry address. Returns `address(0)` if none is s
 ## Transfer restriction logic
 
 - If no registry is set → all transfers pass.
-- **Burns (`to == address(0)`) always pass** — ERC-3643: *"The `burn` function bypasses all checks on eligibility."*
+- **Burns (`to == address(0)`) always pass**. ERC-3643: *"The `burn` function bypasses all checks on eligibility."*
 - For all other transfers, including **mint**:
   - **`to` is ALWAYS checked.** This is the only check ERC-3643 mandates.
-  - `from` is checked **only if `checkSender` is enabled** (off by default — stricter than the spec).
-  - `spender` is checked **only if `checkSpender` is enabled** (off by default — stricter than the spec), and mint
+  - `from` is checked **only if `checkSender` is enabled** (off by default, stricter than the spec).
+  - `spender` is checked **only if `checkSpender` is enabled** (off by default, stricter than the spec), and mint
     and burn are exempt from it regardless: the minter/burner acts on its own authority, not as a delegated spender.
     This is what lets an **unverified minter** mint to a verified recipient, exactly as ERC-3643 requires
     (*"`mint` … only require[s] the receiver to be whitelisted and verified"*).

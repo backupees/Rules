@@ -4,7 +4,7 @@
 
 `RuleChainlinkPoR` ensures the total supply of a token never exceeds the reserves actually backing it. Before every mint it reads the latest reserve value from a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed and checks whether the new total supply (current supply plus the requested mint amount) would exceed what the reserves can back. If it would, the mint is rejected.
 
-The maximum mintable supply equals the reported reserves **exactly** — there is no margin, buffer or headroom parameter. If you need a safety cushion, express it upstream (report conservative reserves on the feed) or compose with `RuleMaxTotalSupply` for a static ceiling.
+The maximum mintable supply equals the reported reserves **exactly**: there is no margin, buffer or headroom parameter. If you need a safety cushion, express it upstream (report conservative reserves on the feed) or compose with `RuleMaxTotalSupply` for a static ceiling.
 
 Only mint operations (`from == address(0)`) are gated. Plain transfers do not change the total supply, and burns only reduce it, so both always pass — including while the feed is stale or unavailable. This is deliberate: a lapsed feed must never trap holders in their position.
 
@@ -53,7 +53,7 @@ Configuration reverts if the feed's `decimals()` call fails (`RuleChainlinkPoR_F
 
 The feed's `decimals()` is read **on every check** and never cached. The value validated at configuration time is only used to reject a bad feed early; it is not stored.
 
-**The risk this avoids.** Caching is the obvious optimisation — decimals are a near-immutable property of a feed, so re-reading them looks wasteful. The problem is the failure mode when that assumption breaks. Chainlink feeds are proxies (`EACAggregatorProxy`) that delegate `decimals()` to whichever aggregator is currently installed. If an aggregator migration changed the reported decimals and the rule were still using a cached value, every subsequent reserve reading would be mis-scaled by `10 ** delta` — with **no revert, no event and no other on-chain signal**. In the direction that overstates reserves, an 8→18 migration against a cached `8` inflates the apparent backing by `10 ** 10`, which authorises essentially unlimited unbacked minting. That is precisely the outcome this rule exists to prevent, so it is not a risk worth trading for gas.
+**The risk this avoids.** Caching is the obvious optimisation, since decimals are a near-immutable property of a feed, so re-reading them looks wasteful. The problem is the failure mode when that assumption breaks. Chainlink feeds are proxies (`EACAggregatorProxy`) that delegate `decimals()` to whichever aggregator is currently installed. If an aggregator migration changed the reported decimals and the rule were still using a cached value, every subsequent reserve reading would be mis-scaled by `10 ** delta` — with **no revert, no event and no other on-chain signal**. In the direction that overstates reserves, an 8→18 migration against a cached `8` inflates the apparent backing by `10 ** 10`, which authorises essentially unlimited unbacked minting. That is precisely the outcome this rule exists to prevent, so it is not a risk worth trading for gas.
 
 **The cost.** One extra `STATICCALL` per restriction check:
 
@@ -63,9 +63,9 @@ The feed's `decimals()` is read **on every check** and never cached. The value v
 | Single `detectTransferRestriction` (cold feed account) | 56,029 | 59,075 | +3,046 |
 | Each further check in the same transaction (warm account) | — | — | ≈ +900 |
 
-Roughly 2.6% of a mint, paid only on the mint path — transfers and burns short-circuit before any feed access and are completely unaffected.
+Roughly 2.6% of a mint, paid only on the mint path; transfers and burns short-circuit before any feed access and are completely unaffected.
 
-**Why this is safe for a MUST-NOT-revert view.** Reading live adds a second external call that could fail, so both feed calls are guarded identically: the `code.length` check covers both (Solidity's extcodesize check on a `try` to a codeless address reverts *uncatchably*, so `try/catch` alone would not be enough), and a reverting `decimals()` returns `CODE_RESERVES_ANSWER_INVALID`. The `MAX_FEED_DECIMALS` bound is additionally **re-checked at read time**, not just at configuration — otherwise a feed that raised its decimals past the bound would overflow the scaling exponent and revert the view.
+**Why this is safe for a MUST-NOT-revert view.** Reading live adds a second external call that could fail, so both feed calls are guarded identically: the `code.length` check covers both (a `try` to a codeless address reverts *uncatchably*, so `try/catch` alone would not be enough — see the deployment-precondition section for why, and why the mechanism is the ABI decoder rather than `extcodesize`), and a reverting `decimals()` returns `CODE_RESERVES_ANSWER_INVALID`. The `MAX_FEED_DECIMALS` bound is additionally **re-checked at read time**, not just at configuration — otherwise a feed that raised its decimals past the bound would overflow the scaling exponent and revert the view.
 
 **Residual risk.** The scaling now always agrees with what the feed reports *at the moment of the check*, so there is no stale-cache window. What remains is that a feed changing decimals mid-life still changes the meaning of the reserve figure between one block and the next; the rule follows it faithfully rather than silently using an outdated scale, but an operator monitoring a feed migration should still confirm the new aggregator reports the reserve they expect.
 
@@ -75,7 +75,7 @@ Roughly 2.6% of a mint, paid only on the mint path — transfers and burns short
 
 Configuration validates the token in three ways: it must not be the zero address, it must have code (`RuleChainlinkPoR_TokenIsNotAContract`), and `totalSupply()` must be callable (`RuleChainlinkPoR_TokenTotalSupplyUnavailable`). `decimals()` remains **optional** — a token without it is accepted and the configured value is used as-is — but `totalSupply()` is mandatory, because the restriction check cannot work without it. Probing at configuration turns what would otherwise be a silent read-path failure into an immediate, named configuration error.
 
-> **Warning — decimal scaling.** For a token that does **not** expose `decimals()`, the configured value is used as-is. An incorrect value skews the reserve comparison in either direction, allowing over-minting or blocking valid mints. Verify the token's real decimals before configuring.
+> **Warning: decimal scaling.** For a token that does **not** expose `decimals()`, the configured value is used as-is. An incorrect value skews the reserve comparison in either direction, allowing over-minting or blocking valid mints. Verify the token's real decimals before configuring.
 
 #### Truncation when the feed is finer-grained than the token
 
@@ -97,7 +97,7 @@ Behaviour across the decimals domain is pinned by [`test/RuleChainlinkPoR/RuleCh
 
 `maxStalenessSeconds` is the maximum age of the reserve data before the rule rejects mints. Choose it from the **heartbeat** of the Proof of Reserve feed: the threshold should match or slightly exceed the heartbeat. A feed whose `updatedAt` is exactly `maxStalenessSeconds` old is still accepted; older is rejected.
 
-Setting the threshold to `0` disables the check — the rule then accepts reserve data of any age. Do this only when the feed's freshness is guaranteed by other means.
+Setting the threshold to `0` disables the check, so the rule then accepts reserve data of any age. Do this only when the feed's freshness is guaranteed by other means.
 
 ## Restriction codes
 
@@ -122,7 +122,7 @@ All three setters are gated on `_authorizeChainlinkPoRManager()`.
 
 ### `setReservesFeed(AggregatorV3Interface newReservesFeed)`
 
-Replaces the data feed. Reverts on the zero address, on an address with no code, when `decimals()` reverts, or when it reports more than 36 — validation only, the value is not stored. Emits `ReservesFeedUpdated`, whose `feedDecimals` argument records what the feed reported at configuration time.
+Replaces the data feed. Reverts on the zero address, on an address with no code, when `decimals()` reverts, or when it reports more than 36. Validation only, the value is not stored. Emits `ReservesFeedUpdated`, whose `feedDecimals` argument records what the feed reported at configuration time.
 
 ### `setTokenMetadata(address newTokenContract, uint8 newTokenDecimals)`
 
@@ -149,7 +149,7 @@ Forwards the feed's current `decimals()`, so it always agrees with what the rest
 For a mint (`from == address(0)`):
 
 1. Read `decimals()` and then `latestRoundData()` from `reservesFeed`.
-2. Reject with `CODE_RESERVES_FEED_UNAVAILABLE` if either call reverts or the feed reports more than `MAX_FEED_DECIMALS` — there is no answer to judge.
+2. Reject with `CODE_RESERVES_FEED_UNAVAILABLE` if either call reverts or the feed reports more than `MAX_FEED_DECIMALS`: there is no answer to judge.
 3. Reject with `CODE_RESERVES_ANSWER_INVALID` if a round was returned but `answer < 0` or `updatedAt == 0`.
 4. Reject with `CODE_RESERVES_FEED_STALE` if `maxStalenessSeconds != 0` and `block.timestamp - updatedAt > maxStalenessSeconds`.
 5. Scale the answer from the feed's live decimals to `tokenDecimals` to obtain `backedSupply`.
@@ -172,7 +172,7 @@ Anything else returns `TRANSFER_OK`. `detectTransferRestrictionFrom` delegates t
 #### Why two feed-failure codes
 
 `79` and `77` both block the mint, so the *token* behaves identically. They are separated because they tell an
-operator different things, and the restriction code is the only channel available — the read path cannot revert
+operator different things, and the restriction code is the only channel available, because the read path cannot revert
 with data, and a view cannot emit an event.
 
 | Code | Meaning | What an operator checks |
@@ -180,12 +180,28 @@ with data, and a view cannot emit an event.
 | `79` | The feed could not be read at all | Feed liveness; is the configured address a compatible `AggregatorV3Interface`? |
 | `77` | A round came back and its contents are unusable | Is this really a Proof of Reserve feed (a price feed can legitimately go negative)? Or wait for the round to complete. |
 
-`80` is left reserved. Splitting `79` further — "reverted" versus "decimals out of range" — was considered and
+`80` is left reserved. Splitting `79` further into "reverted" versus "decimals out of range" was considered and
 rejected: both mean the configured feed cannot be used, so the remedy is the same.
 
 #### Deployment precondition: EIP-6780 (Cancun or later)
 
-`try/catch` does **not** catch a call to an address with no code — Solidity's `extcodesize` check reverts *uncatchably*, before the `catch` clause can run. The revert-free guarantee therefore rests on `reservesFeed` and `tokenContract` still having code at read time.
+`try/catch` does **not** catch a call to an address with no code, and the reason is not the one usually quoted.
+`catch` handles a revert raised by the *callee*; it cannot handle a failure in this contract's own frame.
+
+For a call that returns data (`totalSupply()`, `decimals()`, `latestRoundData()`), **Solidity 0.8.10 and later
+skip the `EXTCODESIZE` check entirely** and rely on the ABI decoder instead. The `CALL` to a codeless account
+*succeeds*, returning 0 bytes; the decoder then fails to read the expected values from nothing, in the caller's
+frame, after the call has already returned. There is no callee revert for `catch` to attach to. (For a call
+returning *nothing*, the `EXTCODESIZE` check is still emitted and reverts before any call is made. Also
+uncatchable, different mechanism.)
+
+Confirm it in one step: point the rule at a contract that *has* code whose fallback succeeds and returns zero
+bytes. `EXTCODESIZE` passes, the `CALL` succeeds, and the view still reverts uncatchably.
+
+The revert-free guarantee therefore rests on `reservesFeed` and `tokenContract` still having code at read time —
+**and on their returning well-formed data**. Code alone is not sufficient: a proxy upgraded to an implementation
+whose fallback returns empty data keeps its code and still breaks the read path. Both are trusted inputs for
+this reason.
 
 That holds because the setters require code at configuration time (`RuleChainlinkPoR_FeedIsNotAContract`, `RuleChainlinkPoR_TokenIsNotAContract`), every write to either field goes through a validated setter, and **EIP-6780** (Cancun) restricts `SELFDESTRUCT` to accounts created in the same transaction — so a contract that exists across transactions can no longer be removed. A validated address stays a contract.
 
@@ -193,7 +209,7 @@ There is deliberately **no runtime code-length re-check**: it would be unreachab
 
 > **If you deploy to a chain without EIP-6780** (post-Shanghai but pre-Cancun, as some L2s were for a period), this guarantee does not hold: a `SELFDESTRUCT`ed feed or token would make the ERC-1404 views revert instead of returning a code. Re-introduce an `address(x).code.length == 0` guard before each `try` if you target such a chain — it costs about 100 gas per call site, not the 2,600 a cold `EXTCODESIZE` suggests, because the account is warmed either way.
 
-The trust placed in `tokenContract` is narrower than it looks: it is trusted to report an **accurate** supply — nothing on-chain can verify that — but it is **not** trusted to stay callable. A token that is upgraded to something that reverts, or that reverts while paused, degrades to a restriction code rather than breaking the ERC-1404 contract. This is stricter than `RuleMaxTotalSupply`, which calls `totalSupply()` unguarded.
+The trust placed in `tokenContract` is narrower than it looks: it is trusted to report an **accurate** supply, which nothing on-chain can verify, but it is **not** trusted to stay callable. A token that is upgraded to something that reverts, or that reverts while paused, degrades to a restriction code rather than breaking the ERC-1404 contract. This is stricter than `RuleMaxTotalSupply`, which calls `totalSupply()` unguarded.
 
 ### Failure modes are fail-closed for mints only
 
@@ -270,7 +286,7 @@ The rule never reads `msg.sender` and holds no per-token binding, so it behaves 
 
 ### One instance per protected token
 
-> **Warning.** A `RuleChainlinkPoR` instance protects exactly **one** token — the one in `tokenContract`. Nothing on-chain enforces that. Deploy a separate instance per token.
+> **Warning.** A `RuleChainlinkPoR` instance protects exactly **one** token: the one in `tokenContract`. Nothing on-chain enforces that. Deploy a separate instance per token.
 
 **What the rule actually checks.** On every mint the rule reads `totalSupply()` from the **configured `tokenContract`**, never from whichever token triggered the check. It has no way to learn that identity: in Topology A the caller is the RuleEngine, and the `transferred(spender, from, to, value)` payload carries no token address.
 
@@ -285,7 +301,7 @@ Y's own supply and Y's own reserves never enter the calculation. Both failure di
 - **Over-mint.** If X's supply sits far below what X's feed backs, the leftover headroom is silently handed to Y. Y can be minted against reserves that do not back it — the exact outcome this rule exists to prevent.
 - **Freeze.** If X is already at its cap, every Y mint is rejected with code `75` even when Y is fully backed.
 
-**Why it is easy to miss.** There is no revert, no event and no divergence in any getter — `maxBackedSupply()` faithfully reports the limit *for the configured token*, so a pre-flight check against the wrong instance looks perfectly healthy. The misconfiguration only surfaces as mints that are wrongly allowed or wrongly blocked.
+**Why it is easy to miss.** There is no revert, no event and no divergence in any getter. `maxBackedSupply()` faithfully reports the limit *for the configured token*, so a pre-flight check against the wrong instance looks perfectly healthy. The misconfiguration only surfaces as mints that are wrongly allowed or wrongly blocked.
 
 **Why there is no guard.** Adding one would mean giving a validation rule a binding and a stateful install/uninstall lifecycle, which is how the *operation* rules (`RuleConditionalTransferLight`, `RuleMintAllowance`) work but not the validation rules — those are deliberately stateless and shareable. `RuleMaxTotalSupply` has the identical exposure for the same reason. Changing that is a library-wide decision about whether supply-capping validation rules should be bindable, not something to special-case here.
 

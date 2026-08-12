@@ -48,7 +48,7 @@ Every finding, its outcome, and the commit that carries it.
 | **E-1** | 16 `internal` functions not `virtual` | ✅ Fixed — 0 gas cost, guarded by override harnesses | `8d60b59` |
 | **E-2** | `canTransfer` not `virtual` (plus its ERC-7943 twin) | ✅ Fixed — ~55 further non-`virtual` public views found, deliberately out of scope | `5ebbe43` |
 | **E-3** | 27 public mutating functions not `virtual` | ✅ Fixed — 0 gas cost; harness coverage is representative, 21 of 27 unguarded | `fad06a7` |
-| **F-1** | Sanctions oracle asked whether `address(0)` is sanctioned | ✅ Fixed — ~900 gas/mint, removes a dependency on a third party's handling of a non-wallet | `b10021e` |
+| **F-1** | Sanctions oracle asked whether `address(0)` is sanctioned | ✅ Fixed — 2 830 gas/mint, removes a dependency on a third party's handling of a non-wallet | `b10021e` |
 | **F-2** | Sanctions `From` path skipped the direct check when the oracle is unset | ⚠️ **Fixed — the remedy proposed in the finding did not work** and was replaced; +221 gas on the disabled-oracle path, accepted | `63a9548` |
 | **F-3** | Dead `to != address(0)` term in `RuleIdentityRegistryBase` | ✅ Fixed — 49 gas, and the comment that credited it with the burn exemption corrected | `44c6681` |
 | **F-4** | `_transferHash` comment claimed "packed"; encoding is neither standard form | ✅ Fixed (option 1) — comment corrected, 96/128-byte preimage documented and pinned by tests; assembly kept (~109 gas cheaper, on the transfer write path) | `9c68056` |
@@ -98,7 +98,7 @@ Every finding, its outcome, and the commit that carries it.
 | **E-1** | Convention | 16 `internal` functions lack `virtual`, against the project's own rule — including an access-control hook | ✅ **implemented** — 0 gas, 0 remaining |
 | **E-2** | Convention | `canTransfer` is the only non-`virtual` view in `RuleTransferValidation` | ✅ **implemented** — plus its ERC-7943 twin; ~55 more found, see note |
 | **E-3** | Convention | 27 public mutating functions lack `virtual`; siblings disagree, and it already forced a documented workaround | ✅ **implemented** — 0 gas, 0 remaining |
-| **F-1** | Weird | Sanctions rule asks the oracle whether `address(0)` is sanctioned on every mint and burn | ✅ **implemented** — ~900 gas/mint, removes the dependency |
+| **F-1** | Weird | Sanctions rule asks the oracle whether `address(0)` is sanctioned on every mint and burn | ✅ **implemented** — 2 830 gas/mint (+96 on transfers), removes the dependency |
 | **F-2** | Weird | Sanctions `From` path skips the direct check entirely when the oracle is unset | ✅ **implemented** — the sketched fix was wrong, see note |
 | **F-3** | Weird | Dead condition `to != address(0)` in `RuleIdentityRegistryBase` | ✅ **implemented** — 49 gas, comment corrected |
 | **F-4** | Weird | `_transferHash` assembly matches neither `abi.encode` nor `abi.encodePacked`, but the comment says "packed" | ✅ **implemented (option 1)** — comment fixed, preimage documented + pinned |
@@ -690,7 +690,15 @@ Note this is a *different* question from "should the minter be screened". `CLAUD
 >
 > **The test gap was the real story.** The whole suite passed *before* any test was written for this — nothing anywhere asserted what a mint or burn does when the oracle has an opinion about `address(0)`. The new `RuleSanctionsListMintBurnSentinel.t.sol` configures an oracle that **does** sanction the zero address and asserts issuance and redemption still work. Reverting the two guards and re-running shows 4 of its 8 tests fail — mint blocked with code `30`, burn with `31`, and `transferred` reverting on the write path — while the 4 asserting unchanged behaviour (real sanctioned participants, the minter-as-spender check) pass either way. That is the shape a regression test should have.
 >
-> **Gas, as a side effect rather than the point:** a mint or burn now makes one oracle call instead of two — **2 478 gas versus 3 405** for a two-participant transfer, about 900 gas saved on every issuance and redemption. Quantified without a before/after build, since the difference between the one-participant and two-participant paths in the current code *is* the removed call.
+> **Gas, as a side effect rather than the point** — and the figure first published here was wrong. It compared the *current* mint path (2 478) against the *current* transfer path (3 405) and inferred "about 900 gas", on the reasoning that the difference between a one-participant and a two-participant path is the removed call. That reasoning ignores cold/warm: the removed call read `address(0)`'s slot in the oracle, which nothing else ever touches, so it was **cold on every mint** — whereas a transfer's two calls hit slots real activity keeps warm. Re-measured as a true before/after of the same operation, with the guard toggled in place:
+>
+> | Path | Before | After | Delta |
+> |---|---|---|---|
+> | Mint | 5 308 | 2 478 | **−2 830** |
+> | Burn | 5 308 | 2 478 | **−2 830** |
+> | Plain transfer | 3 309 | 3 405 | **+96** |
+>
+> Three times the saving originally claimed, and it also surfaces a cost the first measurement missed entirely: the two `!= address(0)` guards add 96 gas to every plain transfer, where they are always true. Note the pre-fix mint cost *more* than a pre-fix transfer (5 308 vs 3 309) while screening one fewer real participant — the tell that the sentinel lookup was always cold.
 >
 > **What was deliberately not changed:** the `spender` leg is still passed to the oracle unguarded, so a direct `detectTransferRestrictionFrom(address(0), …)` call still queries the sentinel. Left alone because CMTAT routes plain transfers through the 3-argument path, so a zero spender never reaches this rule from a token — it is only reachable by an off-chain caller constructing the call by hand, where the answer is harmless. Guarding it would be consistent and costs nothing; it is simply outside what this finding claimed, and the finding explicitly said the spender handling should stay.
 

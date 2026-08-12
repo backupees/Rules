@@ -84,7 +84,35 @@ The trust placed in `tokenContract` is therefore narrower than it looks: it is t
 
 #### Deployment precondition: EIP-6780 (Cancun or later)
 
-`try/catch` does not catch a call to a codeless address — Solidity's `extcodesize` check reverts *uncatchably*. The revert-free guarantee therefore assumes `tokenContract` still has code at read time, which holds because the setters require code at configuration and **EIP-6780** (Cancun) restricts `SELFDESTRUCT` to same-transaction accounts. There is no runtime code-length re-check, because it would be unreachable on any supported chain; `foundry.toml` targets `prague`. On a chain without EIP-6780, re-introduce the guard (~100 gas per call site — the account is warmed either way, so it does not cost a full cold `EXTCODESIZE`).
+**`try/catch` cannot contain a call to a codeless address.** This is the reason the code-length check lives at
+*configuration* rather than being left to the read path, and the mechanism is not the one usually quoted.
+
+`try/catch` catches a revert **raised by the callee**. It does not catch a failure that happens in *this*
+contract's frame while preparing or consuming the call. Two such failures apply here, and which one you get
+depends on the signature:
+
+| Call shape | What the compiler emits | Why `catch` never runs |
+| --- | --- | --- |
+| Returns data (`totalSupply() → uint256`) | Since **Solidity 0.8.10** the `EXTCODESIZE` check is *skipped*; the compiler relies on the ABI decoder instead | The `CALL` to a codeless account **succeeds** with 0 bytes of return data. The decoder then fails to read a `uint256` from nothing — in the caller's frame, *after* the call returned. Not a callee revert, so not catchable |
+| Returns nothing | The `EXTCODESIZE` check is still emitted, before the call | The revert happens before any external call is made. There is nothing for `catch` to attach to |
+
+So for `totalSupply()` the uncatchable revert comes from the **ABI decoder**, not from `extcodesize`. That is
+easy to confirm: point the rule at a contract that *has* code whose fallback succeeds and returns zero bytes.
+`EXTCODESIZE` passes, the `CALL` succeeds — and the view still reverts uncatchably.
+
+Two consequences follow:
+
+1. **A runtime code-length re-check would be pointless**, which is why there is none. `_setTokenContract`
+   requires code at configuration, and **EIP-6780** (Cancun) restricts `SELFDESTRUCT` to accounts created in
+   the same transaction, so a validated token cannot become codeless afterwards. On a chain *without* EIP-6780
+   this does not hold and the guard should be re-introduced (~100 gas per call site; the account is warm
+   either way, so it is not a full cold `EXTCODESIZE`).
+2. **Having code is necessary but not sufficient.** The guarantee is that the token returns a well-formed
+   `uint256`, not merely that it exists. A proxy upgraded to an implementation whose fallback returns empty
+   data keeps its code and still breaks the read path — the ABI decoder reverts and `CODE_SUPPLY_ORACLE_UNAVAILABLE`
+   is never reached. `try/catch` covers a token that *reverts*; it cannot cover one that returns nothing.
+   `tokenContract` is a trusted input for this reason, and pointing the rule at an untrusted proxy is outside
+   the model.
 
 ## Usage scenario
 

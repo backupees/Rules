@@ -52,7 +52,7 @@ Legend: ✅ screened / can block · ❌ not screened · ⚙️ conditional (see 
 
 ## 3. Overload surface (ERC-7943 `tokenId` / `ITransferContext`)
 
-Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads and the `ITransferContext` struct entrypoints come from `RuleNFTAdapter`, and **only the rules that inherit it have them**. This is a deliberate design choice, not an oversight: `RuleMaxTotalSupply` and `RuleChainlinkPoR` cap a fungible supply, and the conditional-transfer / mint-allowance rules key on fungible amounts, so a `tokenId` dimension would be meaningless for them.
+Not every rule exposes the same entrypoints. The ERC-7943 `tokenId` overloads and the `ITransferContext` struct entrypoints come from `RuleNFTAdapter`, and **only the rules that inherit it have them**. The omission is deliberate: `RuleMaxTotalSupply` and `RuleChainlinkPoR` cap a fungible supply, and the conditional-transfer / mint-allowance rules key on fungible amounts, so a `tokenId` dimension would be meaningless for them.
 
 | Rule | ERC-7943 `tokenId` overloads [12] | `transferred(FungibleTransferContext)` | `transferred(MultiTokenTransferContext)` |
 |---|---|---|---|

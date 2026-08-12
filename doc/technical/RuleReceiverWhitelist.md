@@ -14,11 +14,11 @@ It sits between two existing rules:
 
 ## Why receiver-only
 
-ERC-3643 mandates exactly one identity check — *"The receiver MUST be whitelisted on the Identity Registry and verified"* — and states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility".
+ERC-3643 mandates exactly one identity check, *"The receiver MUST be whitelisted on the Identity Registry and verified"*, and states that `transferFrom` "works the same way", that `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility".
 
 That is not an oversight in the standard. **Screening the sender traps de-listed holders**: an investor whose eligibility lapses could neither receive nor send, stranding their position permanently. ERC-3643 checks only the receiver precisely so a lapsed investor can still exit to an eligible counterparty. This rule is the CMTAT-side expression of that decision, and the same reasoning `CLAUDE.md` records as non-negotiable for `RuleIdentityRegistry`.
 
-If you want both parties screened, that is a different policy — use `RuleWhitelist`.
+If you want both parties screened, that is a different policy; use `RuleWhitelist`.
 
 ## Behaviour
 
@@ -31,7 +31,7 @@ If you want both parties screened, that is a different policy — use `RuleWhite
 
 ### Burn is exempted explicitly
 
-On a burn the receiver is `address(0)`, which **can never be listed** — the underlying address set rejects it, so `isAddressListed(address(0))` is always `false`. Without an explicit exemption every burn would be rejected. ERC-3643 says burn bypasses eligibility, so the exemption is the conformant behaviour rather than a convenience.
+On a burn the receiver is `address(0)`, which **can never be listed**: the underlying address set rejects it, so `isAddressListed(address(0))` is always `false`. Without an explicit exemption every burn would be rejected. ERC-3643 says burn bypasses eligibility, so the exemption is the conformant behaviour rather than a convenience.
 
 ### Mint has no opt-out flag
 
@@ -97,7 +97,7 @@ engine.setTokenSelfBindingApproval(address(token), true);
 token.setCompliance(address(engine));   // engine holds RuleReceiverWhitelist
 ```
 
-Because the rule's semantics match the token's own, it composes with the identity registry without changing the token's behaviour — it narrows eligibility, never widens or redirects it.
+Because the rule's semantics match the token's own, it composes with the identity registry without changing the token's behaviour; it narrows eligibility, never widens or redirects it.
 
 ## Tests
 
@@ -109,4 +109,4 @@ Because the rule's semantics match the token's own, it composes with the identit
 
 The parity suite is the one that matters for the conformance claim. It runs the rule in the compliance slot of the genuine `Token.sol` over the *same address set* the identity registry holds, and asserts the rule never changes the outcome — a de-listed holder still exits, an unlisted spender is not blocked, burn still works. A rule that screened the sender would break those while every unit test still passed. A final test confirms the rule is genuinely consulted (it blocks when its list is narrower than the registry's), so the parity results are not vacuous.
 
-Run it with `FOUNDRY_PROFILE=erc3643 forge test` — see `foundry.toml` for why that suite needs its own profile.
+Run it with `FOUNDRY_PROFILE=erc3643 forge test`; see `foundry.toml` for why that suite needs its own profile.

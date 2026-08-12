@@ -8,7 +8,7 @@ Approval key:
 
 - `keccak256(token, from, to, value)`
 
-This prevents approval reuse across tokens — **provided the rule receives token-specific caller context, which only happens when each token calls the rule directly.**
+This prevents approval reuse across tokens, **provided the rule receives token-specific caller context, which only happens when each token calls the rule directly.**
 
 > ## ⚠️ Deployment requirement: bind this rule **directly to each token**
 >
@@ -16,16 +16,16 @@ This prevents approval reuse across tokens — **provided the rule receives toke
 >
 > The reason is structural: approvals are **recorded** under the `token` argument you pass to `approveTransfer`, but **consumed** under `msg.sender`. Those two keys agree only when the caller *is* the token. Behind a `RuleEngine` the caller is the engine, and the rule cannot do its job — see [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work) for the exhaustive case analysis.
 >
-> "MultiToken" means *several tokens each pointing directly at one shared rule* — not *one RuleEngine serving several tokens*.
+> "MultiToken" means *several tokens each pointing directly at one shared rule*, not *one RuleEngine serving several tokens*.
 
 ## Deployment topology — why a RuleEngine does not work
 
 Two guards determine what is possible:
 
-- `_authorizeTransferExecution()` — `require(isTokenBound(msg.sender))`: **the caller must be bound.**
-- `_approveTransfer()` — `require(isTokenBound(token))`: **the `token` argument must be bound.**
+- `_authorizeTransferExecution()`: `require(isTokenBound(msg.sender))`: **the caller must be bound.**
+- `_approveTransfer()`: `require(isTokenBound(token))`: **the `token` argument must be bound.**
 
-Behind a `RuleEngine` (`CMTAT.setRuleEngine(engine)` + `engine.addRule(rule)`), the engine — not the token — is the `msg.sender` of every `transferred()` call. Every possible wiring then fails:
+Behind a `RuleEngine` (`CMTAT.setRuleEngine(engine)` + `engine.addRule(rule)`), the engine, not the token, is the `msg.sender` of every `transferred()` call. Every possible wiring then fails:
 
 | # | Wiring | Outcome |
 | --- | --- | --- |
@@ -33,14 +33,14 @@ Behind a `RuleEngine` (`CMTAT.setRuleEngine(engine)` + `engine.addRule(rule)`), 
 | B | Bind the **token** | The engine is still the caller and is not bound → same revert. Binding the token achieves nothing, because the token never calls the rule. |
 | C | Bind the **engine**, approve with the **token** address | `approveTransfer(token, …)` → `token` is not bound → reverts `RuleConditionalTransferLightMultiToken_InvalidToken`. The approval cannot even be recorded. |
 | C′ | Bind **both**, approve with the **token** address | Approval stored under `H(token, …)`; the engine consumes under `H(engine, …)` → reverts `TransferNotApproved`, and the approval is **stranded in storage permanently**. |
-| D | Bind the **engine**, approve with the **engine** address | The only configuration that runs — and it defeats the rule's purpose (see below). |
+| D | Bind the **engine**, approve with the **engine** address | The only configuration that runs, and it defeats the rule's purpose (see below). |
 
 Case D "works" but is not a valid deployment:
 
 1. **No per-token isolation.** The approval key is the engine, not the token. An approval recorded for `(alice → bob, 100)` intending token A is equally consumable on token B. This is exactly the cross-token approval reuse this rule exists to prevent.
 2. **The `token` parameter becomes misleading.** The operator must pass the *engine* address into a parameter named `token`. Reading the API as written lands you in case C′ and strands approvals.
 3. **`approveAndTransferIfAllowed` cannot work.** It calls `IERC20(token).allowance(...)` on what is actually the engine → revert.
-4. **It is strictly worse than the single-token rule.** Case D is only safe when the engine serves exactly one token — and in that situation [`RuleConditionalTransferLight`](./RuleConditionalTransferLight.md) does the same job with an honest API and a working `approveAndTransferIfAllowed`.
+4. **It is strictly worse than the single-token rule.** Case D is only safe when the engine serves exactly one token, and in that situation [`RuleConditionalTransferLight`](./RuleConditionalTransferLight.md) does the same job with an honest API and a working `approveAndTransferIfAllowed`.
 
 **Correct deployment (direct binding).** Each token calls the rule itself, so `msg.sender == tokenX`, the approve key and the consume key are both `H(tokenX, …)`, and approvals are genuinely isolated per token:
 
@@ -111,7 +111,7 @@ Approves and executes `safeTransferFrom` on the specified token, requiring allow
 
 ### `transferred(...)`
 
-Only bound tokens can call transfer execution hooks. Approval consumption uses the **caller** (`msg.sender`) as the token key — which is why the rule must be bound directly to each token. See [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work).
+Only bound tokens can call transfer execution hooks. Approval consumption uses the **caller** (`msg.sender`) as the token key, which is why the rule must be bound directly to each token. See [Deployment topology](#deployment-topology--why-a-ruleengine-does-not-work).
 
 ### `detectTransferRestrictionForToken(address token, address from, address to, uint256 value) -> uint8`
 
@@ -123,7 +123,7 @@ Boolean counterpart of `detectTransferRestrictionForToken`. Prefer it over `canT
 
 ### `detectTransferRestriction(from, to, value)` / `canTransfer(from, to, value)`
 
-⚠️ **Caller-dependent — prefer the `…ForToken` views above.** These ERC-1404 / ERC-3643 views derive the token key from `msg.sender`, so they only return a meaningful answer when invoked *by the bound token*. Any other caller always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46) / `false`, even for a transfer that is approved and will succeed. They are fail-closed, but carry no signal for third-party pre-flight. See `RESULT.md` finding **F-8**.
+⚠️ **Caller-dependent; prefer the `…ForToken` views above.** These ERC-1404 / ERC-3643 views derive the token key from `msg.sender`, so they only return a meaningful answer when invoked *by the bound token*. Any other caller always receives `CODE_TRANSFER_REQUEST_NOT_APPROVED` (46) / `false`, even for a transfer that is approved and will succeed. They are fail-closed, but carry no signal for third-party pre-flight. See `RESULT.md` finding **F-8**.
 
 The standardized signatures are kept as-is (the token cannot be added to them without breaking ERC-1404), and both the implicit and explicit views are backed by the same internal helper, so for the bound token they can never disagree.
 

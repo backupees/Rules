@@ -8,11 +8,11 @@
 
 ### Where the whitelist comes from
 
-The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal` — the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.
+The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal`, the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.
 
-Only the `internal` layer is inherited, and that is deliberate: the registry exposes exactly one write API — the ERC-3643 one — rather than two overlapping ones. The two roles that gate `RuleAddressSet`'s public `addAddress` / `removeAddress` live in a separate `RuleAddressSetRolesStorage`, inherited by that public layer only, so **this registry does not advertise `ADDRESS_LIST_ADD_ROLE` / `ADDRESS_LIST_REMOVE_ROLE` at all** — it never enforces them, and exposing an inert role invites an operator to grant a privilege that authorises nothing. `testDoesNotExposeInertAddressListRoles` pins their absence from the ABI. Inheriting the public `RuleAddressSet` surface would add `addAddress` / `removeAddress` alongside `registerIdentity` / `deleteIdentity`, giving the same state change two sets of roles and two sets of events, and leaving an operator to guess which pair is authoritative.
+Only the `internal` layer is inherited, and that is deliberate: the registry exposes exactly one write API (the ERC-3643 one) rather than two overlapping ones. The two roles that gate `RuleAddressSet`'s public `addAddress` / `removeAddress` live in a separate `RuleAddressSetRolesStorage`, inherited by that public layer only, so **this registry does not advertise `ADDRESS_LIST_ADD_ROLE` / `ADDRESS_LIST_REMOVE_ROLE` at all** — it never enforces them, and exposing an inert role invites an operator to grant a privilege that authorises nothing. `testDoesNotExposeInertAddressListRoles` pins their absence from the ABI. Inheriting the public `RuleAddressSet` surface would add `addAddress` / `removeAddress` alongside `registerIdentity` / `deleteIdentity`, giving the same state change two sets of roles and two sets of events, and leaving an operator to guess which pair is authoritative.
 
-The design goal is a **wrapper, not a registry**: it adapts the calls an ERC-3643 token makes onto a plain whitelist, and keeps **no identity state whatsoever** — no ONCHAINID, no country, no claims. `registerIdentity`'s `_identity` and `_country` arguments exist so the ERC-3643 signature matches; both are discarded. Verification means exactly one thing: is this wallet on the whitelist.
+The design goal is a **wrapper, not a registry**: it adapts the calls an ERC-3643 token makes onto a plain whitelist, and keeps **no identity state whatsoever**: no ONCHAINID, no country, no claims. `registerIdentity`'s `_identity` and `_country` arguments exist so the ERC-3643 signature matches; both are discarded. Verification means exactly one thing: is this wallet on the whitelist.
 
 ## Which ERC-3643 functions call the registry, and how
 
@@ -46,7 +46,7 @@ Two consequences worth internalising:
 5. deleteIdentity(lostWallet)                           ── called BY THE TOKEN
 ```
 
-**Step 1 does not involve this registry.** Supply the investor's ONCHAINID — or any ERC-734 contract — as `_investorOnchainID`.
+**Step 1 does not involve this registry.** Supply the investor's ONCHAINID, or any ERC-734 contract, as `_investorOnchainID`.
 
 An earlier revision implemented `keyHasPurpose` here so the registry could be passed as that argument, removing the ONCHAINID dependency entirely. It was **removed**, because it bought nothing: `Token.recoveryAddress` calls `keyHasPurpose` on the address the agent supplies and never cross-checks it against the registry (`Token.sol:303-305`), so an agent who wants to skip the gate simply passes a different contract. It was convenience for an honest agent, not a control — and it cost a reverse index plus two behavioural divergences from the reference registry, both of which are now gone.
 
@@ -73,7 +73,7 @@ registry.grantRole(role, operator);        // maintains the whitelist
 registry.grantRole(role, address(token));  // REQUIRED for recoveryAddress
 ```
 
-Then, to recover a wallet — the replacement wallet is registered **by the token**, so do not pre-register it:
+Then, to recover a wallet (the replacement wallet is registered **by the token**, so do not pre-register it):
 
 ```solidity
 token.recoveryAddress(lostWallet, newWallet, investorOnchainId);    // a real ERC-734 identity
@@ -104,11 +104,11 @@ Removes a wallet from the whitelist and clears its reverse-index entry. Reverts 
 
 ### `isVerified(address _userAddress) → bool`
 
-Whitelist membership. **`isVerified(address(0))` is always `false`** — the zero address can never enter the registry, so the registry can never authorise a mint to it.
+Whitelist membership. **`isVerified(address(0))` is always `false`**: the zero address can never enter the registry, so the registry can never authorise a mint to it.
 
 ### `investorCountry(address _userAddress) → uint16`
 
-**Always returns 0.** No country is stored. The function exists only because `recoveryAddress` calls it — omitting it would make every recovery revert — and the 0 it returns is handed straight back into `registerIdentity`, which ignores it. See [Limitation 3](#3-no-identity-data-is-kept).
+**Always returns 0.** No country is stored. The function exists only because `recoveryAddress` calls it (omitting it would make every recovery revert), and the 0 it returns is handed straight back into `registerIdentity`, which ignores it. See [Limitation 3](#3-no-identity-data-is-kept).
 
 ### `version() → string`
 
@@ -151,9 +151,9 @@ Less than it sounds, because the token barely uses it. Auditing the reference im
 | Location | Role |
 | --- | --- |
 | `token/Token.sol:308` (`recoveryAddress`) | **The only use in the token.** A pure pass-through: reads the lost wallet's country and hands it straight to `registerIdentity` for the new wallet. The token never branches on the value, never stores it, and exposes no getter — `IToken.sol` does not mention country at all. |
-| `registry/implementation/IdentityRegistryStorage.sol:91,112,177` | Storage plumbing — writes and reads the field. |
+| `registry/implementation/IdentityRegistryStorage.sol:91,112,177` | Storage plumbing: writes and reads the field. |
 | `registry/implementation/IdentityRegistry.sol:132,226` | Forwards to storage. |
-| `compliance/legacy/BasicCompliance.sol:175` | `_getCountry()` — the only place country drives *logic*, and it has **no caller** in the vendored tree; it exists for country-restriction modules built on top. Note the path: `legacy`. |
+| `compliance/legacy/BasicCompliance.sol:175` | `_getCountry()`, the only place country drives *logic*, and it has **no caller** in the vendored tree; it exists for country-restriction modules built on top. Note the path: `legacy`. |
 | `_testContracts/` | `MockContract`, `LegacyToken_3_5_2`. |
 
 Two things follow:

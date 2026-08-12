@@ -26,6 +26,7 @@ Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatibl
 - [Toolchains and Usage](#toolchains-and-usage)
 - [API](#api)
 - [Security](#security)
+- [Development](#development)
 - [Intellectual property](#intellectual-property)
 
 ## Schema
@@ -147,7 +148,7 @@ _Diagram source: doc/img/readme-erc721-erc1155-compliance.puml._
 
 ### Zero address in batch operations
 
-Every address-list rule (`RuleWhitelist`, `RuleReceiverWhitelist`, `RuleBlacklist`, `RuleSpenderWhitelist`, `RuleERC2980`) offers single and batch write functions. The two differ in exactly one way, and it is worth stating precisely because it is easy to assume otherwise:
+Every address-list rule (`RuleWhitelist`, `RuleReceiverWhitelist`, `RuleBlacklist`, `RuleSpenderWhitelist`, `RuleERC2980`) offers single and batch write functions. The two differ in exactly one way:
 
 | Input | Single (`addAddress`) | Batch (`addAddresses`) |
 | --- | --- | --- |
@@ -158,7 +159,7 @@ Every address-list rule (`RuleWhitelist`, `RuleReceiverWhitelist`, `RuleBlacklis
 
 So "batch operations are non-reverting" holds for duplicates and missing entries only. `address(0)` is rejected on **every** add path.
 
-That is deliberate, not an oversight. The batch convention skips duplicates because a duplicate is an idempotent no-op that the emitted event still describes truthfully. Silently dropping `address(0)` would not be truthful: `AddAddresses` echoes the input array, so the event would name the zero address as a set member when it is not one, re-polluting the exact off-chain view the guard exists to keep clean. The zero address is the ERC-20 mint/burn sentinel, never a participant — mint and burn permission is governed by the `allowMint` / `allowBurn` flags, never by list membership.
+That is deliberate. The batch convention skips duplicates because a duplicate is an idempotent no-op that the emitted event still describes truthfully. Silently dropping `address(0)` would not be truthful: `AddAddresses` echoes the input array, so the event would name the zero address as a set member when it is not one, re-polluting the exact off-chain view the guard exists to keep clean. The zero address is the ERC-20 mint/burn sentinel, never a participant — mint and burn permission is governed by the `allowMint` / `allowBurn` flags, never by list membership.
 
 **Operationally:** an operator submitting a batch that happens to contain a zero entry — a truncated CSV column, an unset field in a spreadsheet export — loses the entire batch to a revert rather than having 999 of 1000 addresses applied. Filter the input before submitting.
 
@@ -1899,6 +1900,22 @@ AI-assisted static analysis was performed with [Wake Arena](https://getwake.io) 
 | M-1 | Incomplete `supportsInterface` breaks ERC-165 discovery | Medium | High | Fixed — pre-computed constants + `IERC7551Compliance` + full ERC-3643 `ICompliance` ID (`IERC3643ComplianceFull`, `0x3144991c`) added |
 | I-1 | RuleERC2980 docs omit frozen spender on `transferFrom` | Informational | High | Fixed (doc only) — README, `AGENTS.md`, and `CLAUDE.md` updated to document spender freeze path |
 | I-2 | `hasRole` override: admin implicitly passes all role checks | Informational | High | Fixed (doc only) — dedicated section added to README documenting intentional design and off-chain monitoring guidance |
+
+## Development
+
+Parts of this project were written with the help of AI coding assistants, principally **Claude Code**
+(Anthropic) and **Codex** (OpenAI). They contributed to contract code, tests, and documentation.
+
+Everything they produced was reviewed before it landed, and the project's usual gates apply to it without
+exception: the full Foundry suite on both profiles, 100% line and branch coverage targets, the static-analysis
+passes recorded under [`doc/security/audits/tools/`](./doc/security/audits/tools/), and the threat model in
+[`THREAT_MODEL.md`](./THREAT_MODEL.md). Where an assistant's own reasoning turned out to be wrong, the
+correction is recorded next to the original claim rather than quietly replacing it; the code-quality review in
+[`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md`](./doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md)
+carries several such corrections, including two gas measurements that were overstated and one proposed fix that
+did not work.
+
+Responsibility for the code rests with the maintainers, not with the tools.
 
 ## Intellectual property
 

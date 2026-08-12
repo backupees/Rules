@@ -106,7 +106,7 @@ for (uint256 i = 0; i < rulesLength; ++i) {
 The early-exit test is a single comparison against a counter maintained as targets are resolved. It
 was previously a full rescan of `result` on every child rule; the counter form is equivalent and
 saves roughly **85 gas per child scanned** (~1% of the per-child cost). The external `STATICCALL`
-dominates, so the table below is essentially unchanged by it — treat those figures as a marginally
+dominates, so the table below is essentially unchanged by it. Treat those figures as a marginally
 conservative upper bound.
 
 **This is not only a `view` cost.** The wrapper's `transferred()` → `_detectTransferRestriction` path runs the same scan during **transfer execution**, so the gas is paid by the *transferring user*, on every transfer, for the life of the token.
@@ -133,13 +133,13 @@ With `checkSpender = true` (3 target addresses instead of 2), the same 10-child 
 
 ### Two things make the worst case the common case
 
-1. **The early exit only fires once *every* target address is resolved.** A transfer that is going to be **rejected** — because `from`, `to` (or `spender`) is in *no* child list — never resolves, and therefore scans **all N children**. The most expensive path is the failing one, and the user pays for it before the revert.
+1. **The early exit only fires once *every* target address is resolved.** A transfer that is going to be **rejected** (because `from`, `to` or `spender` is in *no* child list) never resolves, and therefore scans **all N children**. The most expensive path is the failing one, and the user pays for it before the revert.
 2. **`checkSpender = true` adds a third address that must also be found** before the loop can break. It materially lowers the early-exit hit rate and pushes more transfers toward the full-N scan (≈ +35% at 10 children, per the table above).
 
 ### Operator guidance
 
-- **Keep the child list small — stay at or below the default cap of 10.** `addRule` reverts once `rulesCount() >= maxRules`, and `maxRules` defaults to `DEFAULT_MAX_RULES = 10`. At that cap the worst case is ~90k gas of scanning per transfer: significant, but safe.
-- **Raising `maxRules` is a decision with a permanent, per-transfer cost for every holder.** `setMaxRules` only rejects `0` — it accepts any other value. A rules manager who raises the cap to 100 makes the worst-case scan cost **~884k gas on every transfer**; at 200 it is ~1.77M. That is a tax on holders, not a broken token — transfers still fit in a block — but it is paid forever and cannot be refunded. Nothing untrusted can trigger this: only `RULES_MANAGEMENT_ROLE` (or the owner) can add child rules or raise the cap. **The size of the child list is the operator's responsibility.**
+- **Keep the child list small: stay at or below the default cap of 10.** `addRule` reverts once `rulesCount() >= maxRules`, and `maxRules` defaults to `DEFAULT_MAX_RULES = 10`. At that cap the worst case is ~90k gas of scanning per transfer: significant, but safe.
+- **Raising `maxRules` is a decision with a permanent, per-transfer cost for every holder.** `setMaxRules` only rejects `0`; it accepts any other value. A rules manager who raises the cap to 100 makes the worst-case scan cost **~884k gas on every transfer**; at 200 it is ~1.77M. That is a tax on holders, not a broken token — transfers still fit in a block — but it is paid forever and cannot be refunded. Nothing untrusted can trigger this: only `RULES_MANAGEMENT_ROLE` (or the owner) can add child rules or raise the cap. **The size of the child list is the operator's responsibility.**
 - **Order children by expected hit rate.** Put the whitelist that resolves the most addresses first, so the early exit fires as early as possible. This is free and materially reduces the average cost.
 - **Prefer fewer, larger child lists over many small ones.** The per-child overhead is an external call; the number of addresses inside a child does not affect the scan cost.
 
