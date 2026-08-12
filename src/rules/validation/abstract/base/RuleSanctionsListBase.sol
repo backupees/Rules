@@ -134,8 +134,14 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
 
     /**
      * @notice Detects whether a direct transfer is restricted by the sanctions oracle.
-     * @param from The sender address.
-     * @param to The recipient address.
+     * @dev The zero address is the ERC-20 mint/burn sentinel, not a participant, so it is never sent
+     *      to the oracle: on a mint `from` is skipped, on a burn `to` is skipped. Asking a
+     *      third-party contract whether `address(0)` is sanctioned would delegate this rule's
+     *      mint/burn behaviour to that contract's handling of a degenerate input -- an oracle
+     *      answering `true` would block ALL issuance and ALL redemption, trapping holders. Every
+     *      other rule in this library screens only the real participants for the same reason.
+     * @param from The sender address; the zero address denotes a mint and is not screened.
+     * @param to The recipient address; the zero address denotes a burn and is not screened.
      * @return The restriction code, or TRANSFER_OK when no party is sanctioned.
      */
     function _detectTransferRestriction(
@@ -153,9 +159,9 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
         // `view`, so those are STATICCALLs and cannot write `sanctionsList`.
         ISanctionsList oracle = sanctionsList;
         if (address(oracle) != address(0)) {
-            if (oracle.isSanctioned(from)) {
+            if (from != address(0) && oracle.isSanctioned(from)) {
                 return CODE_ADDRESS_FROM_IS_SANCTIONED;
-            } else if (oracle.isSanctioned(to)) {
+            } else if (to != address(0) && oracle.isSanctioned(to)) {
                 return CODE_ADDRESS_TO_IS_SANCTIONED;
             }
         }

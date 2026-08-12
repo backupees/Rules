@@ -38,6 +38,27 @@ _Diagram source: doc/img/rule-sanctionslist-flow.puml._
 | `CODE_ADDRESS_TO_IS_SANCTIONED` | 31 | Recipient is sanctioned |
 | `CODE_ADDRESS_SPENDER_IS_SANCTIONED` | 32 | Spender is sanctioned |
 
+## Who is screened
+
+Only **real participants** are sent to the oracle. The zero address is the ERC-20 mint/burn sentinel, not a wallet, so it is never queried:
+
+| Operation | `from` | `to` | `spender` |
+| --- | --- | --- | --- |
+| Transfer | screened | screened | — |
+| `transferFrom` | screened | screened | screened |
+| Mint (`from == address(0)`) | **not screened** | screened | screened — this is the **minter** |
+| Burn (`to == address(0)`) | screened | **not screened** | screened |
+
+The mint/burn exemptions cover the sentinel only, never a real address: a mint to a sanctioned recipient is still rejected with code `31`, and a burn from a sanctioned holder still with code `30`.
+
+This matters beyond tidiness. Forwarding `address(0)` to the oracle would delegate the rule's mint and burn behaviour to a third-party contract's handling of an input it has never been asked about — an oracle answering `true` for the zero address would block **all issuance and all redemption** on every token using this rule, and the restriction code would blame a "sanctioned sender" that is not an address. Chainalysis returns `false` today; the guard means the rule does not depend on that.
+
+The **minter is still screened**, as the `spender` on the 4-argument mint path — that is deliberate and unchanged (see `CLAUDE.md`, the mint/burn `spender` convention). Skipping the sentinel does not weaken it.
+
+Pinned by [`test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol`](../../test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol), which configures an oracle that *does* sanction `address(0)` and asserts mint and burn still pass.
+
+Side effect: a mint or burn now makes one oracle call instead of two — measured at **2,478 gas versus 3,405** for a two-participant transfer, so roughly 900 gas saved on every issuance and redemption.
+
 ## Access Control
 
 The default admin is the address passed as `admin` in the constructor. It is granted `DEFAULT_ADMIN_ROLE`, which implicitly holds all roles.
