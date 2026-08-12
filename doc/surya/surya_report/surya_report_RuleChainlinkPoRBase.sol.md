@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleChainlinkPoRBase.sol | 7191fb609d8e2b6551f97bf80c24c3afc91bf268 |
+| ./rules/validation/abstract/base/RuleChainlinkPoRBase.sol | 5fe5edfc548dda041e38a7864ca0979b314b09a1 |
 
 
 ### Contracts Description Table
@@ -15,7 +15,7 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleChainlinkPoRBase** | Implementation | RuleTransferValidation, RuleChainlinkPoRInvariantStorage |||
+| **RuleChainlinkPoRBase** | Implementation | RuleTransferValidation, TokenSupplyReader, RuleChainlinkPoRInvariantStorage |||
 | └ | <Constructor> | Public ❗️ | 🛑  |NO❗️ |
 | └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
 | └ | setReservesFeed | Public ❗️ | 🛑  | onlyChainlinkPoRManager |
@@ -31,7 +31,7 @@
 | └ | _setMaxStalenessSeconds | Internal 🔒 | 🛑  | |
 | └ | _authorizeChainlinkPoRManager | Internal 🔒 |   | |
 | └ | _maxBackedSupply | Internal 🔒 |   | |
-| └ | _currentSupply | Internal 🔒 |   | |
+| └ | _supplyToken | Internal 🔒 |   | |
 | └ | _scaleReserve | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |

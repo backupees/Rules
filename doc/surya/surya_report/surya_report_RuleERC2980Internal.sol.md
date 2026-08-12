@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol | 98c16e072b51952238cf3f8ad384b5991310ea59 |
+| ./rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol | 5566b1b8c48c5f5d89b01d7883f00743bd7bf8f2 |
 
 
 ### Contracts Description Table
@@ -24,6 +24,7 @@
 | └ | _removeFrozenlistAddresses | Internal 🔒 | 🛑  | |
 | └ | _addFrozenlistAddress | Internal 🔒 | 🛑  | |
 | └ | _removeFrozenlistAddress | Internal 🔒 | 🛑  | |
+| └ | _requireNotZeroAddress | Internal 🔒 |   | |
 | └ | _isWhitelisted | Internal 🔒 |   | |
 | └ | _whitelistCount | Internal 🔒 |   | |
 | └ | _isFrozen | Internal 🔒 |   | |

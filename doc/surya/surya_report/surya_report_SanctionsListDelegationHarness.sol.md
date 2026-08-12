@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleWhitelistBase.sol | 7cb62bf29323cbf092a1f0787d6b7cf6e929d41b |
+| ./mocks/harness/SanctionsListDelegationHarness.sol | d44cf59a92ad9c1bf119269b233690ef67ceff55 |
 
 
 ### Contracts Description Table
@@ -15,12 +15,9 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleWhitelistBase** | Implementation | RuleAddressSet, RuleWhitelistShared, IIdentityRegistryVerified |||
-| └ | <Constructor> | Public ❗️ | 🛑  | RuleAddressSet |
-| └ | isVerified | Public ❗️ |   |NO❗️ |
-| └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| **SanctionsListExtraCheckHarness** | Implementation | RuleSanctionsList |||
+| └ | <Constructor> | Public ❗️ | 🛑  | RuleSanctionsList |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
-| └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 
 
 ### Legend

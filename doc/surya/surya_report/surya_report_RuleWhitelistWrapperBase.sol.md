@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleWhitelistWrapperBase.sol | afd89e8447fb78d04a958d4cd9ab4cc99c2ed3d2 |
+| ./rules/validation/abstract/base/RuleWhitelistWrapperBase.sol | bb3b6454d4316c7a7bcc82e6e599ffc45bacdd7a |
 
 
 ### Contracts Description Table
@@ -17,11 +17,8 @@
 ||||||
 | **RuleWhitelistWrapperBase** | Implementation | RulesManagementModule, MetaTxModuleStandalone, RuleWhitelistShared, IIdentityRegistryVerified |||
 | └ | <Constructor> | Public ❗️ | 🛑  | MetaTxModuleStandalone |
-| └ | setCheckSpender | Public ❗️ | 🛑  | onlyCheckSpenderManager |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | isVerified | Public ❗️ |   |NO❗️ |
-| └ | _setCheckSpender | Internal 🔒 | 🛑  | |
-| └ | _authorizeCheckSpenderManager | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _isListedInAnyChild | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |

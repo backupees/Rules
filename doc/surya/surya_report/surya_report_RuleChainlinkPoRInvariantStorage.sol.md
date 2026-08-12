@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/invariant/RuleChainlinkPoRInvariantStorage.sol | d1ed16417cdf50b4e1bfcf2ab53272ed5b107280 |
+| ./rules/validation/abstract/invariant/RuleChainlinkPoRInvariantStorage.sol | 64a0b4372644a3b79b325839cdd9897f5c3ad9f0 |
 
 
 ### Contracts Description Table

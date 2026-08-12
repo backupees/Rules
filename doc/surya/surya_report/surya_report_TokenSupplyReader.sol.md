@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleWhitelistBase.sol | 7cb62bf29323cbf092a1f0787d6b7cf6e929d41b |
+| ./rules/validation/abstract/core/TokenSupplyReader.sol | 71e98f5c3b1bb9a8662453e287c915cab73df29a |
 
 
 ### Contracts Description Table
@@ -15,12 +15,10 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleWhitelistBase** | Implementation | RuleAddressSet, RuleWhitelistShared, IIdentityRegistryVerified |||
-| └ | <Constructor> | Public ❗️ | 🛑  | RuleAddressSet |
-| └ | isVerified | Public ❗️ |   |NO❗️ |
-| └ | supportsInterface | Public ❗️ |   |NO❗️ |
-| └ | _detectTransferRestriction | Internal 🔒 |   | |
-| └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
+| **TokenSupplyReader** | Implementation |  |||
+| └ | _supplyToken | Internal 🔒 |   | |
+| └ | _currentSupply | Internal 🔒 |   | |
+| └ | _probeTotalSupplyCallable | Internal 🔒 |   | |
 
 
 ### Legend

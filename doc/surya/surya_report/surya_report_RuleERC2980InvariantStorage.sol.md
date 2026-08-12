@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/RuleERC2980/invariantStorage/RuleERC2980InvariantStorage.sol | 1bd837aa10448105529170e9a0e15802050cb64d |
+| ./rules/validation/abstract/RuleERC2980/invariantStorage/RuleERC2980InvariantStorage.sol | 077f022e41959ca712342763566a630c437e514a |
 
 
 ### Contracts Description Table
