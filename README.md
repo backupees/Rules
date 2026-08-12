@@ -81,6 +81,59 @@ access-control policy, in either an `AccessControl` or an `Ownable2Step` flavour
 Codes must stay unique across rules, since a RuleEngine returns the first non-zero one.
 Per-rule detail is in [`doc/technical/`](./doc/technical/); the semantics that differ between rules (who is screened, mint/burn handling, unset-oracle behaviour) are tabulated in [`RULE_SEMANTICS.md`](./doc/technical/RULE_SEMANTICS.md).
 
+## ERC-3643
+
+An [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) token has **two** pluggable slots, and this library fills both, from opposite directions.
+
+| Slot | Filled with | Direction |
+| --- | --- | --- |
+| **Compliance** (`ICompliance`) | A `RuleEngine` holding rules | The token asks the rules whether a transfer may proceed |
+| **Identity registry** (`IIdentityRegistry`) | `IdentityRegistryWhitelist` | The token asks it whether a wallet is a verified investor |
+
+### Compliance: go through a RuleEngine
+
+Use `RuleEngine`, not a bare rule. ERC-3643 drives mint and burn through `created` and `destroyed`, which the **validation rules do not implement** — they only expose `canTransfer` / `transferred`. 
+
+`RuleEngine` implements the full `ICompliance` surface and forwards to the rules, so it is the supported path. 
+
+The operation rules do implement `created` / `destroyed`, but they are bound to a single token and are not a compliance contract on
+their own.
+
+### Identity verification
+
+ERC-3643 decides who may hold a token by asking an **identity registry** one question:
+`isVerified(wallet)` — is this a verified investor? A normal registry answers it by checking the wallet's
+on-chain identity contract (ONCHAINID) for the required claims.
+
+This library provides **both sides of that exchange**, which is the part worth getting straight:
+
+| Contract | What it is | Where it plugs in |
+| --- | --- | --- |
+| `RuleIdentityRegistry` | The side that **asks the question**: a transfer rule that calls `isVerified` on whatever registry the token uses, and blocks the transfer when the answer is no. | Added to a RuleEngine, like any other rule |
+| `IdentityRegistryWhitelist` | The side that **answers it**: a registry implementation that replies from a whitelist instead of reading ONCHAINIDs, so no identity contracts need deploying. | `token.setIdentityRegistry(...)`. It is **not** a rule, implements no `IRule`, and must never be added to a RuleEngine |
+
+Pick by whichever half you are missing. Already operate an identity registry and want its verdict enforced on
+transfers? You need the rule. Want ERC-3643 eligibility without the ONCHAINID machinery? You need the registry.
+
+They are independent, and they also **compose**: the rule can consult the whitelist-backed registry, so one
+whitelist drives both the token's own eligibility checks and the transfer rule. That pairing is covered by
+`test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol`.
+
+### Matching the spec's semantics
+
+`RuleReceiverWhitelist` reproduces ERC-3643 eligibility exactly: **only the receiver** is screened. The spec
+checks the receiver alone on purpose, so a de-listed holder can still exit a position; screening the sender
+would trap them. `RuleIdentityRegistry` follows the same default, with sender and spender checks available as
+explicit opt-ins.
+
+Every rule and the registry implement `IERC3643Version`, so `version()` is queryable on-chain.
+
+### Tested against a real ERC-3643 token
+
+`test/ERC3643Real/` runs against the actual ERC-3643 `Token.sol` and `IdentityRegistry.sol`, not mocks: the
+RuleEngine integration, the identity rule against a real registry, and receiver-whitelist parity with the
+spec's eligibility. 31 tests, run with `FOUNDRY_PROFILE=erc3643 forge test`.
+
 ## Quick start
 
 ```bash

@@ -89,7 +89,7 @@ function canTransfer(address _from, address _to, uint256 _amount) external view 
 function transferred(address _from, address _to, uint256 _amount) external;
 ```
 
-However, contrary to the RuleEngine, the whole interface is currently not implemented (e.g. `created` and `destroyed`) and as a result, the rule cannot directly support ERC-3643 token.
+However, contrary to the RuleEngine, the whole interface is not implemented: the **validation rules** do not declare `created` and `destroyed`, so a validation rule cannot back an ERC-3643 token on its own. (The operation rules — `RuleConditionalTransferLight`, `…MultiToken` and `RuleMintAllowance` — do implement both, but each is bound to a single token and is not a general compliance contract.)
 
 The alternative to use a Rule with an ERC-3643 token is through the RuleEngine, which implements the whole `ICompliance` interface.
 
@@ -98,6 +98,46 @@ The diagram below shows the recommended integration: the ERC-3643 token drives t
 ![Using a rule with an ERC-3643 token through a RuleEngine](./img/readme-erc3643-integration.png)
 
 _Diagram source: doc/img/readme-erc3643-integration.puml._
+
+#### The identity registry slot
+
+An ERC-3643 token has a **second** pluggable slot besides compliance, and this library fills it too. Two
+contracts face the registry from opposite directions:
+
+| Contract | Relationship | Installed with | Use when |
+| --- | --- | --- | --- |
+| `RuleIdentityRegistry` | **Consults** a registry, calling `isVerified` | Added to a RuleEngine like any rule | You already operate an ERC-3643 identity registry with ONCHAINIDs |
+| [`IdentityRegistryWhitelist`](./technical/IdentityRegistryWhitelist.md) | **Is** a registry (implements `IIdentityRegistryERC3643`) | `token.setIdentityRegistry(...)` | You want ERC-3643 eligibility without deploying ONCHAINIDs |
+
+`IdentityRegistryWhitelist` answers `isVerified` from a whitelist and keeps **no identity state**: `_identity`
+and `_country` are accepted for signature compatibility then discarded. It is not a rule, implements no
+`IRule`, and must never be added to a RuleEngine. The token itself must hold `IDENTITY_REGISTRAR_ROLE`.
+
+#### Matching the spec's screening semantics
+
+ERC-3643 requires that **only the receiver** be verified: `transferFrom` works the same way, `mint` and
+`forcedTransfer` check only the receiver, and `burn` bypasses eligibility entirely. That asymmetry is
+deliberate — screening the sender would trap a de-listed holder in their position.
+
+- [`RuleReceiverWhitelist`](./technical/RuleReceiverWhitelist.md) reproduces this exactly (code `81`).
+- [`RuleIdentityRegistry`](./technical/RuleIdentityRegistry.md) defaults to the same behaviour, with
+  `checkSender` / `checkSpender` available as explicit opt-ins, both `false` by default.
+
+Every rule and the registry implement `IERC3643Version`, so `version()` is queryable on-chain.
+
+#### Tested against a real ERC-3643 token
+
+[`test/ERC3643Real/`](../test/ERC3643Real/) exercises the integration against the actual ERC-3643 `Token.sol`
+and `IdentityRegistry.sol` rather than mocks:
+
+| Suite | Covers |
+| --- | --- |
+| `ERC3643RealTokenRuleEngine.t.sol` | A real ERC-3643 token driving rules through a RuleEngine |
+| `RuleIdentityRegistryWithRealERC3643Registry.t.sol` | The identity rule against a real `IdentityRegistry` |
+| `ERC3643ReceiverWhitelistParity.t.sol` | Receiver-whitelist parity with the spec's eligibility |
+
+31 tests, run with `FOUNDRY_PROFILE=erc3643 forge test`. They are **not** part of a plain `forge test`: the
+vendored `Token.sol` pins solc `0.8.30` exactly and cannot share a compilation unit with our `0.8.34`.
 
 ### ERC-721/ERC-1155
 
