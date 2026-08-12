@@ -46,7 +46,8 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
         ICMTATConstructor.Engine memory engines = ICMTATConstructor.Engine(IRuleEngine(address(0)));
 
         // Deploy CMTAT with the deployer as temporary admin so we can configure it.
-        token = new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
+        token =
+            new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
 
         // Deploy rules; each rule is owned directly by the intended admin.
         ruleBlacklist = new RuleBlacklist(admin, address(0));

@@ -24,7 +24,8 @@ contract DeployCMTATWithWhitelist is Script {
             );
         ICMTATConstructor.Engine memory engines = ICMTATConstructor.Engine(IRuleEngine(address(0)));
 
-        token = new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
+        token =
+            new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
         rule = new RuleWhitelist(admin, address(0), checkSpender, false);
 
         token.setRuleEngine(IRuleEngine(address(rule)));
