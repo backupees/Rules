@@ -29,7 +29,7 @@ contract DeployCMTATWithWhitelistTest is Test {
         assertEq(address(token.ruleEngine()), address(rule));
     }
 
-    /// The hand-over is the security-critical step and used to be untested (SCRIPT_FEEDBACK.md S-10).
+    /// The hand-over is the security-critical step and used to be untested (CLAUDE_ANALYSIS_SCRIPT.md S-10).
     function testHandsAdminRoleToAdmin() public view {
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), ADMIN));
     }
@@ -45,7 +45,7 @@ contract DeployCMTATWithWhitelistTest is Test {
     /**
      * The script used to hard-code `allowMintBurn = false`, which produced a token that could not be
      * issued at all: mint was rejected with code 24 even to a whitelisted investor
-     * (SCRIPT_FEEDBACK.md S-3). run() now passes true.
+     * (CLAUDE_ANALYSIS_SCRIPT.md S-3). run() now passes true.
      */
     function testTokenCanBeMintedToAWhitelistedInvestor() public {
         vm.prank(ADMIN);

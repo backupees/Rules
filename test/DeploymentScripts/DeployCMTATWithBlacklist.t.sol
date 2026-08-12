@@ -25,7 +25,7 @@ contract DeployCMTATWithBlacklistTest is Test {
         assertEq(address(token.ruleEngine()), address(rule));
     }
 
-    /// The hand-over is the security-critical step and used to be untested (SCRIPT_FEEDBACK.md S-10).
+    /// The hand-over is the security-critical step and used to be untested (CLAUDE_ANALYSIS_SCRIPT.md S-10).
     function testHandsAdminRoleToAdmin() public view {
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), ADMIN));
     }

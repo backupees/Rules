@@ -62,7 +62,7 @@ against a real ERC-3643 token.
 - **`RuleChainlinkPoR`** — caps total supply at the reserves reported by a Chainlink Proof of Reserve feed. Restriction codes `75`–`78`.
 - **`IdentityRegistryWhitelist`** — a whitelist that fills an ERC-3643 token's *identity registry* slot, so a token can enforce investor eligibility with no ONCHAINID deployment. Not a rule: it implements no `IRule` and must never be added to a `RuleEngine`.
 
-**Deployment scripts.** All four scripts in `script/` were reviewed and fixed; see `SCRIPT_FEEDBACK.md`
+**Deployment scripts.** All four scripts in `script/` were reviewed and fixed; see [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md)
 for the twelve findings. Three of them (`DeployCMTATWithBlacklist`, `DeployCMTATWithWhitelist`,
 `DeployCMTATWithBlacklistAndSanctionsList`) reverted under `forge script` because they read
 `address(this)` inside a broadcast, so they could not deploy anything; they now take the deployer as an

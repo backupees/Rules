@@ -24,7 +24,7 @@ contract DeployCMTATWithWhitelist is CMTATDeploymentBase {
     /**
      * @notice Deploys and wires the token and its rule.
      * @dev `deployer` is explicit rather than read as `address(this)`; see
-     *      `DeployCMTATWithBlacklist` and SCRIPT_FEEDBACK.md S-1 for why.
+     *      `DeployCMTATWithBlacklist` and CLAUDE_ANALYSIS_SCRIPT.md S-1 for why.
      * @param admin Address that ends up holding `DEFAULT_ADMIN_ROLE` on the token.
      * @param deployer Address that executes the calls and holds the temporary admin role.
      * @param forwarder ERC-2771 trusted forwarder; `address(0)` disables meta-transactions.
@@ -35,7 +35,7 @@ contract DeployCMTATWithWhitelist is CMTATDeploymentBase {
      *        mint/burn sentinel `address(0)` like any other participant, so with `false` every mint
      *        is rejected with code 24 (`CODE_MINT_NOT_ALLOWED`) even to a whitelisted investor. The
      *        script previously hard-coded `false` and shipped a token nobody could issue
-     *        (SCRIPT_FEEDBACK.md S-3); {run} now passes `true`. Recoverable either way with
+     *        (CLAUDE_ANALYSIS_SCRIPT.md S-3); {run} now passes `true`. Recoverable either way with
      *        `setAllowMint` / `setAllowBurn`, which require `MINT_BURN_MANAGER`.
      * @return token The deployed CMTAT.
      * @return rule The whitelist rule bound to it.

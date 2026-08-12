@@ -30,7 +30,7 @@ contract DeployCMTATWithBlacklist is CMTATDeploymentBase {
      *      broadcaster makes the calls below, not the script contract, and Foundry rejects
      *      `address(this)` inside a broadcast ("script contracts are ephemeral and their addresses
      *      should not be relied upon"). Reading it there made this script revert before it could
-     *      deploy anything (SCRIPT_FEEDBACK.md S-1).
+     *      deploy anything (CLAUDE_ANALYSIS_SCRIPT.md S-1).
      * @param admin Address that ends up holding `DEFAULT_ADMIN_ROLE` on the token.
      * @param deployer Address that executes the calls and holds the temporary admin role:
      *        `msg.sender` under `forge script`, the script contract's address under test.

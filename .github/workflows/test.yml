@@ -54,7 +54,7 @@ jobs:
       # `forge build` compiles the deployment scripts but never executes them, and the unit tests
       # call deploy() directly rather than run(), so neither exercises the broadcast context. That
       # gap let three scripts revert on every real deployment while CI stayed green
-      # (SCRIPT_FEEDBACK.md S-1/S-2). A test cannot cover this: Foundry refuses to combine a prank
+      # (CLAUDE_ANALYSIS_SCRIPT.md S-1/S-2). A test cannot cover this: Foundry refuses to combine a prank
       # with a broadcast, so `forge script` itself is the only faithful harness. No key or RPC is
       # needed -- without --broadcast this is a local simulation.
       - name: Run deployment scripts (dry run)

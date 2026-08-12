@@ -13,11 +13,11 @@ import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
  *
  * @dev Every script used to repeat the same token-attribute block verbatim, so a CMTAT constructor
  *      change meant editing each one and the failure mode of missing one was a script that still
- *      compiled. The block lives here instead (SCRIPT_FEEDBACK.md S-4).
+ *      compiled. The block lives here instead (CLAUDE_ANALYSIS_SCRIPT.md S-4).
  *
  * @dev Values are read from the environment with the previous hard-coded constants as fallbacks, so
  *      the scripts stay runnable with no configuration while a real deployment no longer requires
- *      editing source (SCRIPT_FEEDBACK.md S-5):
+ *      editing source (CLAUDE_ANALYSIS_SCRIPT.md S-5):
  *
  *      | Variable | Default |
  *      | --- | --- |
@@ -98,7 +98,7 @@ abstract contract CMTATDeploymentBase is Script {
      * @notice Prints a labelled deployed address.
      * @dev `forge script` prints return values positionally, which is unreadable once a script
      *      returns five contracts. Labelling them makes the run output usable as a deployment record
-     *      (SCRIPT_FEEDBACK.md S-8).
+     *      (CLAUDE_ANALYSIS_SCRIPT.md S-8).
      * @param label Human-readable contract name.
      * @param deployed The deployed address.
      */

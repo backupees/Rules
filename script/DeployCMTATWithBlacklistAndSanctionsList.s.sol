@@ -34,7 +34,7 @@ contract DeployCMTATWithBlacklistAndSanctionsList is CMTATDeploymentBase {
      * @notice Deploys and wires the whole set.
      * @dev `deployer` is explicit rather than read as `address(this)`: under `forge script` the
      *      broadcaster makes these calls, and Foundry rejects `address(this)` inside a broadcast, so
-     *      the previous version reverted before deploying anything (SCRIPT_FEEDBACK.md S-1).
+     *      the previous version reverted before deploying anything (CLAUDE_ANALYSIS_SCRIPT.md S-1).
      * @param admin Address that ends up holding every admin role.
      * @param deployer Address that executes the calls and holds the temporary admin roles:
      *        `msg.sender` under `forge script`, the script contract's address under test.
