@@ -150,8 +150,4 @@ abstract contract IdentityRegistryWhitelistBase is
      * @dev Implemented by concrete subclasses with the desired access-control policy.
      */
     function _authorizeIdentityRegistrar() internal view virtual;
-
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
 }

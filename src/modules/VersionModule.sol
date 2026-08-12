@@ -20,7 +20,7 @@ abstract contract VersionModule is IERC3643Version {
     /**
      * @inheritdoc IERC3643Version
      */
-    function version() public view virtual override returns (string memory version_) {
+    function version() public pure virtual override returns (string memory version_) {
         return VERSION;
     }
 }
