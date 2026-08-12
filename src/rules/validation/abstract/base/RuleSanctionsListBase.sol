@@ -148,10 +148,13 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
         override
         returns (uint8)
     {
-        if (address(sanctionsList) != address(0)) {
-            if (sanctionsList.isSanctioned(from)) {
+        // Read the oracle address once. Safe to cache across the calls below: this function is
+        // `view`, so those are STATICCALLs and cannot write `sanctionsList`.
+        ISanctionsList oracle = sanctionsList;
+        if (address(oracle) != address(0)) {
+            if (oracle.isSanctioned(from)) {
                 return CODE_ADDRESS_FROM_IS_SANCTIONED;
-            } else if (sanctionsList.isSanctioned(to)) {
+            } else if (oracle.isSanctioned(to)) {
                 return CODE_ADDRESS_TO_IS_SANCTIONED;
             }
         }
@@ -173,8 +176,9 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
         override
         returns (uint8)
     {
-        if (address(sanctionsList) != address(0)) {
-            if (sanctionsList.isSanctioned(spender)) {
+        ISanctionsList oracle = sanctionsList;
+        if (address(oracle) != address(0)) {
+            if (oracle.isSanctioned(spender)) {
                 return CODE_ADDRESS_SPENDER_IS_SANCTIONED;
             }
             return _detectTransferRestriction(from, to, value);
