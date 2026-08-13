@@ -33,6 +33,16 @@ covered by the same check, since a mint raises the receiver's balance exactly as
 > with a whitelist active. If that test ever fails, the bypass has been closed by other means and this warning
 > should be revisited.
 
+## Schema
+
+### Graph
+
+![surya_graph_RuleMaxBalance](../../surya/surya_graph/surya_graph_RuleMaxBalance.sol.png)
+
+### Inheritance
+
+![surya_inheritance_RuleMaxBalance](../../surya/surya_inheritance/surya_inheritance_RuleMaxBalance.sol.png)
+
 ## Restriction codes
 
 | Constant | Code | Meaning |

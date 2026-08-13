@@ -848,6 +848,28 @@ Limits minting so that total supply never exceeds a configured maximum. Transfer
 
 The operator deploys `RuleMaxTotalSupply` with `setMaxTotalSupply(1_000_000)` and sets the token with `setTokenContract`. When the issuer mints and `totalSupply + amount` exceeds the limit, `detectTransferRestriction` rejects the mint. Transfers between holders still pass.
 
+#### Max balance per holder
+
+Caps how many tokens a single address may hold. One cap applies to every holder, and the operator may exempt
+specific addresses from it. The **receiver** is screened: a transfer is rejected when
+`balanceOf(to) + value > maxBalance`. Mints are covered by the same check; burns are exempt, and the sender is
+never screened because sending tokens away can only lower a balance.
+
+![surya_inheritance_RuleMaxBalance.sol](./surya/surya_inheritance/surya_inheritance_RuleMaxBalance.sol.png)
+
+> ⚠️ **Do not deploy this rule alone.** The cap counts tokens per *address*, so an investor holding through two
+> addresses holds twice the cap and no rule objects. Pair it with a rule that admits one address per investor
+> (`RuleWhitelist`, `RuleReceiverWhitelist` or `RuleIdentityRegistry`) **and** an onboarding policy of one
+> admitted address per legal entity — a whitelist alone does not close it, since the operator can admit both
+> wallets. See [RuleMaxBalance.md](./technical/contracts/RuleMaxBalance.md).
+
+**Usage scenario**
+
+An issuer must keep any single investor below 5% of a 1,000,000-token issue. They deploy `RuleWhitelist` and
+`RuleMaxBalance(admin, cmtat, 50_000)` in the same RuleEngine, admit exactly one address per onboarded
+investor, and exempt the treasury address holding the unsold allocation. An investor at 50,000 tokens can still
+sell, and can buy again once below the cap; a mint that would push them over is rejected with code `82`.
+
 #### Chainlink Proof of Reserve
 
 Limits minting so that the total supply never exceeds the reserves actually backing the token. Before every mint the rule reads the latest reserve value from a [Chainlink Proof of Reserve](https://docs.chain.link/data-feeds/proof-of-reserve) data feed (any `AggregatorV3Interface`), scales it from the feed's decimals to the token's, and rejects the mint if `totalSupply + amount` would exceed it.

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/core/TokenSupplyReader.sol | d7faee1c8cfbc1c31fb97f65823c1c4648b3d793 |
+| ./rules/validation/deployment/RuleMaxBalance.sol | 4429c1761c88f3f8a783f34f780758456a59384d |
 
 
 ### Contracts Description Table
@@ -15,10 +15,10 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **TokenSupplyReader** | Implementation |  |||
-| └ | _supplyToken | Internal 🔒 |   | |
-| └ | _currentSupply | Internal 🔒 |   | |
-| └ | _probeTotalSupplyCallable | Internal 🔒 |   | |
+| **RuleMaxBalance** | Implementation | AccessControlModuleStandalone, RuleMaxBalanceBase |||
+| └ | <Constructor> | Public ❗️ | 🛑  | AccessControlModuleStandalone RuleMaxBalanceBase |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _authorizeMaxBalanceManager | Internal 🔒 |   | onlyRole |
 
 
 ### Legend

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/core/TokenSupplyReader.sol | d7faee1c8cfbc1c31fb97f65823c1c4648b3d793 |
+| ./rules/validation/deployment/RuleMaxBalanceOwnable2Step.sol | 10c0b8cde2773cc67a1c5e60448457c302753044 |
 
 
 ### Contracts Description Table
@@ -15,10 +15,10 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **TokenSupplyReader** | Implementation |  |||
-| └ | _supplyToken | Internal 🔒 |   | |
-| └ | _currentSupply | Internal 🔒 |   | |
-| └ | _probeTotalSupplyCallable | Internal 🔒 |   | |
+| **RuleMaxBalanceOwnable2Step** | Implementation | RuleMaxBalanceBase, Ownable2Step, Ownable2StepERC165Module |||
+| └ | <Constructor> | Public ❗️ | 🛑  | RuleMaxBalanceBase Ownable |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _authorizeMaxBalanceManager | Internal 🔒 |   | onlyOwner |
 
 
 ### Legend
