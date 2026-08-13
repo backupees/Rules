@@ -1952,14 +1952,14 @@ See the consolidated [Audit & Security-Analysis Overview](./security/audits/AUDI
 
 #### Static analysis (v0.5.0)
 
-Re-run **2026-08-13** for the v0.5.0 release. Full reports and per-finding triage in
+Re-run **2026-08-13** for the v0.5.0 release, at solc `0.8.36`. Full reports and per-finding triage in
 [`doc/security/audits/tools/v0.5.0/`](./security/audits/tools/v0.5.0/); consolidated view in
 [`AUDIT_OVERVIEW.md`](./security/audits/AUDIT_OVERVIEW.md).
 
 | Tool | High | Medium | Low | Info | Anything to fix? |
 |---|---|---|---|---|---|
-| [Slither](https://github.com/crytic/slither) 0.11.5 | 2 | 10 | 17 | 14 | **No** — [feedback](./security/audits/tools/v0.5.0/slither-report-feedback.md) |
-| [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5 | 0 | 0 | 9 categories (315 instances) | 0 | **No** — [feedback](./security/audits/tools/v0.5.0/aderyn-report-feedback.md) |
+| [Slither](https://github.com/crytic/slither) 0.11.5 | 2 | 11 | 17 | 14 | **No** — [feedback](./security/audits/tools/v0.5.0/slither-report-feedback.md) |
+| [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5 | 0 | 0 | 9 categories (332 instances) | 0 | **No** — [feedback](./security/audits/tools/v0.5.0/aderyn-report-feedback.md) |
 
 **Nothing to fix.** Every increase over v0.4.0 is proportional to the three contracts this release adds; the two
 new Slither categories (`uninitialized-local`, `timestamp`) were each verified against the source and are a

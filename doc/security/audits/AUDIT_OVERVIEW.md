@@ -25,12 +25,12 @@
 ## Static-analysis results (v0.5.0)
 
 Scope: production contracts only — mocks excluded (`-x mocks` / `mocks` filter) and vendored dependencies
-excluded via the `lib` filter. Run **2026-08-13** (re-run of `v0.5.0`, replacing the 2026-08-11 run).
+excluded via the `lib` filter. Run **2026-08-13** at solc `0.8.36`, superseding the earlier `v0.5.0` runs.
 
 | Tool | High | Medium | Low | Info | Relevant to fix? |
 |---|---|---|---|---|---|
-| Slither 0.11.5 | 2 | 10 | 17 | 14 | **No** — all false-positive, by-design or cosmetic; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
-| Aderyn 0.6.5 | 0 | 0 | 9 categories (315 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
+| Slither 0.11.5 | 2 | 11 | 17 | 14 | **No** — all false-positive, by-design or cosmetic; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
+| Aderyn 0.6.5 | 0 | 0 | 9 categories (332 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
 
 **Nothing to fix in `v0.5.0`.** Every delta from v0.4.0 traces to the three contracts added in this release
 (`RuleChainlinkPoR`, `RuleReceiverWhitelist`, `IdentityRegistryWhitelist`) and each was verified against the
@@ -38,8 +38,12 @@ source before dismissal. The two new Slither categories are `uninitialized-local
 `try` whose `catch` reverts or returns) and `timestamp` (the Proof-of-Reserve staleness comparison, which is the
 feature itself).
 
-**The 2026-08-13 re-run lowered both counts** (Slither 46 → 43, Aderyn 333 → 315 instances) while contract count
-and nSLOC rose. The reduction is earned by the `AddressSetBatchLib` refactor, which replaced duplicated batch
+**Latest re-run (2026-08-13, solc `0.8.36`): Slither 44, Aderyn 332 instances.** The seven contracts added for
+`RuleMaxBalance` and the `ChainlinkPoRFeedManager` split produced exactly **one** new Slither finding — a
+`balanceOf` configuration probe whose discarded return value is the point — and **no** new Aderyn category. The
+dependency and compiler bumps (solc `0.8.36`, OpenZeppelin `v5.7.0`, RuleEngine `v3.0.0-rc5`, CMTAT
+`v3.3.0-rc3`) moved no detector at all. An earlier re-run the same day had lowered both counts (Slither 46 → 43,
+Aderyn 333 → 315) while contract count and nSLOC rose. The reduction is earned by the `AddressSetBatchLib` refactor, which replaced duplicated batch
 loops with one shared implementation that consumes the `EnumerableSet` return values instead of discarding them;
 Aderyn's *Loop Contains `require`/`revert`* category disappeared entirely. One informational disposition was
 **corrected** rather than re-confirmed: Slither's `unused-state` on the four `TRANSFERRED_SELECTOR_*` constants

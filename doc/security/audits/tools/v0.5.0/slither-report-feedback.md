@@ -5,17 +5,20 @@ slither . --checklist --filter-paths "node_modules,lib,test,forge-std,mocks" \
   > doc/security/audits/tools/v0.5.0/slither-report.md
 ```
 
-Tool: **Slither 0.11.5** · Run date: **2026-08-13** (re-run of `v0.5.0`, replacing the 2026-08-11 run)
+Tool: **Slither 0.11.5** · Compiler: solc `0.8.36` · Run date: **2026-08-13**
 Scope: production contracts only. Mocks excluded via the `mocks` filter, vendored dependencies via `lib`.
-199 contracts, 101 detectors, **43 results**.
+206 contracts, 101 detectors, **44 results**.
 
-**Executive triage: nothing to fix.** No finding is exploitable. Two are High by detector severity and both are
-false positives on a permissioned path. One informational finding changed disposition since the last run, and it
-is a correction rather than a code change — see [`unused-state`](#unused-state-correction-to-the-previous-triage).
+This run supersedes the two earlier `v0.5.0` runs: 2026-08-11 at solc 0.8.34, and an earlier 2026-08-13 run
+made before `RuleMaxBalance` and the `ChainlinkPoRFeedManager` split landed.
+
+**Executive triage: nothing to fix.** No finding is exploitable. The two High-severity results are false
+positives on a permissioned path. One finding is new since the previous run, and it is the same false-positive
+class as three already dismissed.
 
 ### Scope check
 
-Both scope assertions pass on this run:
+Both scope assertions pass:
 
 ```
 grep -c 'lib/\|node_modules/' slither-report.md   → 0
@@ -32,55 +35,52 @@ magnitude, check the filter before reading anything into it.
 | Detector | Severity | Instances | Disposition | Reason (verified against source) |
 |---|---|---|---|---|
 | `arbitrary-send-erc20` | **High** | 2 | **False positive** | `RuleConditionalTransferLightMultiTokenBase.approveAndTransferIfAllowed` passes a caller-supplied `from` to `safeTransferFrom`, but the call is reachable only through `onlyTransferApprover`, requires a previously recorded approval for the exact `(token, from, to, value)` tuple, and still needs the holder's own ERC-20 allowance. The holder's approval is the authorisation; the rule cannot move tokens the holder has not already approved. |
-| `uninitialized-local` | Medium | 2 | **False positive** | `RuleChainlinkPoRBase`'s `newFeedDecimals` and `currentFeedDecimals`. Both are declared before a `try` and assigned inside it — Solidity requires this, since a `try` cannot declare a variable that outlives its own scope. The matching `catch` **reverts** or **returns**, so control never reaches a read with the variable unset. |
-| `unused-return` | Medium | 8 | **False positive** | Six are the batch helpers in `RuleAddressSetInternal` and `RuleERC2980Internal`, e.g. `return _whitelist.removeBatch(addressesToRemove);` — the `(removed, skipped)` tuple is **returned straight to the caller**, so nothing is discarded; Slither flags the forwarding pattern itself. The other two are deliberate probes: `TokenSupplyReader`'s `try …totalSupply()` (only the revert matters) and `RuleChainlinkPoRBase`'s partial destructuring of `latestRoundData()`, which ignores `roundId` / `startedAt` / `answeredInRound` on purpose. |
-| `calls-loop` | Low | 16 | **By design** | `RuleWhitelistWrapperBase`'s child-rule scan and the batch list operations. The gas cost is documented with measurements in [`RuleWhitelistWrapper.md`](../../../../technical/contracts/RuleWhitelistWrapper.md#gas-cost-of-the-child-rule-scan), including the operator guidance to keep the child list at or below 10. |
-| `timestamp` | Low | 1 | **By design** | `RuleChainlinkPoRBase._maxBackedSupply` compares `block.timestamp` against the feed's `updatedAt`. That comparison **is** the Proof-of-Reserve staleness feature. It is guarded against underflow, and `maxStalenessSeconds` is configured from the feed heartbeat — hours — so validator drift of a few seconds cannot flip the outcome. |
+| `uninitialized-local` | Medium | 2 | **False positive** | `ChainlinkPoRFeedManager`'s `newFeedDecimals` and `currentFeedDecimals`. Both are declared before a `try` and assigned inside it — Solidity requires this, since a `try` cannot declare a variable that outlives its own scope. The matching `catch` **reverts** or **returns**, so control never reaches a read with the variable unset. |
+| `unused-return` | Medium | 9 | **False positive** | Six are batch helpers in `RuleAddressSetInternal` and `RuleERC2980Internal`, e.g. `return _whitelist.removeBatch(addressesToRemove);` — the `(removed, skipped)` tuple is **returned straight to the caller**, so nothing is discarded; Slither flags the forwarding pattern itself. The other three are deliberate probes: `TokenSupplyReader`'s `try …totalSupply()`, `ChainlinkPoRFeedManager`'s partial destructuring of `latestRoundData()`, and the one new this run — see below. |
+| `calls-loop` | Low | 16 | **By design** | `RuleWhitelistWrapperBase`'s child-rule scan and the batch list operations. The gas cost is documented with measurements in [`RuleWhitelistWrapper.md`](../../../../technical/contracts/RuleWhitelistWrapper.md#gas-cost-of-the-child-rule-scan), including the guidance to keep the child list at or below 10. |
+| `timestamp` | Low | 1 | **By design** | `ChainlinkPoRFeedManager._maxBackedSupply` compares `block.timestamp` against the feed's `updatedAt`. That comparison **is** the Proof-of-Reserve staleness feature. It is guarded against underflow, and `maxStalenessSeconds` is configured from the feed heartbeat — hours — so validator drift of a few seconds cannot flip the outcome. |
 | `assembly` | Informational | 2 | **By design** | `RuleConditionalTransferLightApprovalBase._transferHash` and `IdentityRegistryWhitelistBase._walletKey`, both written in assembly to satisfy the project's `asm-keccak256` lint convention. The second is pinned by a test asserting it is byte-identical to `keccak256(abi.encode(wallet))`. |
-| `dead-code` | Informational | 2 | **False positive** | **New this run.** `RuleAddressSetInternal._requireNotZeroAddress` and `RuleERC2980Internal._requireNotZeroAddress` are reported as never used. Both **are** used — passed as internal function pointers to `AddressSetBatchLib.addBatch` (`RuleAddressSetInternal.sol:49`, `RuleERC2980Internal.sol:52` and `:101`). Slither does not resolve internal function pointers. The zero-address rejection is still exercised by the test suite. |
+| `dead-code` | Informational | 2 | **False positive** | `RuleAddressSetInternal._requireNotZeroAddress` and `RuleERC2980Internal._requireNotZeroAddress` are reported as never used. Both **are** used — passed as internal function pointers to `AddressSetBatchLib.addBatch`. Slither does not resolve internal function pointers. The zero-address rejection is exercised by the test suite. |
 | `naming-convention` | Informational | 6 | **By design** | Four are `_userAddress` / `_identity` in `IdentityRegistryWhitelistBase`, reproducing the ERC-3643 `IIdentityRegistry` parameter names **verbatim** so the interface reads identically to the standard. Two are pre-existing in `RuleERC2980Base`. |
-| `unused-state` | Informational | 4 | **Cosmetic** | The four `TRANSFERRED_SELECTOR_*` constants in `RuleNFTAdapter`. See below — this corrects the previous triage. |
+| `unused-state` | Informational | 4 | **Cosmetic** | The four `TRANSFERRED_SELECTOR_*` constants in `RuleNFTAdapter`. Each occurs exactly once in the repository — its own declaration — so Slither is right that they are unreferenced. Impact is nil: they are `internal constant`, so they occupy no storage slot and, being unused, are not emitted into the deployed bytecode. Either delete them or add a test asserting each equals the corresponding overload's selector, which would make them load-bearing and pin the ERC-7943 signatures. |
 
-## `unused-state`: correction to the previous triage
+## The one new finding
 
-The 2026-08-11 feedback recorded these as a **false positive**, on the grounds that the selector constants "are
-consumed by the adapter's dispatch, not referenced by name from the subclass Slither reports them against".
+`unused-return` rose from 8 to 9. The new instance is in `RuleMaxBalanceBase._setBalanceToken`:
 
-**That reason is wrong.** Each constant occurs exactly once in the entire repository — its own declaration:
+```solidity
+try IBalanceOf(newBalanceToken).balanceOf(address(this)) returns (uint256) {
+    // callable
+} catch {
+    revert RuleMaxBalance_TokenBalanceUnavailable(newBalanceToken);
+}
+```
 
-| Constant | Occurrences in `src/`, `test/`, `script/` |
-|---|---|
-| `TRANSFERRED_SELECTOR_ERC3643` | 1 (declaration) |
-| `TRANSFERRED_SELECTOR_RULE_ENGINE` | 1 (declaration) |
-| `TRANSFERRED_SELECTOR_ERC7943` | 1 (declaration) |
-| `TRANSFERRED_SELECTOR_ERC7943_FROM` | 1 (declaration) |
+**False positive, and the same class as three findings already dismissed.** The call is a *probe*: its only
+purpose is to establish that `balanceOf` does not revert, turning what would otherwise be a silent read-path
+failure — every transfer blocked with code `83` — into an immediate, named configuration error. Discarding the
+value is the point; there is no balance to act on at configuration time. This mirrors
+`TokenSupplyReader._probeTotalSupplyCallable`, dismissed on identical grounds.
 
-There is no dispatch that reads them. Slither is right: they are unreferenced.
+## Delta from the previous run
 
-**Impact: none.** They are `internal constant`, so they occupy no storage slot and, being unused, are not
-emitted into the deployed bytecode. Nothing is wasted at runtime and no behaviour depends on them. They read as
-documentation of the four `transferred` overload selectors the adapter supports.
+| | Previous (2026-08-13, pre-`RuleMaxBalance`) | This run |
+|---|---|---|
+| Contracts | 199 | **206** |
+| Compiler | solc 0.8.34 | **solc 0.8.36** |
+| Results | 43 | **44** |
+| Severity | 2 High · 10 Med · 17 Low · 14 Info | 2 High · **11** Med · 17 Low · 14 Info |
 
-**Disposition: cosmetic, not fixed.** Either delete them or add a test asserting each equals the selector of the
-corresponding overload, which would make them load-bearing and keep the ERC-7943 signatures pinned. Recorded
-here rather than fixed because this run is a re-analysis, not a code change.
+Seven contracts were added — `RuleMaxBalance` with its base, invariant storage and `Ownable2Step` variant,
+plus `IBalanceOf`, `BalanceOfMock` and `ChainlinkPoRFeedManager` — and they produced exactly **one** new
+finding, the probe above. Every other detector reports the same instance count as before, which is the check
+that rules out a scope regression: a filter or compile-target change would have moved several categories at
+once.
 
-The instance count halved (8 → 4) only because the same four constants were previously reported against both
-`RuleIdentityRegistry` and `RuleIdentityRegistryOwnable2Step`, and are now reported against the Ownable2Step
-variant alone. No constant was removed and no behaviour changed.
+**The dependency and compiler bumps produced no new findings.** solc `0.8.34` → `0.8.36`, OpenZeppelin
+`v5.6.1` → `v5.7.0`, RuleEngine `v3.0.0-rc4` → `v3.0.0-rc5` and CMTAT `v3.3.0-rc1` → `v3.3.0-rc3` all landed
+between the two runs, and no detector count moved because of them.
 
-## Delta from the 2026-08-11 run of `v0.5.0`
-
-2026-08-11: 2 High · 11 Medium · 17 Low · 16 Informational (46 results, 191 contracts).
-2026-08-13: 2 High · 10 Medium · 17 Low · 14 Informational (**43 results**, 199 contracts).
-
-Contract count rose by 8 while results fell by 3. Both are explained by work landed between the two runs.
-
-| Change | Cause |
-|---|---|
-| +8 contracts | The deployment-script rework: `script/base/CMTATDeploymentBase.sol` plus the four rewritten scripts (`CLAUDE_ANALYSIS_SCRIPT.md`). `script/` is not in the filter list, so scripts are in scope. |
-| `dead-code` 0 → 2 | The `AddressSetBatchLib` refactor (`CLAUDE_ANALYSIS.md` D-1) moved the zero-address guard behind an internal function pointer, which Slither cannot follow. False positive. |
-| `unused-return` 9 → 8 | Same refactor: the batch loops now live in one library and forward their `(added, skipped)` tuple instead of discarding `EnumerableSet` return values in duplicated loops. |
-| `unused-state` 8 → 4 | Reporting shape only — the same four constants, now attributed to one contract instead of two. |
-
-No new detector fired on the deployment scripts.
+**The `ChainlinkPoRFeedManager` split produced none either.** Extracting feed management out of
+`RuleChainlinkPoRBase` moved code between files without changing it; `uninitialized-local`, `timestamp` and the
+`latestRoundData()` `unused-return` all report the same instances, now attributed to the new contract.
