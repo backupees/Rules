@@ -10,8 +10,8 @@ import {RuleMaxBalanceBase} from "../abstract/base/RuleMaxBalanceBase.sol";
 /**
  * @title RuleMaxBalanceOwnable2Step
  * @notice Ownable2Step variant of RuleMaxBalance.
- * @dev WARNING: pair this with a rule that admits one address per investor. See
- * `doc/technical/contracts/RuleMaxBalance.md`.
+ * @dev WARNING: pair this with a rule that admits one address per investor. The cap counts tokens per
+ * address, so a holder with several addresses can otherwise exceed it.
  */
 contract RuleMaxBalanceOwnable2Step is RuleMaxBalanceBase, Ownable2Step, Ownable2StepERC165Module {
     /*//////////////////////////////////////////////////////////////

@@ -24,8 +24,7 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
  * who wants more than `maxBalance` can simply spread the position across several addresses. Deploy
  * it together with a rule that ties addresses to identities -- `RuleWhitelist`,
  * `RuleReceiverWhitelist` or `RuleIdentityRegistry` -- and admit one address per investor. Used
- * alone on a permissionless token it is a speed bump, not a limit. See
- * `doc/technical/contracts/RuleMaxBalance.md`.
+ * alone on a permissionless token it is a speed bump, not a limit.
  *
  * @dev **The check assumes the token calls this BEFORE it moves the value.** It compares
  * `balanceOf(to) + value` against the cap, which is only correct while `balanceOf(to)` still
