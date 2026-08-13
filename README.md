@@ -90,6 +90,10 @@ An [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) token has **two** pluggab
 | **Compliance** (`ICompliance`) | A `RuleEngine` holding rules | The token asks the rules whether a transfer may proceed |
 | **Identity registry** (`IIdentityRegistry`) | `IdentityRegistryWhitelist` | The token asks it whether a wallet is a verified investor |
 
+![An ERC-3643 token has two pluggable slots](./doc/schema/erc3643-slots.png)
+
+_Diagram source: [`doc/schema/erc3643-slots.puml`](./doc/schema/erc3643-slots.puml)._
+
 ### Compliance: go through a RuleEngine
 
 Use `RuleEngine`, not a bare rule. ERC-3643 drives mint and burn through `created` and `destroyed`, which the **validation rules do not implement** — they only expose `canTransfer` / `transferred`. 
@@ -111,6 +115,10 @@ This library provides **both sides of that exchange**:
 | --- | --- | --- |
 | `RuleIdentityRegistry` | The side that **asks the question**: a transfer rule that calls `isVerified` on whatever registry the token uses, and blocks the transfer when the answer is no. | Added to a RuleEngine, like any other rule |
 | `IdentityRegistryWhitelist` | The side that **answers it**: a registry implementation that replies from a whitelist instead of reading ONCHAINIDs, so no identity contracts need deploying. | `token.setIdentityRegistry(...)`. It is **not** a rule, implements no `IRule`, and must never be added to a RuleEngine |
+
+![Identity verification: asking versus answering](./doc/schema/erc3643-identity-directions.png)
+
+_Diagram source: [`doc/schema/erc3643-identity-directions.puml`](./doc/schema/erc3643-identity-directions.puml)._
 
 Pick by whichever half you are missing. Already operate an identity registry and want its verdict enforced on
 transfers? You need the rule. Want ERC-3643 eligibility without the ONCHAINID machinery? You need the registry.

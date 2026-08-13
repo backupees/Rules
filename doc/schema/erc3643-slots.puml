@@ -1,0 +1,49 @@
+@startuml
+' Source for doc/schema/erc3643-slots.png, embedded in the root README (ERC-3643 section).
+' Render with:  plantuml -tpng doc/schema/erc3643-slots.puml
+title An ERC-3643 token has two pluggable slots — this library fills both
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+
+rectangle "ERC-3643 token\n<size:10>Token.sol</size>" as token #FFF3E0
+
+package "Compliance slot" as comp #F4F8FC {
+  rectangle "RuleEngine" as engine
+  rectangle "RuleWhitelist" as r1
+  rectangle "RuleBlacklist" as r2
+  rectangle "RuleSanctionsList" as r3
+  engine -down-> r1
+  engine -down-> r2
+  engine -down-> r3
+}
+
+package "Identity registry slot" as idp #F4F8FC {
+  rectangle "IdentityRegistryWhitelist\n<size:10>answers from a whitelist</size>\n<size:10>no ONCHAINID needed</size>" as idreg
+}
+
+token -down-> engine : "canTransfer / transferred\ncreated / destroyed\n//may this move happen?//"
+token -down-> idreg : "isVerified(wallet)\n//is this a verified investor?//"
+
+note bottom of comp
+  Use a **RuleEngine**, not a bare rule: ERC-3643 drives mint
+  and burn through ""created"" / ""destroyed"", which the
+  validation rules do not implement.
+end note
+
+note bottom of idp
+  Installed with ""token.setIdentityRegistry(...)"".
+  **Not** a rule — never add it to a RuleEngine.
+end note
+
+@enduml

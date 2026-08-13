@@ -1,0 +1,54 @@
+@startuml
+' Source for doc/schema/erc3643-identity-directions.png, embedded in the root README.
+' Render with:  plantuml -tpng doc/schema/erc3643-identity-directions.puml
+title Identity verification — one contract asks the question, the other answers it
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+
+rectangle "**A. You already run a registry**" as A #F4F8FC {
+  rectangle "CMTAT / ERC-3643 token" as tA
+  rectangle "RuleEngine" as eA
+  rectangle "RuleIdentityRegistry\n<size:10>**asks** the question</size>" as ruleA #E8F5E9
+  rectangle "Your ERC-3643\nidentity registry\n<size:10>ONCHAINID-backed</size>" as regA
+
+  tA -down-> eA : transferred(...)
+  eA -down-> ruleA
+  ruleA -down-> regA : isVerified(wallet)?
+}
+
+rectangle "**B. You want eligibility without ONCHAINID**" as B #F4F8FC {
+  rectangle "ERC-3643 token" as tB
+  rectangle "IdentityRegistryWhitelist\n<size:10>**answers** the question</size>" as regB #E3F2FD
+
+  tB -down-> regB : isVerified(wallet)?
+}
+
+rectangle "**C. Both — they compose**" as C #F4F8FC {
+  rectangle "CMTAT / ERC-3643 token" as tC
+  rectangle "RuleIdentityRegistry\n<size:10>asks</size>" as ruleC #E8F5E9
+  rectangle "IdentityRegistryWhitelist\n<size:10>answers</size>" as regC #E3F2FD
+
+  tC -down-> ruleC : via RuleEngine
+  ruleC -down-> regC : isVerified(wallet)?
+}
+
+note bottom of C
+  One whitelist then drives both the token's own
+  eligibility checks and the transfer rule.
+  Pinned by CMTATRuleIdentityRegistryComposition.t.sol
+end note
+
+A -[hidden]right- B
+B -[hidden]right- C
+@enduml
