@@ -39,7 +39,7 @@ Every finding, its outcome, and the commit that carries it.
 | **C-1** | `RuleMaxTotalSupply` constructor emitted nothing | ✅ Fixed | `d354ae1` |
 | **C-2** | `checkSpender` initial value never announced | ✅ Fixed | `d354ae1` |
 | **C-3** | `RuleIdentityRegistry` constructor omitted `IdentityRegistryUpdated` | ✅ Fixed | `d354ae1` |
-| **C-4** | Batch events report the input array, not the effect; counters computed then discarded | ✅ Fixed — the counters are now emitted. **Breaking**: six batch event signatures change, so `topic0` changes | `PENDING` |
+| **C-4** | Batch events report the input array, not the effect; counters computed then discarded | ✅ Fixed — the counters are now emitted. **Breaking**: six batch event signatures change, so `topic0` changes | `17d6eb8` |
 | **D-1** | `RuleERC2980Internal` duplicated `RuleAddressSetInternal` twice | ✅ Fixed — shared `AddressSetBatchLib`; storage layout verified identical | `bd3b6a7` |
 | **D-2** | `_currentSupply()` byte-identical in two rules | ✅ Fixed — stateless `TokenSupplyReader` base, −12 gas | `e4dd438` |
 | **D-3** | detect-then-`require` `_transferred` pair repeated in 9 rules | ⬜ **Left as is** — the per-rule custom error is the only variation and is worth keeping | — |
@@ -428,10 +428,17 @@ Leaving the code as-is — computing, discarding, and emitting something less in
 > input.length` and that `skipped` equals what was already present.
 >
 > **A pre-existing test defect surfaced.** `RuleWhitelistRemove.t.sol` contained three bare
-> `emit IAddressList.AddAddresses(...)` statements with **no `vm.expectEmit` before them** — they emitted an
-> event from the test contract and asserted nothing at all. The compiler flagged them only because the arity
-> changed. They are now real assertions, and the most useful of them checks a batch of 3 removals where only
-> 2 were present: `(removed = 2, skipped = 1)` — exactly the information this finding was about.
+> `emit IAddressList.AddAddresses(...)` / `RemoveAddresses(...)` statements with **no `vm.expectEmit` before
+> them** — they emitted an event from the test contract and asserted nothing at all. The compiler flagged them
+> only because the arity changed. Those three are now real assertions, and the most useful of them checks a
+> batch of 3 removals where only 2 were present: `(removed = 2, skipped = 1)` — exactly the information this
+> finding was about.
+>
+> **The same defect survives on two singular events in the same file**, at `RuleWhitelistRemove.t.sol:48` and
+> `:95` (`emit IAddressList.RemoveAddress(ADDRESS1);`). Their arity did not change, so the compiler never
+> surfaced them and this finding's sweep did not reach them. Line 95 is inside a test that expects a revert,
+> so it could never have asserted anything. Neither affects C-4's scope — both are single-address events, not
+> batch ones — but the cleanup above is narrower than "the file is now clean". Open.
 
 ---
 
