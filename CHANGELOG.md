@@ -195,6 +195,11 @@ screening, F-1; `transferFrom` delegation, F-2).
 
 ### Changed — dependencies
 
+- **Solidity toolchain updated to `0.8.36`** (from `0.8.34`), in both `foundry.toml` and `hardhat.config.js`. Builds clean and all three suites pass unchanged: 763 Foundry tests, 31 on the ERC-3643 profile, and the Hardhat smoke test.
+  - **`[profile.erc3643]` deliberately stays on `0.8.30`**, and must. The vendored ERC-3643 `Token.sol` pins `pragma solidity 0.8.30` *exactly*, so it cannot share a compilation unit with the default profile at any other version. Verified after the bump: the default profile compiles with Solc 0.8.36, the ERC-3643 profile with Solc 0.8.30.
+  - Source pragmas are untouched. Contracts stay on `^0.8.20` so integrators pin their own compiler; only this repository's own builds move.
+  - The v0.5.0 Slither and Aderyn reports were produced at `0.8.34` and record that in their headers. They were not re-run for a patch-level compiler bump; their findings are source-level (pragma, PUSH0, centralization, empty blocks) and do not depend on the codegen version.
+
 - **CMTAT submodule bumped to `v3.3.0-rc3`** (from `v3.3.0-rc1`). Builds clean and both test profiles pass unchanged (763 + 31). No interface this library imports changed shape: `ICMTATConstructor`, `IRuleEngine` and `draft-IERC1643CMTAT` differ only in the pragma and NatSpec, and the validation modules changed in comments only.
   - `IRuleEngine` gains a **normative requirement** in its NatSpec: zero-value calls are permissionless, because ERC-20 treats a `0` transfer as a normal transfer and `_spendAllowance` consumes no allowance, so anyone can reach `transferred(spender, from, to, 0)` for an arbitrary `from`. Implementations "MUST therefore treat `value == 0` as carrying no economic meaning: any stateful rule ... MUST be a no-op for a zero value". **The operation rules in this library do not yet satisfy this** — see the note in `doc/technical/RuleConditionalTransferLight.md`.
 
@@ -232,7 +237,7 @@ screening, F-1; `transferFrom` delegation, F-2).
 ### Testing
 
 - New `test/ERC3643Real/ERC3643RealTokenRuleEngine.t.sol` — the same **ERC-3643 token → RuleEngine → RuleWhitelist** wiring, but against the **real vendored `Token.sol`** rather than a mock, so nothing in it is transcribed. 12 tests covering mint, transfer, transferFrom, forcedTransfer and burn, asserting the token's own `ComplianceNotFollowed` / `TransferNotPossible` errors and the rule's `RuleWhitelist_InvalidTransfer` codes.
-  - Requires its own Foundry profile: `Token.sol` pins `pragma solidity 0.8.30` exactly, which cannot share a compilation unit with the project's 0.8.34. `test/ERC3643Real/**` is skipped by the default profile and built by `[profile.erc3643]`. **CI must run both `forge test` and `FOUNDRY_PROFILE=erc3643 forge test`.**
+  - Requires its own Foundry profile: `Token.sol` pins `pragma solidity 0.8.30` exactly, which cannot share a compilation unit with the project's 0.8.36. `test/ERC3643Real/**` is skipped by the default profile and built by `[profile.erc3643]`. **CI must run both `forge test` and `FOUNDRY_PROFILE=erc3643 forge test`.**
   - The `lib/ERC-3643` submodule moves from 4.1.3 to **4.2.0-beta1**; 4.1.3 pins `0.8.17`, which cannot compile alongside our `^0.8.20` contracts at all. Nothing in `src/` imports ERC-3643, so the bump affects tests only.
   - Adds minimal `IIdentity` / `IClaimIssuer` stubs under `test/utils/onchainid/`, wired by a context-scoped remapping, because ONCHAINID is an npm dependency rather than a submodule.
 - New `test/ERC3643Compliance/ERC3643RuleEngineWhitelist.t.sol` — an ERC-3643 token wired to a `RuleEngine` as its **compliance** contract (`setCompliance`), enforcing `RuleWhitelist`: **ERC-3643 token → RuleEngine → RuleWhitelist**. Covers `mint`, `transfer`, `transferFrom`, `forcedTransfer` and `burn`, and pins that the compliance slot and the identity-registry slot block independently — an address verified by the registry but absent from the rule is rejected, and vice versa. Exercises the `setTokenSelfBindingApproval` path that exists in `ERC3643ComplianceExtendedModule` for ERC-3643 self-binding.

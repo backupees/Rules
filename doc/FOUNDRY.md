@@ -8,13 +8,13 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
 - `hardhat.config.js`
 
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
+  - Solidity [v0.8.36](https://docs.soliditylang.org/en/v0.8.36/)
   - EVM version: Prague (Pectra upgrade)
   - Optimizer: true, 200 runs
 
 - `foundry.toml`
 
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
+  - Solidity [v0.8.36](https://docs.soliditylang.org/en/v0.8.36/)
   - EVM version: Prague (Pectra upgrade)
   - Optimizer: true, 200 runs
 

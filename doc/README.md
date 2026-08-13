@@ -193,7 +193,7 @@ and `IdentityRegistry.sol` rather than mocks:
 | `ERC3643ReceiverWhitelistParity.t.sol` | Receiver-whitelist parity with the spec's eligibility |
 
 31 tests, run with `FOUNDRY_PROFILE=erc3643 forge test`. They are **not** part of a plain `forge test`: the
-vendored `Token.sol` pins solc `0.8.30` exactly and cannot share a compilation unit with our `0.8.34`.
+vendored `Token.sol` pins solc `0.8.30` exactly and cannot share a compilation unit with our `0.8.36`.
 
 ### ERC-721/ERC-1155
 
@@ -974,7 +974,7 @@ These roles are listed above in the Role Summary table.
 
 ## Toolchains and Usage
 
-This repository is developed and tested with [Foundry](https://book.getfoundry.sh); a Hardhat config is also present for compilation and a small smoke test. Build settings (`foundry.toml` / `hardhat.config.js`): solc `v0.8.34`, EVM `Prague`, optimizer on (200 runs).
+This repository is developed and tested with [Foundry](https://book.getfoundry.sh); a Hardhat config is also present for compilation and a small smoke test. Build settings (`foundry.toml` / `hardhat.config.js`): solc `v0.8.36`, EVM `Prague`, optimizer on (200 runs).
 
 ### Main commands
 
@@ -1960,7 +1960,7 @@ Static analysis with [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5, re-run **
 | ID | Title | Instances | Verdict |
 |---|---|---|---|
 | L-1 | Centralization Risk | 68 | By design (regulated token issuer model) |
-| L-2 | Unspecific Solidity Pragma | 63 | By design (`^0.8.20` library; project pins solc 0.8.34) |
+| L-2 | Unspecific Solidity Pragma | 63 | By design (`^0.8.20` library; project pins solc 0.8.36) |
 | L-3 | Address State Variable Set Without Checks | 1 | False positive — zero-check enforced at public `setSanctionListOracle` |
 | L-4 | PUSH0 Opcode | 64 | By design — project targets Prague EVM |
 | L-5 | Modifier Invoked Only Once | 2 | By design — template method pattern |
