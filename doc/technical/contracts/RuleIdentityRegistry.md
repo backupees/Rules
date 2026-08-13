@@ -50,17 +50,17 @@ If no identity registry is configured (`address(0)`), all transfers pass this ru
 
 ### Graph
 
-![surya_graph_RuleIdentityRegistry](../surya/surya_graph/surya_graph_RuleIdentityRegistry.sol.png)
+![surya_graph_RuleIdentityRegistry](../../surya/surya_graph/surya_graph_RuleIdentityRegistry.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleIdentityRegistry](../surya/surya_inheritance/surya_inheritance_RuleIdentityRegistry.sol.png)
+![surya_inheritance_RuleIdentityRegistry](../../surya/surya_inheritance/surya_inheritance_RuleIdentityRegistry.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer, including the ERC-3643 identity registry `isVerified` lookups and the no-registry pass-through case.
 
-![RuleIdentityRegistry flow with a CMTAT token](../img/rule-identity-registry-flow.png)
+![RuleIdentityRegistry flow with a CMTAT token](../../img/rule-identity-registry-flow.png)
 
 _Diagram source: doc/img/rule-identity-registry-flow.puml._
 

@@ -2,7 +2,7 @@
 
 [TOC]
 
-This document covers the Foundry scripts in [`script/`](../../script/): what each one deploys, the shape they
+This document covers the Foundry scripts in [`script/`](../../../script/): what each one deploys, the shape they
 all share, how to configure them, what you still have to do after running one, and the limitations worth
 knowing before you use them on a real chain.
 
@@ -19,7 +19,7 @@ operator can supply, listed per script under [After deployment](#after-deploymen
 | `DeployCMTATWithBlacklistAndSanctionsList.s.sol` | CMTAT + `RuleEngine` + 2 rules | A (engine) | 18 |
 | `DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply.s.sol` | CMTAT + `RuleEngine` + 3 rules | A (engine) | 19 |
 
-All four share [`script/base/CMTATDeploymentBase.sol`](../../script/base/CMTATDeploymentBase.sol), which holds
+All four share [`script/base/CMTATDeploymentBase.sol`](../../../script/base/CMTATDeploymentBase.sol), which holds
 the token metadata, the environment configuration, and the address-logging helper.
 
 ## The shape every script shares
@@ -47,7 +47,7 @@ things break if a script assumes otherwise:
    `token.renounceRole(role, deployer)` only succeeds when `msg.sender == deployer`.
 
 Three of the four scripts read `address(this)` and could not deploy anything at all until this was fixed. The
-full write-up is [`CLAUDE_ANALYSIS_SCRIPT.md`](../security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md)
+full write-up is [`CLAUDE_ANALYSIS_SCRIPT.md`](../../security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md)
 S-1.
 
 ### Temporary admin and hand-over
@@ -242,7 +242,7 @@ tests cover it, but a partial failure on a live chain would not be caught by the
 
 Two layers, and they cover different things.
 
-**Unit tests**, in [`test/DeploymentScripts/`](../../test/DeploymentScripts/), call `deploy()` directly and
+**Unit tests**, in [`test/DeploymentScripts/`](../../../test/DeploymentScripts/), call `deploy()` directly and
 assert the wiring, the role hand-over, and the resulting compliance behaviour end to end: 50 tests across the
 four scripts, including that the admin owns everything and the deployer owns nothing.
 

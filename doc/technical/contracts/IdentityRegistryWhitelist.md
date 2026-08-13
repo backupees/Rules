@@ -10,7 +10,7 @@
 > this contract cannot be installed on a CMTAT token directly. Reach it through
 > [`RuleIdentityRegistry`](./RuleIdentityRegistry.md) in a `RuleEngine`, which consults this registry over
 > `isVerified`. The two are wired by interface, not inheritance, and that pairing is pinned by
-> [`CMTATRuleIdentityRegistryComposition.t.sol`](../../test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol).
+> [`CMTATRuleIdentityRegistryComposition.t.sol`](../../../test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol).
 
 ### Where the whitelist comes from
 
@@ -62,11 +62,11 @@ Steps 3 and 5 mean **the token itself is a caller of the registry's write functi
 
 ### Graph
 
-![surya_graph_IdentityRegistryWhitelist](../surya/surya_graph/surya_graph_IdentityRegistryWhitelist.sol.png)
+![surya_graph_IdentityRegistryWhitelist](../../surya/surya_graph/surya_graph_IdentityRegistryWhitelist.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_IdentityRegistryWhitelist](../surya/surya_inheritance/surya_inheritance_IdentityRegistryWhitelist.sol.png)
+![surya_inheritance_IdentityRegistryWhitelist](../../surya/surya_inheritance/surya_inheritance_IdentityRegistryWhitelist.sol.png)
 
 ## Installation
 

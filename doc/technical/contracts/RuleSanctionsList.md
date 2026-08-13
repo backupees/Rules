@@ -16,17 +16,17 @@ The oracle can be updated with `setSanctionListOracle` or disabled with `clearSa
 
 ### Graph
 
-![surya_graph_RuleSanctionsList](../surya/surya_graph/surya_graph_RuleSanctionsList.sol.png)
+![surya_graph_RuleSanctionsList](../../surya/surya_graph/surya_graph_RuleSanctionsList.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleSanctionsList](../surya/surya_inheritance/surya_inheritance_RuleSanctionsList.sol.png)
+![surya_inheritance_RuleSanctionsList](../../surya/surya_inheritance/surya_inheritance_RuleSanctionsList.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer, including the Chainalysis oracle lookup and the no-oracle pass-through case.
 
-![RuleSanctionsList flow with a CMTAT token](../img/rule-sanctionslist-flow.png)
+![RuleSanctionsList flow with a CMTAT token](../../img/rule-sanctionslist-flow.png)
 
 _Diagram source: doc/img/rule-sanctionslist-flow.puml._
 
@@ -55,7 +55,7 @@ This matters beyond tidiness. Forwarding `address(0)` to the oracle would delega
 
 The **minter is still screened**, as the `spender` on the 4-argument mint path — that is deliberate and unchanged (see `CLAUDE.md`, the mint/burn `spender` convention). Skipping the sentinel does not weaken it.
 
-Pinned by [`test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol`](../../test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol), which configures an oracle that *does* sanction `address(0)` and asserts mint and burn still pass.
+Pinned by [`test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol`](../../../test/RuleSanctionsList/RuleSanctionsListMintBurnSentinel.t.sol), which configures an oracle that *does* sanction `address(0)` and asserts mint and burn still pass.
 
 Side effect on gas: a mint or burn now makes one oracle call instead of two.
 

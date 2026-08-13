@@ -28,7 +28,7 @@ covered by the same check, since a mint raises the receiver's balance exactly as
 > during onboarding and reflected on-chain by admitting exactly one address per investor.
 >
 > This is pinned by
-> [`testSplitWalletsBypassTheCapEvenWithAWhitelist`](../../test/RuleMaxBalance/RuleMaxBalanceCMTATIntegration.t.sol),
+> [`testSplitWalletsBypassTheCapEvenWithAWhitelist`](../../../test/RuleMaxBalance/RuleMaxBalanceCMTATIntegration.t.sol),
 > which deliberately admits both wallets of one investor and shows the combined holding reaching twice the cap
 > with a whitelist active. If that test ever fails, the bypass has been closed by other means and this warning
 > should be revisited.

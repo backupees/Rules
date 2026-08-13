@@ -20,17 +20,17 @@ For that reason, `RuleMintAllowance` does not advertise the full ERC-3643 `IComp
 
 ### Graph
 
-![surya_graph_RuleMintAllowance](../surya/surya_graph/surya_graph_RuleMintAllowance.sol.png)
+![surya_graph_RuleMintAllowance](../../surya/surya_graph/surya_graph_RuleMintAllowance.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleMintAllowance](../surya/surya_inheritance/surya_inheritance_RuleMintAllowance.sol.png)
+![surya_inheritance_RuleMintAllowance](../../surya/surya_inheritance/surya_inheritance_RuleMintAllowance.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a mint. As an operation rule, it decrements the minter's allowance in the `transferred` callback after balances are updated.
 
-![RuleMintAllowance flow with a CMTAT token](../img/rule-mint-allowance-flow.png)
+![RuleMintAllowance flow with a CMTAT token](../../img/rule-mint-allowance-flow.png)
 
 _Diagram source: doc/img/rule-mint-allowance-flow.puml._
 
@@ -140,7 +140,7 @@ The table above describes calls made **directly on the rule**. In a normal deplo
 > allowed that then reverts with `RuleMintAllowance_AllowanceExceeded`.
 
 This is pinned by `test_MA1_EngineAndTokenInheritTheHardcodedAllowedView_CurrentBehaviour` in
-[`test/ThreatModel/ThreatModelTests.t.sol`](../../test/ThreatModel/ThreatModelTests.t.sol). Per the
+[`test/ThreatModel/ThreatModelTests.t.sol`](../../../test/ThreatModel/ThreatModelTests.t.sol). Per the
 project convention, that test asserts behaviour the audit considers wrong: if the rule, the engine or
 the token is ever changed to close the gap, it fails, and the finding and documentation must be
 updated with it.

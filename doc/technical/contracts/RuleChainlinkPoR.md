@@ -16,8 +16,8 @@ The rule is split in two, so feed handling does not drag the rest of the rule al
 
 | Contract | Holds | Depends on |
 | --- | --- | --- |
-| [`ChainlinkPoRFeedManager`](../../src/rules/validation/abstract/core/ChainlinkPoRFeedManager.sol) | The feed, the protected token, `tokenDecimals`, `maxStalenessSeconds`, their setters and the revert-free reserve read (`maxBackedSupply`, decimal scaling) | `TokenSupplyReader`, the invariant storage. **No constructor, no ERC-1404** |
-| [`RuleChainlinkPoRBase`](../../src/rules/validation/abstract/base/RuleChainlinkPoRBase.sol) | The constructor, the ERC-1404 / ERC-3643 surface (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the restriction logic that turns a backed supply into a code | `RuleTransferValidation`, `ChainlinkPoRFeedManager` |
+| [`ChainlinkPoRFeedManager`](../../../src/rules/validation/abstract/core/ChainlinkPoRFeedManager.sol) | The feed, the protected token, `tokenDecimals`, `maxStalenessSeconds`, their setters and the revert-free reserve read (`maxBackedSupply`, decimal scaling) | `TokenSupplyReader`, the invariant storage. **No constructor, no ERC-1404** |
+| [`RuleChainlinkPoRBase`](../../../src/rules/validation/abstract/base/RuleChainlinkPoRBase.sol) | The constructor, the ERC-1404 / ERC-3643 surface (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the restriction logic that turns a backed supply into a code | `RuleTransferValidation`, `ChainlinkPoRFeedManager` |
 
 The manager declaring no constructor is the point of the split: it exposes `_setReservesFeed`,
 `_setTokenMetadata` and `_setMaxStalenessSeconds` and leaves *when* they run to the inheritor.
@@ -33,7 +33,7 @@ compiled artifacts for both `RuleChainlinkPoR` and `RuleChainlinkPoROwnable2Step
 
 `RuleChainlinkPoR` is **not usable with an ERC-721 or ERC-1155 token**, for two independent reasons:
 
-- **No ERC-7943 entrypoints.** The rule inherits `RuleTransferValidation` directly, not `RuleNFTAdapter`, so the `tokenId`-carrying overloads (`detectTransferRestriction(from, to, tokenId, amount)`, `transferred(from, to, tokenId, value)`, …) and the `ITransferContext` struct entrypoints do not exist on it, and it does not advertise `IERC7943NonFungibleComplianceExtend` through ERC-165. See the overload matrix in [`RULE_SEMANTICS.md`](./RULE_SEMANTICS.md#3-overload-surface-erc-7943-tokenid--itransfercontext).
+- **No ERC-7943 entrypoints.** The rule inherits `RuleTransferValidation` directly, not `RuleNFTAdapter`, so the `tokenId`-carrying overloads (`detectTransferRestriction(from, to, tokenId, amount)`, `transferred(from, to, tokenId, value)`, …) and the `ITransferContext` struct entrypoints do not exist on it, and it does not advertise `IERC7943NonFungibleComplianceExtend` through ERC-165. See the overload matrix in [`RULE_SEMANTICS.md`](../guides/RULE_SEMANTICS.md#3-overload-surface-erc-7943-tokenid--itransfercontext).
 - **An aggregate `totalSupply()` is mandatory.** Configuration probes it and reverts with `RuleChainlinkPoR_TokenTotalSupplyUnavailable` when it is absent. Plain ERC-721 has no `totalSupply()` — only `ERC721Enumerable` does — and ERC-1155 supply is per token id (`ERC1155Supply.totalSupply(id)`), so an aggregate figure mixes every id together and a reserve cap derived from it means nothing for a multi-id collection.
 
 This is a design choice, not an omission: the rule caps a *fungible supply* against a reserve figure, so a `tokenId` dimension carries no information for it. `RuleMaxTotalSupply` is ERC-20 only for the same reason. To cap issuance of a non-fungible asset, screen the participants with an address-based validation rule (`RuleWhitelist`, `RuleReceiverWhitelist`, …), all of which do expose the ERC-7943 overloads.
@@ -42,11 +42,11 @@ This is a design choice, not an omission: the rule caps a *fungible supply* agai
 
 ### Graph
 
-![surya_graph_RuleChainlinkPoR](../surya/surya_graph/surya_graph_RuleChainlinkPoR.sol.png)
+![surya_graph_RuleChainlinkPoR](../../surya/surya_graph/surya_graph_RuleChainlinkPoR.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleChainlinkPoR](../surya/surya_inheritance/surya_inheritance_RuleChainlinkPoR.sol.png)
+![surya_inheritance_RuleChainlinkPoR](../../surya/surya_inheritance/surya_inheritance_RuleChainlinkPoR.sol.png)
 
 ## Configuration
 
@@ -110,7 +110,7 @@ This is most visible at `tokenDecimals == 0` (CMTAT equity tokens), where the di
 
 The last row is the case to be aware of operationally: with a 0-decimals token, reserves below one whole unit back nothing at all. That is arithmetically correct — you cannot issue a whole share against a fractional reserve — but it means a feed reporting a small residual balance blocks issuance entirely rather than allowing a token or two.
 
-Behaviour across the decimals domain is pinned by [`test/RuleChainlinkPoR/RuleChainlinkPoRDecimals.t.sol`](../../test/RuleChainlinkPoR/RuleChainlinkPoRDecimals.t.sol), which includes a fuzz cross-checking the implementation against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
+Behaviour across the decimals domain is pinned by [`test/RuleChainlinkPoR/RuleChainlinkPoRDecimals.t.sol`](../../../test/RuleChainlinkPoR/RuleChainlinkPoRDecimals.t.sol), which includes a fuzz cross-checking the implementation against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
 
 ### Staleness threshold
 

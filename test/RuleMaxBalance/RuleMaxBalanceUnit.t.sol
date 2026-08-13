@@ -367,7 +367,7 @@ contract RuleMaxBalanceUnit is Test, RuleMaxBalanceInvariantStorage, RuleAddress
      * @notice Pins the limitation the documentation warns about: the cap is per **address**, so one
      *         holder with two addresses can hold 2x the cap without the rule objecting.
      * @dev This asserts behaviour that is correct-as-designed but exploitable in isolation. It is
-     *      why `doc/technical/RuleMaxBalance.md` requires pairing the rule with a one-address-per-
+     *      why `doc/technical/contracts/RuleMaxBalance.md` requires pairing the rule with a one-address-per-
      *      investor rule. If a future change makes this fail, the mitigation is no longer needed and
      *      the documentation must be updated with it.
      */

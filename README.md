@@ -80,7 +80,7 @@ access-control policy, in either an `AccessControl` or an `Ownable2Step` flavour
 | `RuleMintAllowance` | Per-minter mint quota | 70 |
 
 Codes must stay unique across rules, since a RuleEngine returns the first non-zero one.
-Per-rule detail is in [`doc/technical/`](./doc/technical/); the semantics that differ between rules (who is screened, mint/burn handling, unset-oracle behaviour) are tabulated in [`RULE_SEMANTICS.md`](./doc/technical/RULE_SEMANTICS.md).
+Per-rule detail is in [`doc/technical/`](./doc/technical/); the semantics that differ between rules (who is screened, mint/burn handling, unset-oracle behaviour) are tabulated in [`RULE_SEMANTICS.md`](./doc/technical/guides/RULE_SEMANTICS.md).
 
 ## ERC-3643
 
@@ -169,7 +169,7 @@ forge script script/DeployCMTATWithBlacklist.s.sol:DeployCMTATWithBlacklist --rp
 ```
 
 Four scripts cover the common combinations. See
-[`DEPLOYMENT_SCRIPTS.md`](./doc/technical/DEPLOYMENT_SCRIPTS.md) for configuration and limitations.
+[`DEPLOYMENT_SCRIPTS.md`](./doc/technical/guides/DEPLOYMENT_SCRIPTS.md) for configuration and limitations.
 
 ## Documentation
 
@@ -177,9 +177,9 @@ Four scripts cover the common combinations. See
 | --- | --- |
 | Full reference | [`doc/README.md`](./doc/README.md) |
 | Per-rule detail | [`doc/technical/`](./doc/technical/) |
-| Cross-rule semantics | [`RULE_SEMANTICS.md`](./doc/technical/RULE_SEMANTICS.md) |
-| Deployment scripts | [`DEPLOYMENT_SCRIPTS.md`](./doc/technical/DEPLOYMENT_SCRIPTS.md) |
-| Invariant tests | [`INVARIANT_TESTS.md`](./doc/technical/INVARIANT_TESTS.md) |
+| Cross-rule semantics | [`RULE_SEMANTICS.md`](./doc/technical/guides/RULE_SEMANTICS.md) |
+| Deployment scripts | [`DEPLOYMENT_SCRIPTS.md`](./doc/technical/guides/DEPLOYMENT_SCRIPTS.md) |
+| Invariant tests | [`INVARIANT_TESTS.md`](./doc/technical/guides/INVARIANT_TESTS.md) |
 | Audits and static analysis | [`doc/security/audits/`](./doc/security/audits/) |
 | Release history | [`CHANGELOG.md`](./CHANGELOG.md) |
 

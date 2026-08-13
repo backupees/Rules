@@ -13,7 +13,7 @@ unauthorized party move value, bypass a restriction or brick a contract. The one
 correctness weight (H-1) is an *assumption that currently holds* and was undocumented and unpinned; it is now
 both. The known limitation of this rule — that a per-address cap is bypassable by splitting a position across
 wallets — is a documented design property, not a defect, and is covered in
-[`RuleMaxBalance.md`](../../../../technical/RuleMaxBalance.md).
+[`RuleMaxBalance.md`](../../../../technical/contracts/RuleMaxBalance.md).
 
 ## Disposition summary
 

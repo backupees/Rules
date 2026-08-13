@@ -8,23 +8,23 @@ This rule aggregates multiple child whitelist rules using OR logic. An address i
 
 Each child rule must implement `IAddressList`. The wrapper iterates through all registered rules and returns `true` for an address as soon as one rule lists it. Iteration stops early once all required addresses are resolved.
 
-![ruleWhitelistWrapper.drawio](../schema/rule/ruleWhitelistWrapper.drawio.png)
+![ruleWhitelistWrapper.drawio](../../schema/rule/ruleWhitelistWrapper.drawio.png)
 
 ## Schema
 
 ### Graph
 
-![surya_graph_RuleWhitelistWrapper](../surya/surya_graph/surya_graph_RuleWhitelistWrapper.sol.png)
+![surya_graph_RuleWhitelistWrapper](../../surya/surya_graph/surya_graph_RuleWhitelistWrapper.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleWhitelistWrapper](../surya/surya_inheritance/surya_inheritance_RuleWhitelistWrapper.sol.png)
+![surya_inheritance_RuleWhitelistWrapper](../../surya/surya_inheritance/surya_inheritance_RuleWhitelistWrapper.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the wrapper aggregates its child whitelist rules when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer.
 
-![RuleWhitelistWrapper flow with a CMTAT token](../img/rule-whitelist-wrapper-flow.png)
+![RuleWhitelistWrapper flow with a CMTAT token](../../img/rule-whitelist-wrapper-flow.png)
 
 _Diagram source: doc/img/rule-whitelist-wrapper-flow.puml._
 

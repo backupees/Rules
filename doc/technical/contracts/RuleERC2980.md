@@ -12,17 +12,17 @@ This rule implements the [ERC-2980](https://eips.ethereum.org/EIPS/eip-2980) Swi
 
 ### Graph
 
-![surya_graph_RuleERC2980](../surya/surya_graph/surya_graph_RuleERC2980.sol.png)
+![surya_graph_RuleERC2980](../../surya/surya_graph/surya_graph_RuleERC2980.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleERC2980](../surya/surya_inheritance/surya_inheritance_RuleERC2980.sol.png)
+![surya_inheritance_RuleERC2980](../../surya/surya_inheritance/surya_inheritance_RuleERC2980.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer. The frozenlist is evaluated before the recipient whitelist.
 
-![RuleERC2980 flow with a CMTAT token](../img/rule-erc2980-flow.png)
+![RuleERC2980 flow with a CMTAT token](../../img/rule-erc2980-flow.png)
 
 _Diagram source: doc/img/rule-erc2980-flow.puml._
 

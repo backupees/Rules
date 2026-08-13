@@ -11,7 +11,7 @@ import {RuleTransferValidation} from "../abstract/core/RuleTransferValidation.so
  * @notice Caps how many tokens a single address may hold, with an operator-managed exemption list.
  * @dev WARNING: pair this with a rule that admits one address per investor (`RuleWhitelist`,
  * `RuleReceiverWhitelist` or `RuleIdentityRegistry`). The cap counts tokens per address, so a holder
- * with several addresses can otherwise exceed it. See `doc/technical/RuleMaxBalance.md`.
+ * with several addresses can otherwise exceed it. See `doc/technical/contracts/RuleMaxBalance.md`.
  */
 contract RuleMaxBalance is AccessControlModuleStandalone, RuleMaxBalanceBase {
     /*//////////////////////////////////////////////////////////////

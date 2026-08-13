@@ -32,7 +32,7 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
  * codeless address reverts *uncatchably*, so the guard would be useless there anyway. (The mechanism is the
  * ABI decoder, not `EXTCODESIZE` — solc >= 0.8.10 skips the existence check when return data is expected, the
  * CALL to a codeless account succeeds with 0 bytes, and decoding fails in THIS frame after the call returned,
- * where `catch` cannot reach it. See `doc/technical/RuleMaxTotalSupply.md`.) Safety comes
+ * where `catch` cannot reach it. See `doc/technical/contracts/RuleMaxTotalSupply.md`.) Safety comes
  * from configuration instead -- each rule's setter rejects a candidate without code, and EIP-6780
  * (Cancun) makes that permanent, since `SELFDESTRUCT` can only clear an account created in the same
  * transaction. **This reasoning assumes a Cancun-or-later chain**, which `foundry.toml` targets.

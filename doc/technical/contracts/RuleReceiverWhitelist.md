@@ -49,11 +49,11 @@ The constant is named `RECEIVER` rather than `TO` so it does not collide with `R
 
 ### Graph
 
-![surya_graph_RuleReceiverWhitelist](../surya/surya_graph/surya_graph_RuleReceiverWhitelist.sol.png)
+![surya_graph_RuleReceiverWhitelist](../../surya/surya_graph/surya_graph_RuleReceiverWhitelist.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleReceiverWhitelist](../surya/surya_inheritance/surya_inheritance_RuleReceiverWhitelist.sol.png)
+![surya_inheritance_RuleReceiverWhitelist](../../surya/surya_inheritance/surya_inheritance_RuleReceiverWhitelist.sol.png)
 
 ## Configuration
 

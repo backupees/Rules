@@ -2,7 +2,7 @@
 
 [TOC]
 
-This document describes the **stateful invariant suite** in [`test/invariant/`](../../test/invariant/): what each invariant asserts, why it matters, how the handlers are built, and how the suite was verified to actually catch bugs.
+This document describes the **stateful invariant suite** in [`test/invariant/`](../../../test/invariant/): what each invariant asserts, why it matters, how the handlers are built, and how the suite was verified to actually catch bugs.
 
 Invariant tests differ from the unit and fuzz tests elsewhere in `test/`: instead of exercising a fixed call sequence, Foundry drives a **handler** contract with long, randomly-ordered sequences of calls and re-checks every `invariant_*` function after each step. They are the right tool for the two **stateful (operation) rules**, whose storage evolves across calls.
 
@@ -58,9 +58,9 @@ Foundry cannot usefully fuzz a rule directly: `approveTransfer` needs `OPERATOR_
 
 | File | Role |
 |---|---|
-| [`test/invariant/ConditionalTransferHandler.sol`](../../test/invariant/ConditionalTransferHandler.sol) | Drives `RuleConditionalTransferLight`'s approval state machine |
-| [`test/invariant/MintAllowanceHandler.sol`](../../test/invariant/MintAllowanceHandler.sol) | Drives `RuleMintAllowance`'s quota accounting |
-| [`test/invariant/RuleInvariants.t.sol`](../../test/invariant/RuleInvariants.t.sol) | The two invariant test contracts and their `setUp` |
+| [`test/invariant/ConditionalTransferHandler.sol`](../../../test/invariant/ConditionalTransferHandler.sol) | Drives `RuleConditionalTransferLight`'s approval state machine |
+| [`test/invariant/MintAllowanceHandler.sol`](../../../test/invariant/MintAllowanceHandler.sol) | Drives `RuleMintAllowance`'s quota accounting |
+| [`test/invariant/RuleInvariants.t.sol`](../../../test/invariant/RuleInvariants.t.sol) | The two invariant test contracts and their `setUp` |
 
 ---
 
@@ -137,7 +137,7 @@ Re-run these yourself before trusting a change to either rule: if you mutate the
 
 ## 5. Coverage map
 
-Invariant IDs and their verification status are recorded in [`CLAUDE_AUDIT.md`](../security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md).
+Invariant IDs and their verification status are recorded in [`CLAUDE_AUDIT.md`](../../security/audits/tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md).
 
 | Invariant (threat model) | Property | Covered by |
 |---|---|---|

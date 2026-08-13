@@ -10,17 +10,17 @@ A significant portion of the address-list management code is shared with the whi
 
 ### Graph
 
-![surya_graph_RuleBlacklist](../surya/surya_graph/surya_graph_RuleBlacklist.sol.png)
+![surya_graph_RuleBlacklist](../../surya/surya_graph/surya_graph_RuleBlacklist.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleBlacklist](../surya/surya_inheritance/surya_inheritance_RuleBlacklist.sol.png)
+![surya_inheritance_RuleBlacklist](../../surya/surya_inheritance/surya_inheritance_RuleBlacklist.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a transfer.
 
-![RuleBlacklist flow with a CMTAT token](../img/rule-blacklist-flow.png)
+![RuleBlacklist flow with a CMTAT token](../../img/rule-blacklist-flow.png)
 
 _Diagram source: doc/img/rule-blacklist-flow.puml._
 

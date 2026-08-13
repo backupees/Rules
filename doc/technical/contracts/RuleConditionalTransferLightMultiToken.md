@@ -57,17 +57,17 @@ Supporting true per-token scoping behind a `RuleEngine` would require the token 
 
 ### Graph
 
-![surya_graph_RuleConditionalTransferLightMultiToken](../surya/surya_graph/surya_graph_RuleConditionalTransferLightMultiToken.sol.png)
+![surya_graph_RuleConditionalTransferLightMultiToken](../../surya/surya_graph/surya_graph_RuleConditionalTransferLightMultiToken.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleConditionalTransferLightMultiToken](../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLightMultiToken.sol.png)
+![surya_inheritance_RuleConditionalTransferLightMultiToken](../../surya/surya_inheritance/surya_inheritance_RuleConditionalTransferLightMultiToken.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows the two-phase flow with token-scoped approvals in the supported topology (**the rule bound directly to the token**): an operator approves a `(token, from, to, value)` transfer, then the CMTAT token validates and consumes that approval.
 
-![RuleConditionalTransferLightMultiToken flow with a CMTAT token](../img/rule-conditional-transfer-light-multitoken-flow.png)
+![RuleConditionalTransferLightMultiToken flow with a CMTAT token](../../img/rule-conditional-transfer-light-multitoken-flow.png)
 
 _Diagram source: doc/img/rule-conditional-transfer-light-multitoken-flow.puml._
 

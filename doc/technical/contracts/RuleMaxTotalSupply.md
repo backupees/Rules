@@ -22,17 +22,17 @@ Both the cap and the token contract address can be updated by the admin after de
 
 ### Graph
 
-![surya_graph_RuleMaxTotalSupply](../surya/surya_graph/surya_graph_RuleMaxTotalSupply.sol.png)
+![surya_graph_RuleMaxTotalSupply](../../surya/surya_graph/surya_graph_RuleMaxTotalSupply.sol.png)
 
 ### Inheritance
 
-![surya_inheritance_RuleMaxTotalSupply](../surya/surya_inheritance/surya_inheritance_RuleMaxTotalSupply.sol.png)
+![surya_inheritance_RuleMaxTotalSupply](../../surya/surya_inheritance/surya_inheritance_RuleMaxTotalSupply.sol.png)
 
 ### Flow with a CMTAT token
 
 The sequence below shows how the rule participates when a CMTAT token (with this rule configured in its RuleEngine) processes a mint. Only mints (`from == address(0)`) are gated; transfers and burns pass.
 
-![RuleMaxTotalSupply flow with a CMTAT token](../img/rule-max-total-supply-flow.png)
+![RuleMaxTotalSupply flow with a CMTAT token](../../img/rule-max-total-supply-flow.png)
 
 _Diagram source: doc/img/rule-max-total-supply-flow.puml._
 
