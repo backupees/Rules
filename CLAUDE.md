@@ -86,7 +86,7 @@ Rules that implement a standardized interface must match that standard's semanti
 ## Dependencies (lib/)
 - `openzeppelin-contracts` v5.6.1 — `AccessControl`, `Ownable2Step`, `EnumerableSet`, `ERC2771Context`
 - `openzeppelin-contracts-upgradeable` v5.6.1
-- `CMTAT` v3.0.0 — `IERC1404`, `IERC3643`, `IRuleEngine` interfaces
+- `CMTAT` v3.3.0-rc3 (submodule pin; library supports ≥ v3.0.0) — `IERC1404`, `IERC3643`, `IRuleEngine` interfaces
 - `RuleEngine` v3.0.0-rc4 — `IRule`, `RulesManagementModule`
 - `forge-std` — Foundry test utilities
 

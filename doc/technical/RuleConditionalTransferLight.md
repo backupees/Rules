@@ -139,6 +139,32 @@ Each call to `approveTransfer` increments the counter by 1. Each successful tran
 
 For `transferred(spender, from, to, value)`, the spender address is ignored. Approval lookup is based solely on `(from, to, value)`.
 
+### Zero-value transfers are not treated as no-ops
+
+**Open conformance gap against CMTAT `v3.3.0-rc3`.** That release added a normative requirement to
+`IRuleEngine`'s NatSpec:
+
+> Zero-value calls are permissionless. ERC-20 requires transfers of `0` to be treated as normal transfers, and
+> OpenZeppelin's `_spendAllowance` consumes no allowance when `value == 0`, so any address can call
+> `transferFrom(victim, anyone, 0)` and reach this callback for an arbitrary `from`, with itself as `spender`,
+> without ever having been approved. *"Implementations MUST therefore treat `value == 0` as carrying no
+> economic meaning: any stateful rule ... MUST be a no-op for a zero value."*
+
+This rule keys approvals on `(from, to, value)` with no special case for `value == 0`, so it does not yet
+satisfy that. Measured against the rule as shipped:
+
+| Call | Behaviour today |
+| --- | --- |
+| `transferred(attacker, victim, anyone, 0)` with no matching approval | **Reverts** — so a zero-value transfer that ERC-20 says should succeed is rejected |
+| An approval recorded for `(from, to, 0)` | **Consumable by any caller**, since the spender is not part of the key |
+
+Neither moves value, and the second requires an operator to have approved a zero-value transfer in the first
+place, which is a degenerate thing to do. The practical exposure is therefore low. The correct fix is to make
+`transferred` return early when `value == 0`, before any approval lookup or state change, on this rule,
+[`RuleConditionalTransferLightMultiToken`](./RuleConditionalTransferLightMultiToken.md) and
+`RuleMintAllowance`. It is a **behaviour change** to shipped compliance logic — a zero-value transfer would
+stop reverting — so it is recorded here rather than applied silently.
+
 ### Duplicate approvals
 
 Multiple approvals for the same `(from, to, value)` tuple are allowed and stack. This enables scenarios where the same transfer is expected to occur multiple times.

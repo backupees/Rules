@@ -193,6 +193,11 @@ screening, F-1; `transferFrom` delegation, F-2).
   - **`RuleIdentityRegistry`** emitted both check flags at construction but not `IdentityRegistryUpdated` for the registry address the rule is parameterised by. It now does, **only when a registry is actually assigned**: a zero argument leaves the default untouched, and an `IdentityRegistryUpdated(0)` there would be indistinguishable from a deliberate `clearIdentityRegistry()`. This matches `RuleSanctionsListBase`, which already emitted only when an oracle was supplied.
   - No ABI change; the rule for the whole library is now "every value actually assigned is announced".
 
+### Changed — dependencies
+
+- **CMTAT submodule bumped to `v3.3.0-rc3`** (from `v3.3.0-rc1`). Builds clean and both test profiles pass unchanged (763 + 31). No interface this library imports changed shape: `ICMTATConstructor`, `IRuleEngine` and `draft-IERC1643CMTAT` differ only in the pragma and NatSpec, and the validation modules changed in comments only.
+  - `IRuleEngine` gains a **normative requirement** in its NatSpec: zero-value calls are permissionless, because ERC-20 treats a `0` transfer as a normal transfer and `_spendAllowance` consumes no allowance, so anyone can reach `transferred(spender, from, to, 0)` for an arbitrary `from`. Implementations "MUST therefore treat `value == 0` as carrying no economic meaning: any stateful rule ... MUST be a no-op for a zero value". **The operation rules in this library do not yet satisfy this** — see the note in `doc/technical/RuleConditionalTransferLight.md`.
+
 ### Fixed
 
 - **CI now runs the ERC-3643 test suite.** `.github/workflows/test.yml` ran only `forge test`, which uses the default profile — and `test/ERC3643Real/**` is in that profile's `skip` list. The 18 tests built by `[profile.erc3643]`, including the parity suite that runs against the real vendored `Token.sol`, were therefore never executed in CI, despite `AGENTS.md` / `CLAUDE.md` stating that both commands are required. Added a `Run Forge tests (ERC-3643 profile)` step with a step-level `FOUNDRY_PROFILE: erc3643`, which overrides the workflow-level `ci` for that step only.

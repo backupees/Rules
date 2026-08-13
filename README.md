@@ -11,7 +11,7 @@ Each rule enforces one transfer restriction. A rule can be plugged **directly** 
 
 | Rules | Contracts report `version()` | CMTAT | RuleEngine | OpenZeppelin |
 | --- | --- | --- | --- | --- |
-| **v0.5.0** (current) | `"0.5.0"` | **≥ v3.0.0**, validated against `v3.3.0-rc1` | `v3.0.0-rc4` | `v5.6.1` |
+| **v0.5.0** (current) | `"0.5.0"` | **≥ v3.0.0**, validated against `v3.3.0-rc3` | `v3.0.0-rc4` | `v5.6.1` |
 
 One rule needs more than the baseline, because it reads the **spender** the token forwards on mint:
 
@@ -20,7 +20,7 @@ One rule needs more than the baseline, because it reads the **spender** the toke
 | `RuleMintAllowance` | **v3.3** | Debits the minter's quota from the 4-argument `transferred(spender, from, to, value)` / `canTransferFrom`. A token that does not forward the spender cannot drive it. |
 | Every other rule | v3.0.0 | Uses the 3-argument path only. |
 
-The submodules in `lib/` are pinned to the validated versions (CMTAT `v3.3.0-rc1`, RuleEngine `v3.0.0-rc4`), so
+The submodules in `lib/` are pinned to the validated versions (CMTAT `v3.3.0-rc3`, RuleEngine `v3.0.0-rc4`), so
 a `git submodule update --init --recursive` checkout builds and tests against exactly what this release was verified with.
 
 📖 **[Full documentation →](./doc/README.md)** — the complete reference: every rule in detail, the API, access-control model, restriction codes, deployment guide, and security findings. This page is a summary.
