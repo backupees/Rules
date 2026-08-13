@@ -25,18 +25,27 @@
 ## Static-analysis results (v0.5.0)
 
 Scope: production contracts only — mocks excluded (`-x mocks` / `mocks` filter) and vendored dependencies
-excluded via the `lib` filter. Run 2026-08-11.
+excluded via the `lib` filter. Run **2026-08-13** (re-run of `v0.5.0`, replacing the 2026-08-11 run).
 
 | Tool | High | Medium | Low | Info | Relevant to fix? |
 |---|---|---|---|---|---|
-| Slither 0.11.5 | 2 | 11 | 17 | 16 | **No** — all false-positive or by-design; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
-| Aderyn 0.6.5 | 0 | 0 | 10 categories (333 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
+| Slither 0.11.5 | 2 | 10 | 17 | 14 | **No** — all false-positive, by-design or cosmetic; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
+| Aderyn 0.6.5 | 0 | 0 | 9 categories (315 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
 
 **Nothing to fix in `v0.5.0`.** Every delta from v0.4.0 traces to the three contracts added in this release
 (`RuleChainlinkPoR`, `RuleReceiverWhitelist`, `IdentityRegistryWhitelist`) and each was verified against the
 source before dismissal. The two new Slither categories are `uninitialized-local` (variables assigned inside a
 `try` whose `catch` reverts or returns) and `timestamp` (the Proof-of-Reserve staleness comparison, which is the
 feature itself).
+
+**The 2026-08-13 re-run lowered both counts** (Slither 46 → 43, Aderyn 333 → 315 instances) while contract count
+and nSLOC rose. The reduction is earned by the `AddressSetBatchLib` refactor, which replaced duplicated batch
+loops with one shared implementation that consumes the `EnumerableSet` return values instead of discarding them;
+Aderyn's *Loop Contains `require`/`revert`* category disappeared entirely. One informational disposition was
+**corrected** rather than re-confirmed: Slither's `unused-state` on the four `TRANSFERRED_SELECTOR_*` constants
+in `RuleNFTAdapter` was previously dismissed as a false positive, but each constant occurs exactly once in the
+repository — its own declaration. They are genuinely unreferenced. Impact is nil (`internal constant`, so no
+storage and not emitted into bytecode), so the disposition is cosmetic rather than a fix.
 
 Note for readers comparing runs: the Slither command must filter **`lib`**, not `submodules` — this is a Foundry
 project, so a generic filter pulls the whole vendored dependency tree into scope and inflates the count roughly

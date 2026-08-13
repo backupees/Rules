@@ -1863,18 +1863,20 @@ See the consolidated [Audit & Security-Analysis Overview](./security/audits/AUDI
 
 #### Static analysis (v0.5.0)
 
-Re-run **2026-08-11** for the v0.5.0 release. Full reports and per-finding triage in
+Re-run **2026-08-13** for the v0.5.0 release. Full reports and per-finding triage in
 [`doc/security/audits/tools/v0.5.0/`](./security/audits/tools/v0.5.0/); consolidated view in
 [`AUDIT_OVERVIEW.md`](./security/audits/AUDIT_OVERVIEW.md).
 
 | Tool | High | Medium | Low | Info | Anything to fix? |
 |---|---|---|---|---|---|
-| [Slither](https://github.com/crytic/slither) 0.11.5 | 2 | 11 | 17 | 16 | **No** — [feedback](./security/audits/tools/v0.5.0/slither-report-feedback.md) |
-| [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5 | 0 | 0 | 10 categories | 0 | **No** — [feedback](./security/audits/tools/v0.5.0/aderyn-report-feedback.md) |
+| [Slither](https://github.com/crytic/slither) 0.11.5 | 2 | 10 | 17 | 14 | **No** — [feedback](./security/audits/tools/v0.5.0/slither-report-feedback.md) |
+| [Aderyn](https://github.com/Cyfrin/aderyn) 0.6.5 | 0 | 0 | 9 categories (315 instances) | 0 | **No** — [feedback](./security/audits/tools/v0.5.0/aderyn-report-feedback.md) |
 
 **Nothing to fix.** Every increase over v0.4.0 is proportional to the three contracts this release adds; the two
 new Slither categories (`uninitialized-local`, `timestamp`) were each verified against the source and are a
-`try`/`catch` assignment pattern and the Proof-of-Reserve staleness check respectively.
+`try`/`catch` assignment pattern and the Proof-of-Reserve staleness check respectively. The 2026-08-13 re-run
+lowered both totals (Slither 46 → 43, Aderyn 333 → 315 instances) even as the contract count rose, because the
+`AddressSetBatchLib` refactor consolidated the duplicated batch loops and consumes their return values.
 
 Commands used for `v0.5.0` (mocks excluded):
 
