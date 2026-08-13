@@ -44,8 +44,9 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         assertEq(resBool, true);
 
         // Act
-        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        vm.expectEmit(true, true, true, true);
         emit IAddressList.RemoveAddress(ADDRESS1);
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
         ruleWhitelist.removeAddress(ADDRESS1);
 
         // Assert
@@ -91,8 +92,8 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         vm.expectRevert(RuleAddressSet_AddressNotFound.selector);
 
         // Act
+        // No event is expected: the call reverts, so nothing is emitted.
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.RemoveAddress(ADDRESS1);
         ruleWhitelist.removeAddress(ADDRESS1);
 
         // Assert

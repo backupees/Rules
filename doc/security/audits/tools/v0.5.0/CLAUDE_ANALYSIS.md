@@ -434,11 +434,16 @@ Leaving the code as-is — computing, discarding, and emitting something less in
 > batch of 3 removals where only 2 were present: `(removed = 2, skipped = 1)` — exactly the information this
 > finding was about.
 >
-> **The same defect survives on two singular events in the same file**, at `RuleWhitelistRemove.t.sol:48` and
-> `:95` (`emit IAddressList.RemoveAddress(ADDRESS1);`). Their arity did not change, so the compiler never
-> surfaced them and this finding's sweep did not reach them. Line 95 is inside a test that expects a revert,
-> so it could never have asserted anything. Neither affects C-4's scope — both are single-address events, not
-> batch ones — but the cleanup above is narrower than "the file is now clean". Open.
+> **Two further instances were found later and are also fixed.** The same defect survived on two *singular*
+> events in the same file (`emit IAddressList.RemoveAddress(ADDRESS1);` at `:48` and `:95`). Their arity did
+> not change, so the compiler never surfaced them and this finding's original sweep did not reach them. They
+> needed different fixes: the first is a successful removal, so it became a real assertion
+> (`vm.expectEmit` → `emit` → `vm.prank` → call, matching the file's other cases); the second sits inside a
+> test that expects a revert, so **no event is ever emitted** and the statement could not be turned into an
+> assertion at all — it was removed, with a comment saying why. Neither is in C-4's scope, both being
+> single-address events, but the file is now genuinely free of bare emits. The new assertion was
+> mutation-checked: expecting `ADDRESS2` where the contract emits `ADDRESS1` fails with
+> `RemoveAddress param mismatch at targetAddress`.
 
 ---
 
