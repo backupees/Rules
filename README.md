@@ -120,12 +120,20 @@ This library provides **both sides of that exchange**:
 
 _Diagram source: [`doc/schema/erc3643-identity-directions.puml`](./doc/schema/erc3643-identity-directions.puml)._
 
-Pick by whichever half you are missing. Already operate an identity registry and want its verdict enforced on
-transfers? You need the rule. Want ERC-3643 eligibility without the ONCHAINID machinery? You need the registry.
+**Which one you need is decided by the token, not by preference.**
 
-They are independent, and they also **compose**: the rule can consult the whitelist-backed registry, so one
-whitelist drives both the token's own eligibility checks and the transfer rule. That pairing is covered by
-`test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol`.
+- **On an ERC-3643 token**, plug `IdentityRegistryWhitelist` straight into the identity slot with
+  `setIdentityRegistry`. The token screens every transfer itself. Do **not** also add `RuleIdentityRegistry`
+  behind a RuleEngine: the token already consults the registry, so the rule would screen the same wallets a
+  second time for no added restriction.
+- **On a CMTAT token there is no identity slot at all** — `setIdentityRegistry` is an ERC-3643 concept, and
+  CMTAT has no equivalent. So `RuleIdentityRegistry` behind a RuleEngine is not one option among several, it
+  is the only way to apply identity-registry screening. It consults whichever registry you point it at:
+  your own ONCHAINID-backed one, or `IdentityRegistryWhitelist` if you have none.
+
+That second case is why the two contracts compose at all, and it is pinned by
+`test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol`. They are wired by interface
+rather than inheritance: the rule holds an `IIdentityRegistryVerified` and only ever calls `isVerified`.
 
 ### Matching the spec's semantics
 

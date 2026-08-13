@@ -1,7 +1,7 @@
 @startuml
 ' Source for doc/schema/erc3643-identity-directions.png, embedded in the root README.
 ' Render with:  plantuml -tpng doc/schema/erc3643-identity-directions.puml
-title Identity verification — one contract asks the question, the other answers it
+title Identity verification — which route applies depends on whether the token has an identity slot
 
 skinparam backgroundColor transparent
 skinparam shadowing false
@@ -16,39 +16,41 @@ skinparam rectangle {
   FontColor #1B2733
 }
 
-rectangle "**A. You already run a registry**" as A #F4F8FC {
-  rectangle "CMTAT / ERC-3643 token" as tA
-  rectangle "RuleEngine" as eA
-  rectangle "RuleIdentityRegistry\n<size:10>**asks** the question</size>" as ruleA #E8F5E9
-  rectangle "Your ERC-3643\nidentity registry\n<size:10>ONCHAINID-backed</size>" as regA
-
-  tA -down-> eA : transferred(...)
-  eA -down-> ruleA
-  ruleA -down-> regA : isVerified(wallet)?
-}
-
-rectangle "**B. You want eligibility without ONCHAINID**" as B #F4F8FC {
-  rectangle "ERC-3643 token" as tB
-  rectangle "IdentityRegistryWhitelist\n<size:10>**answers** the question</size>" as regB #E3F2FD
+rectangle "**ERC-3643 token** — it has an identity slot" as B #E8F5E9 {
+  rectangle "ERC-3643 token\n<size:10>Token.setIdentityRegistry(...)</size>" as tB
+  rectangle "IdentityRegistryWhitelist\n<size:10>**is** a registry — answers from a whitelist</size>" as regB #E3F2FD
 
   tB -down-> regB : isVerified(wallet)?
 }
 
-rectangle "**C. Both — they compose**" as C #F4F8FC {
-  rectangle "CMTAT / ERC-3643 token" as tC
-  rectangle "RuleIdentityRegistry\n<size:10>asks</size>" as ruleC #E8F5E9
-  rectangle "IdentityRegistryWhitelist\n<size:10>answers</size>" as regC #E3F2FD
+rectangle "**CMTAT token** — no identity slot exists" as A #FFF3E0 {
+  rectangle "CMTAT token" as tA
+  rectangle "RuleEngine" as eA
+  rectangle "RuleIdentityRegistry\n<size:10>**consults** a registry</size>" as ruleA #FFECB3
+  rectangle "Your ONCHAINID-backed\nERC-3643 registry" as regA
+  rectangle "IdentityRegistryWhitelist\n<size:10>if you have no ONCHAINID</size>" as regC #E3F2FD
 
-  tC -down-> ruleC : via RuleEngine
-  ruleC -down-> regC : isVerified(wallet)?
+  tA -down-> eA : transferred(...)
+  eA -down-> ruleA
+  ruleA -down-> regA : isVerified(wallet)?
+  ruleA -down-> regC : isVerified(wallet)?
 }
 
-note bottom of C
-  One whitelist then drives both the token's own
-  eligibility checks and the transfer rule.
+note bottom of B
+  Plug the registry **straight into the slot**. The token
+  screens every transfer itself. Do **not** also add
+  ""RuleIdentityRegistry"" to a RuleEngine here — the token
+  already consults the registry, so it would only screen
+  the same wallets twice.
+end note
+
+note bottom of A
+  CMTAT has **no** ""setIdentityRegistry"", so a rule is the only
+  route: the RuleEngine path is not one option among several.
+  Either registry works — the rule holds an
+  ""IIdentityRegistryVerified"" and only calls ""isVerified"".
   Pinned by CMTATRuleIdentityRegistryComposition.t.sol
 end note
 
-A -[hidden]right- B
-B -[hidden]right- C
+B -[hidden]right- A
 @enduml
