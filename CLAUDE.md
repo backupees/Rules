@@ -84,10 +84,10 @@ Rules that implement a standardized interface must match that standard's semanti
 | `VersionModule` | Implements `IERC3643Version`; returns the contract version string |
 
 ## Dependencies (lib/)
-- `openzeppelin-contracts` v5.6.1 — `AccessControl`, `Ownable2Step`, `EnumerableSet`, `ERC2771Context`
-- `openzeppelin-contracts-upgradeable` v5.6.1
+- `openzeppelin-contracts` v5.7.0 — `AccessControl`, `Ownable2Step`, `EnumerableSet`, `ERC2771Context`
+- `openzeppelin-contracts-upgradeable` v5.7.0
 - `CMTAT` v3.3.0-rc3 (submodule pin; library supports ≥ v3.0.0) — `IERC1404`, `IERC3643`, `IRuleEngine` interfaces
-- `RuleEngine` v3.0.0-rc4 — `IRule`, `RulesManagementModule`
+- `RuleEngine` v3.0.0-rc5 — `IRule`, `RulesManagementModule`
 - `forge-std` — Foundry test utilities
 
 Remappings are in `remappings.txt`; aliases used in source: `OZ/`, `CMTAT/`, `RuleEngine/`.
