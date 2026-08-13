@@ -6,6 +6,12 @@
 
 > **This is not a compliance rule.** It implements no `IRule` surface, has no restriction codes, and **must not be added to a `RuleEngine`**. It sits on the token's *identity registry* slot, not its *compliance* slot. Do not confuse it with [`RuleIdentityRegistry`](./RuleIdentityRegistry.md), which is the mirror image: a compliance rule that *consults* an external identity registry. This contract *is* the registry.
 
+> **Using it with a CMTAT token.** CMTAT has **no** `setIdentityRegistry` slot — that is ERC-3643 only — so
+> this contract cannot be installed on a CMTAT token directly. Reach it through
+> [`RuleIdentityRegistry`](./RuleIdentityRegistry.md) in a `RuleEngine`, which consults this registry over
+> `isVerified`. The two are wired by interface, not inheritance, and that pairing is pinned by
+> [`CMTATRuleIdentityRegistryComposition.t.sol`](../../test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol).
+
 ### Where the whitelist comes from
 
 The address set is **not re-implemented**. The contract inherits `RuleAddressSetInternal`, the same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on — so the storage layout, the zero-address guard and the revert errors (`RuleAddressSet_ZeroAddressNotAllowed`, `RuleAddressSet_AddressNotFound`) are shared code rather than a second implementation. **No separate whitelist contract is deployed**: the registry *is* the list.

@@ -4,6 +4,18 @@
 
 This rule checks an [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643) Identity Registry to verify that transfer participants are registered and verified.
 
+> ### When this rule is the right tool
+>
+> Reach for it when the token **cannot consult a registry itself**.
+>
+> - **CMTAT has no identity registry slot.** `setIdentityRegistry` is an ERC-3643 concept with no CMTAT
+>   equivalent, so this rule behind a `RuleEngine` is the *only* way to apply identity-registry screening to a
+>   CMTAT token. It consults whichever registry you point it at — an ONCHAINID-backed ERC-3643 registry, or
+>   [`IdentityRegistryWhitelist`](./IdentityRegistryWhitelist.md) if you have no ONCHAINID deployment.
+> - **On an ERC-3643 token, prefer the token's own slot.** That token already calls `isVerified` on the
+>   registry for every transfer. Adding this rule on top screens the same wallets a second time and adds no
+>   restriction, so install the registry with `setIdentityRegistry` instead.
+
 > ## ✅ ERC-3643 conformant: only the RECEIVER is verified
 >
 > The specification mandates exactly one identity check:

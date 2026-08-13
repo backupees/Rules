@@ -127,17 +127,47 @@ _Diagram source: doc/img/readme-erc3643-integration.puml._
 
 #### The identity registry slot
 
-An ERC-3643 token has a **second** pluggable slot besides compliance, and this library fills it too. Two
-contracts face the registry from opposite directions:
+An ERC-3643 token has a **second** pluggable slot besides compliance, and this library fills it too.
 
-| Contract | Relationship | Installed with | Use when |
-| --- | --- | --- | --- |
-| `RuleIdentityRegistry` | **Consults** a registry, calling `isVerified` | Added to a RuleEngine like any rule | You already operate an ERC-3643 identity registry with ONCHAINIDs |
-| [`IdentityRegistryWhitelist`](./technical/IdentityRegistryWhitelist.md) | **Is** a registry (implements `IIdentityRegistryERC3643`) | `token.setIdentityRegistry(...)` | You want ERC-3643 eligibility without deploying ONCHAINIDs |
+![An ERC-3643 token has two pluggable slots](./schema/erc3643-slots.png)
 
-`IdentityRegistryWhitelist` answers `isVerified` from a whitelist and keeps **no identity state**: `_identity`
-and `_country` are accepted for signature compatibility then discarded. It is not a rule, implements no
-`IRule`, and must never be added to a RuleEngine. The token itself must hold `IDENTITY_REGISTRAR_ROLE`.
+_Diagram source: [`doc/schema/erc3643-slots.puml`](./schema/erc3643-slots.puml)._
+
+ERC-3643 decides who may hold a token by asking an identity registry one question, `isVerified(wallet)`. A
+standard registry answers it by reading the wallet's ONCHAINID for the required claims. This library supplies
+**both sides of that exchange**, and they face opposite directions:
+
+| Contract | What it is | Installed with |
+| --- | --- | --- |
+| [`RuleIdentityRegistry`](./technical/RuleIdentityRegistry.md) | The side that **asks**: a compliance rule that calls `isVerified` on whichever registry it is pointed at, and blocks the transfer when the answer is no | Added to a RuleEngine like any other rule |
+| [`IdentityRegistryWhitelist`](./technical/IdentityRegistryWhitelist.md) | The side that **answers**: a registry implementation (`IIdentityRegistryERC3643`) that replies from a whitelist instead of reading ONCHAINIDs | `token.setIdentityRegistry(...)` — **not** a rule, implements no `IRule`, never add it to a RuleEngine |
+
+**Which one you need is decided by the token, not by preference**, because only one of the two token standards
+has an identity slot at all:
+
+![Identity verification: which route applies](./schema/erc3643-identity-directions.png)
+
+_Diagram source: [`doc/schema/erc3643-identity-directions.puml`](./schema/erc3643-identity-directions.puml)._
+
+- **ERC-3643 token — it has the slot.** Install `IdentityRegistryWhitelist` with `setIdentityRegistry` and the
+  token screens every transfer itself. Do **not** also register `RuleIdentityRegistry` behind a RuleEngine
+  here: the token already consults the registry, so the rule would screen the same wallets a second time
+  without adding any restriction.
+- **CMTAT token — there is no slot.** `setIdentityRegistry` is an ERC-3643 concept and CMTAT has no
+  equivalent, so `RuleIdentityRegistry` behind a RuleEngine is not one option among several: it is the only
+  way to apply identity-registry screening at all. It consults whichever registry you point it at, either your
+  own ONCHAINID-backed one or `IdentityRegistryWhitelist`.
+
+That second case is the reason the two contracts compose, and it is pinned end to end by
+[`test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol`](../test/IdentityRegistryWhitelist/CMTATRuleIdentityRegistryComposition.t.sol).
+They are wired by interface rather than inheritance: the rule holds an `IIdentityRegistryVerified` and only
+ever calls `isVerified`, which the registry implements as part of its ERC-3643 surface. Neither contract
+references the other.
+
+`IdentityRegistryWhitelist` keeps **no identity state**: `_identity` and `_country` are accepted for signature
+compatibility then discarded, and `investorCountry` is a constant `0`. The token itself must hold
+`IDENTITY_REGISTRAR_ROLE`, because `recoveryAddress` makes the token call `registerIdentity` and
+`deleteIdentity`.
 
 #### Matching the spec's screening semantics
 
