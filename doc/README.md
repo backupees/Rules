@@ -31,13 +31,39 @@ Rules are modular validator contracts that the `RuleEngine` or `CMTAT` compatibl
 
 ## Schema
 
-- Using rules with CMTAT and ERC-3643 tokens through a [RuleEngine](https://github.com/CMTA/RuleEngine)
+A rule can be reached two ways, and the choice changes what `msg.sender` is inside it. Both are supported for
+CMTAT; only the first works for ERC-3643.
 
-![Rule-RuleEngine.drawio](./schema/Rule-RuleEngine.drawio.png)
+### Topology A — through a RuleEngine
 
-- Using a rule directly with CMTAT and ERC-3643 tokens
+![Several rules composed behind a RuleEngine](./schema/rule-via-ruleengine.png)
 
-![Rule-Rule.drawio](./schema/Rule-Rule.drawio.png)
+_Diagram source: [`doc/schema/rule-via-ruleengine.puml`](./schema/rule-via-ruleengine.puml)._
+
+The holder calls `transfer` or `transferFrom` on the token **(1)**. The token reports the movement to its
+compliance contract **(2)** — the 3-argument `transferred(from, to, value)` for a plain transfer, the
+4-argument `transferred(spender, from, to, value)` when a spender is involved, which includes every mint. The
+`RuleEngine` relays that to each registered rule in turn **(3a–3c)** and returns the **first non-zero**
+restriction code, so rule order decides *which* code a rejection reports, not whether it is rejected.
+
+Use this whenever more than one rule applies. **ERC-3643 tokens require it**: they drive mint and burn through
+`created` and `destroyed`, which the validation rules do not implement — only `RuleEngine` implements the full
+`ICompliance` surface. Inside each rule `msg.sender` is the engine, not the token, which matters for the
+operation rules that key state on the caller.
+
+### Topology B — bound directly to the token
+
+![A single rule bound directly to the token](./schema/rule-direct.png)
+
+_Diagram source: [`doc/schema/rule-direct.puml`](./schema/rule-direct.puml)._
+
+`token.setRuleEngine(rule)` puts a rule in the compliance slot with no engine in between, so the token calls
+the rule directly and `msg.sender` inside the rule is the **token itself**. It is one contract fewer and saves
+an engine hop on every transfer, which makes it the cheaper choice when a single validation rule is all you
+need. `RuleConditionalTransferLightMultiToken` requires it.
+
+**A bare rule cannot back an ERC-3643 token**, for the reason above: no `created` / `destroyed`. For ERC-3643,
+use Topology A.
 
 ## Overview
 

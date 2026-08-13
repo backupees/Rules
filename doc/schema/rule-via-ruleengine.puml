@@ -1,0 +1,57 @@
+@startuml
+' Source for doc/schema/rule-via-ruleengine.png, embedded in doc/README.md.
+' Render with:  plantuml -tpng doc/schema/rule-via-ruleengine.puml
+title Topology A — several rules composed behind a RuleEngine
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+skinparam actor {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+}
+
+actor "Token holder\n//or spender//" as holder
+
+rectangle "CMTAT" as cmtat #FFF3E0
+rectangle "ERC-3643 token" as erc #E8F5E9
+rectangle "RuleEngine" as engine #E3F2FD
+
+rectangle "RuleWhitelist" as r0
+rectangle "RuleBlacklist" as r1
+rectangle "RuleSanctionsList" as rn
+
+holder -down-> cmtat : **1.** transfer(to, value)\ntransferFrom(from, to, value)
+holder -down-> erc : **1.** transfer(to, value)\ntransferFrom(from, to, value)
+
+cmtat -down-> engine : **2.** transferred(from, to, value)\ntransferred(spender, from, to, value)
+erc -down-> engine : **2.** transferred(...)\ncreated / destroyed
+
+engine -down-> r0 : **3a.**
+engine -down-> r1 : **3b.**
+engine -down-> rn : **3c.**
+
+note right of engine
+  Evaluates each rule in order and returns the **first non-zero**
+  restriction code, so rule order decides which code a rejection
+  reports — not whether it is rejected.
+
+  Inside every rule ""msg.sender"" is the **RuleEngine**, not the token.
+end note
+
+note right of erc
+  **ERC-3643 requires this topology.** The token drives mint and burn
+  through ""created"" / ""destroyed"", which the validation rules do not
+  implement — only ""RuleEngine"" implements the full ""ICompliance"" surface.
+end note
+
+@enduml

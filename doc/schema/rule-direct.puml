@@ -1,0 +1,52 @@
+@startuml
+' Source for doc/schema/rule-direct.png, embedded in doc/README.md.
+' Render with:  plantuml -tpng doc/schema/rule-direct.puml
+title Topology B — a single rule bound directly to the token
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+skinparam actor {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+}
+
+actor "Token holder\n//or spender//" as holder
+
+rectangle "CMTAT\n<size:10>token.setRuleEngine(rule)</size>" as cmtat #FFF3E0
+rectangle "RuleWhitelist\n<size:10>msg.sender == the token</size>" as rule #E3F2FD
+
+rectangle "ERC-3643 token" as erc #FFEBEE
+rectangle "a bare validation rule" as bad #FFEBEE
+
+holder -right-> cmtat : **1.** transfer(to, value)\ntransferFrom(from, to, value)
+cmtat -right-> rule : **2.** transferred(from, to, value)\ntransferred(spender, from, to, value)
+
+erc -right[#C62828,dashed]-> bad : <color:#C62828>**not supported**</color>
+
+note bottom of rule
+  No engine in between, so inside the rule ""msg.sender"" is the
+  **token itself**. One contract fewer and no engine hop per
+  transfer. Fine for a single validation rule; required for
+  ""RuleConditionalTransferLightMultiToken"".
+end note
+
+note bottom of bad
+  <color:#C62828>**An ERC-3643 token cannot be backed by a bare rule.**</color>
+  It drives mint and burn through ""created"" / ""destroyed"",
+  which the validation rules do not implement. Use a
+  ""RuleEngine"" (Topology A) instead.
+end note
+
+cmtat -[hidden]down- erc
+
+@enduml
