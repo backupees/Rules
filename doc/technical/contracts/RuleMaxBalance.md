@@ -105,6 +105,26 @@ a custodian is the usual case — it holds for many people, so a per-holder cap 
 > ⚠️ **An exempt address is an unlimited-holding address.** If the reason for the cap is a regulatory
 > concentration limit, exempting an account is a policy decision, not a technical convenience.
 
+## Zero-value transfers to a holder already over the cap
+
+A holder whose balance is **above** the cap — after the operator lowered it, or after a `forcedTransfer` — is
+rejected even for a transfer of `0`:
+
+| Receiver's balance | `value` | Code |
+| --- | --- | --- |
+| exactly at the cap | `0` | `0` (allowed) |
+| **above** the cap | `0` | **`82`** |
+
+Receiving nothing cannot breach a holding cap, so this is a false rejection. It also makes the token
+non-conformant to ERC-20 for that receiver, since the standard requires a zero-value transfer to be treated as
+a normal transfer.
+
+**Documented, not fixed, for `v0.5.0`.** The fix is to let `value == 0` pass regardless of the current balance.
+It is a behaviour change to shipped compliance logic and was recorded rather than applied late in the release;
+it is tracked together with the equivalent gap in the conditional-transfer rules, in
+[`RuleConditionalTransferLight.md`](./RuleConditionalTransferLight.md#zero-value-transfers-are-not-treated-as-no-ops).
+Exposure is limited: the receiver must already be over the cap, and nothing moves either way.
+
 ## The read path never reverts
 
 The ERC-1404 / ERC-3643 views MUST NOT revert, so `balanceOf` is wrapped in `try/catch` and a failure yields

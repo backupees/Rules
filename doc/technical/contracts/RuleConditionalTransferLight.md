@@ -159,11 +159,29 @@ satisfy that. Measured against the rule as shipped:
 | An approval recorded for `(from, to, 0)` | **Consumable by any caller**, since the spender is not part of the key |
 
 Neither moves value, and the second requires an operator to have approved a zero-value transfer in the first
-place, which is a degenerate thing to do. The practical exposure is therefore low. The correct fix is to make
-`transferred` return early when `value == 0`, before any approval lookup or state change, on this rule,
-[`RuleConditionalTransferLightMultiToken`](./RuleConditionalTransferLightMultiToken.md) and
-`RuleMintAllowance`. It is a **behaviour change** to shipped compliance logic — a zero-value transfer would
-stop reverting — so it is recorded here rather than applied silently.
+place, which is a degenerate thing to do. The practical exposure is therefore low.
+
+**Decision: documented, not fixed, for `v0.5.0`.** The fix is an early return when `value == 0`, before any
+approval lookup or state change, on this rule and
+[`RuleConditionalTransferLightMultiToken`](./RuleConditionalTransferLightMultiToken.md). It is a **behaviour
+change** to shipped compliance logic — a zero-value transfer would stop reverting — so it was recorded rather
+than applied late in the release.
+
+**Which rules the fix would and would not cover**, measured against the code rather than inferred from the
+wording of the requirement:
+
+| Rule | `value == 0` today | In scope? |
+| --- | --- | --- |
+| This rule and `…MultiToken` | Consumes an approval, for a caller never approved | **Yes** |
+| [`RuleMaxBalance`](./RuleMaxBalance.md) | Rejects a receiver already **over** the cap | **Yes** — receiving nothing cannot breach a holding cap |
+| `RuleMintAllowance` | Quota unchanged: debiting `0` is already a no-op, and the mint path is not permissionlessly reachable | **No** — nothing to change |
+| `RuleBlacklist`, `RuleWhitelist`, `RuleSanctionsList`, `RuleIdentityRegistry` | Blocked, as for any value | **No, deliberately** — these screen *who*, not *how much*. A zero-value transfer still emits a `Transfer` event linking the parties, so a blanket "zero is always allowed" would weaken every deny-list for no benefit |
+
+The strongest argument for the change is **ERC-20 conformance**, not the desynchronisation the requirement
+describes: ERC-20 says a zero-value transfer must be treated as a normal transfer, so a rule that reverts one
+makes the *token* non-conformant and breaks integrations that sweep balances or probe with a zero-value send.
+The attacker-desynchronises-state framing barely applies here — it needs an operator to have recorded a
+zero-value approval first.
 
 ### Duplicate approvals
 
