@@ -43,7 +43,7 @@ Rules that implement a standardized interface must match that standard's semanti
 |---|---|
 | `src/rules/validation/` | Read-only rules (view functions, no state changes during transfer) |
 | `src/rules/operation/` | Read-write rules (modify state on transfer) |
-| `src/rules/validation/abstract/core/` | `RuleTransferValidation` (ERC-1404/3643/7551 views), `RuleNFTAdapter` (ERC-7943 + `ITransferContext` overloads), `RuleWhitelistShared`, `TokenSupplyReader` (revert-free `totalSupply()` read, shared by `RuleMaxTotalSupply` and `RuleChainlinkPoR`) |
+| `src/rules/validation/abstract/core/` | `RuleTransferValidation` (ERC-1404/3643/7551 views), `RuleNFTAdapter` (ERC-7943 + `ITransferContext` overloads), `RuleWhitelistShared`, `TokenSupplyReader` (revert-free `totalSupply()` read, shared by `RuleMaxTotalSupply` and `RuleChainlinkPoR`), `ChainlinkPoRFeedManager` (PoR feed configuration + the revert-free reserve read; **no constructor, no ERC-1404**, so it is reusable and initializer-agnostic) |
 | `src/rules/validation/abstract/` | Shared base contracts and invariant storage |
 | `src/rules/interfaces/` | Shared interfaces (`IAddressList`, `IIdentityRegistry`, `ISanctionsList`, `ITotalSupply`, `ITransferContext`, `IERC2980`, `IERC7943NonFungibleCompliance`, `AggregatorV3Interface`, `IDecimals`) |
 | `src/registry/` | Contracts filling a token's **identity registry** slot, not its compliance slot (`IdentityRegistryWhitelist`). Not rules: no `IRule`, never added to a RuleEngine |

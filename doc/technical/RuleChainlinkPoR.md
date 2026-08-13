@@ -10,6 +10,25 @@ Only mint operations (`from == address(0)`) are gated. Plain transfers do not ch
 
 The rule is modelled on Chainlink's [`SecureMintPolicy`](https://docs.chain.link/ace/reference/policy-library/secure-mint-policy) from the ACE policy library, re-expressed as an ERC-1404 / ERC-3643 compliance rule for this library and deliberately simplified: the ACE policy's configurable reserve margin is not carried over.
 
+## Contract layout
+
+The rule is split in two, so feed handling does not drag the rest of the rule along with it.
+
+| Contract | Holds | Depends on |
+| --- | --- | --- |
+| [`ChainlinkPoRFeedManager`](../../src/rules/validation/abstract/core/ChainlinkPoRFeedManager.sol) | The feed, the protected token, `tokenDecimals`, `maxStalenessSeconds`, their setters and the revert-free reserve read (`maxBackedSupply`, decimal scaling) | `TokenSupplyReader`, the invariant storage. **No constructor, no ERC-1404** |
+| [`RuleChainlinkPoRBase`](../../src/rules/validation/abstract/base/RuleChainlinkPoRBase.sol) | The constructor, the ERC-1404 / ERC-3643 surface (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the restriction logic that turns a backed supply into a code | `RuleTransferValidation`, `ChainlinkPoRFeedManager` |
+
+The manager declaring no constructor is the point of the split: it exposes `_setReservesFeed`,
+`_setTokenMetadata` and `_setMaxStalenessSeconds` and leaves *when* they run to the inheritor.
+`RuleChainlinkPoRBase` calls all three from its constructor; an upgradeable variant would call the
+same three from an initializer, with no change to the manager. Nothing in the manager references a
+restriction-code interface either, so a contract that only wants a revert-free view of
+reserve-backed supply can inherit it without implementing an ERC-1404 surface it does not need.
+
+Storage layout and the deployed ABI are **unchanged** by the split, verified per-slot from the
+compiled artifacts for both `RuleChainlinkPoR` and `RuleChainlinkPoROwnable2Step`.
+
 ## Token compatibility: ERC-20 only
 
 `RuleChainlinkPoR` is **not usable with an ERC-721 or ERC-1155 token**, for two independent reasons:
