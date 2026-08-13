@@ -55,11 +55,12 @@ Commit: _see `doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md` for the per-f
 
 ### Summary
 
-Two new contracts, one behavioural hardening with a migration note, and the first tests that run
-against a real ERC-3643 token.
+Three new contracts, one behavioural hardening with a migration note, a reviewed and repaired set of
+deployment scripts, and the first tests that run against a real ERC-3643 token.
 
 **New**
-- **`RuleChainlinkPoR`** — caps total supply at the reserves reported by a Chainlink Proof of Reserve feed. Restriction codes `75`–`78`.
+- **`RuleChainlinkPoR`** — caps total supply at the reserves reported by a Chainlink Proof of Reserve feed. Restriction codes `75`–`79`.
+- **`RuleReceiverWhitelist`** — screens **only the receiver**, reproducing ERC-3643 eligibility as a CMTAT compliance rule. Restriction code `81`.
 - **`IdentityRegistryWhitelist`** — a whitelist that fills an ERC-3643 token's *identity registry* slot, so a token can enforce investor eligibility with no ONCHAINID deployment. Not a rule: it implements no `IRule` and must never be added to a `RuleEngine`.
 
 **Deployment scripts.** All four scripts in `script/` were reviewed and fixed; see [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md)
@@ -90,8 +91,8 @@ requires a second Foundry profile — **`forge test` alone no longer runs everyt
 
 **Code-quality pass.** A full review of `src/` for duplication, missing events, gas on the storage-read and
 loop paths, `virtual` convention drift, and behaviour that is correct but at odds with the library's purpose.
-Of twenty-eight findings, **twenty-three were implemented**, two were deliberately declined with the reasoning
-recorded (`D-3`, `F-7c`), two are left open (`A-3`, `C-4`), and one needed no change (`A-1`). Three carry
+Of twenty-eight findings, **twenty-four were implemented**, two were deliberately declined with the reasoning
+recorded (`D-3`, `F-7c`), one is left open (`A-3`), and one needed no change (`A-1`). Three carry
 corrections to the review itself: `B-1` and `B-4` overstated their gas saving — `B-1` was wrong for four of its
 six sites — and `F-2`'s proposed remedy did not work and was replaced. Every gas figure quoted below was
 **measured**, not estimated. Findings, dispositions and the commit for each are in
