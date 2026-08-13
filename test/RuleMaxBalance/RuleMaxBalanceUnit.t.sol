@@ -78,6 +78,36 @@ contract RuleMaxBalanceUnit is Test, RuleMaxBalanceInvariantStorage, RuleAddress
         rule.setBalanceToken(ALICE);
     }
 
+    /**
+     * @notice A token with code whose `balanceOf` reverts is rejected at configuration time.
+     * @dev Covers the `catch` in `_setBalanceToken`. Code alone is not enough: the probe must
+     *      actually succeed, otherwise every transfer would later be blocked with code 83 by a
+     *      misconfiguration that could have been caught at setup.
+     */
+    function testConstructorRejectsTokenWhoseBalanceOfReverts() public {
+        BalanceOfMock broken = new BalanceOfMock();
+        broken.setReverting(true);
+        vm.expectRevert(abi.encodeWithSelector(RuleMaxBalance_TokenBalanceUnavailable.selector, address(broken)));
+        new RuleMaxBalance(ADMIN, address(broken), CAP);
+    }
+
+    function testSetBalanceTokenRejectsTokenWhoseBalanceOfReverts() public {
+        BalanceOfMock broken = new BalanceOfMock();
+        broken.setReverting(true);
+        vm.prank(ADMIN);
+        vm.expectRevert(abi.encodeWithSelector(RuleMaxBalance_TokenBalanceUnavailable.selector, address(broken)));
+        rule.setBalanceToken(address(broken));
+    }
+
+    function testSetBalanceTokenSucceedsAndAnnounces() public {
+        BalanceOfMock other = new BalanceOfMock();
+        vm.expectEmit(true, true, true, true);
+        emit MaxBalanceTokenUpdated(address(other));
+        vm.prank(ADMIN);
+        rule.setBalanceToken(address(other));
+        assertEq(address(rule.balanceToken()), address(other));
+    }
+
     /*//////////////////////////////////////////////////////////////
                           THE CAP ITSELF
     //////////////////////////////////////////////////////////////*/

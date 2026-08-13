@@ -27,6 +27,13 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
  * alone on a permissionless token it is a speed bump, not a limit. See
  * `doc/technical/RuleMaxBalance.md`.
  *
+ * @dev **The check assumes the token calls this BEFORE it moves the value.** It compares
+ * `balanceOf(to) + value` against the cap, which is only correct while `balanceOf(to)` still
+ * excludes `value`. CMTAT satisfies this: `_checkTransferred(...)` runs before
+ * `ERC20Upgradeable._transfer(...)`. A token that notified its compliance contract *after* updating
+ * balances would double-count, halving the effective cap and rejecting a transfer that exactly
+ * reaches it. Pinned by `testMintExactlyToTheCapProvesPreUpdateAccounting`.
+ *
  * @dev `maxBalance` has **no magic value**. `0` means non-exempt addresses may not hold any tokens;
  * it does not disable the rule. To lift the cap, set it to `type(uint256).max` or remove the rule
  * from the engine.
@@ -114,12 +121,7 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
      * @param targetAddress The address to exempt.
      */
     function addExemptAddress(address targetAddress) public virtual onlyMaxBalanceManager {
-        // `_addAddress` does not guard the sentinel; the caller must, exactly as the whitelist rules
-        // and `IdentityRegistryWhitelist` do. The batch path is already guarded by the function
-        // pointer `_addAddresses` passes to `AddressSetBatchLib`. Invariant I-12.
-        require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        require(_addAddress(targetAddress), RuleAddressSet_AddressAlreadyListed());
-        emit ExemptAddressAdded(targetAddress);
+        _addExemptAddress(targetAddress);
     }
 
     /**
@@ -129,8 +131,7 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
      * @param targetAddress The address to bring back under the cap.
      */
     function removeExemptAddress(address targetAddress) public virtual onlyMaxBalanceManager {
-        require(_removeAddress(targetAddress), RuleAddressSet_AddressNotFound());
-        emit ExemptAddressRemoved(targetAddress);
+        _removeExemptAddress(targetAddress);
     }
 
     /**
@@ -245,6 +246,33 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
      * @dev Implemented by concrete subclasses with the desired access-control policy.
      */
     function _authorizeMaxBalanceManager() internal view virtual;
+
+    /**
+     * @notice Exempts an address: guards, writes and announces, in one place.
+     * @dev Owns the guards as well as the event, so every write path gets both. A subclass that
+     *      wanted to pre-exempt a treasury address from its constructor can call this instead of
+     *      restating the two `require`s, which is what the scalar setters already do via
+     *      {_setMaxBalance} and {_setBalanceToken}.
+     *
+     *      `_addAddress` does not guard the sentinel; the caller must, exactly as the whitelist
+     *      rules and `IdentityRegistryWhitelist` do. The batch path is guarded separately, by the
+     *      function pointer `_addAddresses` passes to `AddressSetBatchLib`. Invariant I-12.
+     * @param targetAddress The address to exempt.
+     */
+    function _addExemptAddress(address targetAddress) internal virtual {
+        require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
+        require(_addAddress(targetAddress), RuleAddressSet_AddressAlreadyListed());
+        emit ExemptAddressAdded(targetAddress);
+    }
+
+    /**
+     * @notice Removes an exemption: guards, writes and announces, in one place.
+     * @param targetAddress The address to bring back under the cap.
+     */
+    function _removeExemptAddress(address targetAddress) internal virtual {
+        require(_removeAddress(targetAddress), RuleAddressSet_AddressNotFound());
+        emit ExemptAddressRemoved(targetAddress);
+    }
 
     /**
      * @notice Stores the cap and emits {MaxBalanceUpdated}.

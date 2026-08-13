@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {RuleInterfaceId} from "RuleEngine/modules/library/RuleInterfaceId.sol";
 import {RuleMaxBalanceOwnable2Step} from "src/rules/validation/deployment/RuleMaxBalanceOwnable2Step.sol";
 import {BalanceOfMock} from "src/mocks/BalanceOfMock.sol";
 
@@ -89,6 +90,11 @@ contract RuleMaxBalanceOwnable2StepTest is Test {
     }
 
     function testSupportsInterface() public view {
+        // IERC165 is satisfied by the Ownable2Step module, i.e. the FIRST operand.
         assertTrue(rule.supportsInterface(type(IERC165).interfaceId));
+        // IRule is satisfied only by RuleTransferValidation, so this exercises the second operand
+        // that the short-circuit above never reaches.
+        assertTrue(rule.supportsInterface(RuleInterfaceId.IRULE_INTERFACE_ID));
+        assertFalse(rule.supportsInterface(0xdeadbeef));
     }
 }

@@ -48,6 +48,25 @@ contract RuleMaxBalanceCMTATIntegration is Test, HelperContract, RuleMaxBalanceI
         assertEq(cmtatContract.balanceOf(INVESTOR), CAP);
     }
 
+    /**
+     * @notice Pins the pre-update accounting the whole check depends on.
+     * @dev The rule compares `balanceOf(to) + value` against the cap, which is only correct while
+     *      `balanceOf(to)` still excludes `value`. CMTAT calls `_checkTransferred(...)` before
+     *      `ERC20Upgradeable._transfer(...)`, so it does. If a token ever notified compliance
+     *      *after* updating balances, this mint of exactly the cap would be seen as `CAP + CAP` and
+     *      rejected -- the effective cap would silently halve. This test is the alarm for that.
+     */
+    function testMintExactlyToTheCapProvesPreUpdateAccounting() public {
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        cmtatContract.mint(INVESTOR, CAP);
+        assertEq(cmtatContract.balanceOf(INVESTOR), CAP, "a mint of exactly the cap must succeed");
+
+        // And the boundary is exact: one more unit is rejected.
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        vm.expectRevert();
+        cmtatContract.mint(INVESTOR, 1);
+    }
+
     function testMintPastTheCapIsBlocked() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         cmtatContract.mint(INVESTOR, CAP);
