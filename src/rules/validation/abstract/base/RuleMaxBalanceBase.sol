@@ -242,12 +242,6 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Authorization hook invoked before any configuration or exemption change.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     */
-    function _authorizeMaxBalanceManager() internal view virtual;
-
-    /**
      * @notice Exempts an address: guards, writes and announces, in one place.
      * @dev Owns the guards as well as the event, so every write path gets both. A subclass that
      *      wanted to pre-exempt a treasury address from its constructor can call this instead of
@@ -303,6 +297,12 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
         balanceToken = IBalanceOf(newBalanceToken);
         emit MaxBalanceTokenUpdated(newBalanceToken);
     }
+
+    /**
+     * @notice Authorization hook invoked before any configuration or exemption change.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     */
+    function _authorizeMaxBalanceManager() internal view virtual;
 
     /**
      * @notice Reads an address's balance without ever reverting.

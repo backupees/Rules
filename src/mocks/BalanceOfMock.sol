@@ -7,6 +7,14 @@ pragma solidity ^0.8.20;
  * the revert-free read path of {RuleMaxBalanceBase} can be exercised.
  */
 contract BalanceOfMock {
+    /**
+     * @notice Error raised by {balanceOf} while the mock is in its reverting mode.
+     */
+    error BalanceOfMock_Reverting();
+
+    /**
+     * @notice Stored balance per address.
+     */
     mapping(address => uint256) private _balances;
     /**
      * @notice When true, `balanceOf` reverts, simulating a token that broke after configuration.
@@ -40,7 +48,7 @@ contract BalanceOfMock {
      * @return The stored balance.
      */
     function balanceOf(address account) external view returns (uint256) {
-        require(!reverting, "BalanceOfMock: reverting");
+        require(!reverting, BalanceOfMock_Reverting());
         return _balances[account];
     }
 }
