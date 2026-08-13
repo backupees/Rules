@@ -55,13 +55,17 @@ Commit: _see `doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md` for the per-f
 
 ### Summary
 
-Three new contracts, one behavioural hardening with a migration note, a reviewed and repaired set of
-deployment scripts, and the first tests that run against a real ERC-3643 token.
+Four new contracts, one behavioural hardening with a migration note, a reviewed and repaired set of
+deployment scripts, the first tests that run against a real ERC-3643 token, and updated dependencies
+(CMTAT `v3.3.0-rc3`, RuleEngine `v3.0.0-rc5`, OpenZeppelin `v5.7.0`, solc `0.8.36`).
+
+Every deployable contract reports `version()` → `"0.5.0"`, asserted exhaustively by `test/Version.t.sol`.
 
 **New**
 - **`RuleChainlinkPoR`** — caps total supply at the reserves reported by a Chainlink Proof of Reserve feed. Restriction codes `75`–`79`.
 - **`RuleReceiverWhitelist`** — screens **only the receiver**, reproducing ERC-3643 eligibility as a CMTAT compliance rule. Restriction code `81`.
 - **`IdentityRegistryWhitelist`** — a whitelist that fills an ERC-3643 token's *identity registry* slot, so a token can enforce investor eligibility with no ONCHAINID deployment. Not a rule: it implements no `IRule` and must never be added to a `RuleEngine`.
+- **`RuleMaxBalance`** — caps how many tokens a **single address** may hold, with an operator-managed exemption list. Restriction codes `82`, `83`. **Bypassable by splitting a position across wallets**, so it must be paired with a rule admitting one address per investor.
 
 **Deployment scripts.** All four scripts in `script/` were reviewed and fixed; see [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md`](doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md)
 for the twelve findings. Three of them (`DeployCMTATWithBlacklist`, `DeployCMTATWithWhitelist`,
@@ -108,7 +112,7 @@ screening, F-1; `transferFrom` delegation, F-2).
   - **`maxBalance` has no magic value.** `0` forbids holding entirely; it does **not** disable the rule. A sentinel meaning "unlimited" would turn an operator's attempt to freeze holdings into its opposite. To lift the cap use `type(uint256).max` or remove the rule.
   - **Revert-free read path.** `balanceOf` is wrapped in `try/catch`, and a token that breaks after configuration yields code `83` rather than reverting the MUST-NOT-revert views. The token is validated at configuration (non-zero, has code, `balanceOf` callable). Burns and exempt receivers are decided before any balance is read, so they keep working even while the token is unreadable.
   - **Exemptions reuse `RuleAddressSetInternal`**, the same `EnumerableSet` machinery as `RuleWhitelist`, so batch semantics match the library: duplicates skipped and counted, `address(0)` rejected on every add path including batches (invariant I-12).
-  - Documented in [`doc/technical/contracts/RuleMaxBalance.md`](./doc/technical/contracts/RuleMaxBalance.md); 51 tests across unit, `Ownable2Step` access control and a CMTAT + RuleEngine end-to-end suite.
+  - Documented in [`doc/technical/contracts/RuleMaxBalance.md`](./doc/technical/contracts/RuleMaxBalance.md); 55 tests across unit, `Ownable2Step` access control and a CMTAT + RuleEngine end-to-end suite.
 - Code-quality review of the new rule in [`doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_MAXBALANCE.md`](./doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS_MAXBALANCE.md). Two findings implemented: the exemption writes gained `_addExemptAddress` / `_removeExemptAddress` internals that own the guards and the event, matching the scalar setters; and the rule's dependence on the token notifying compliance **before** it moves value is now documented and pinned by a mutation-verified test (a token notifying afterwards would double-count and silently halve the cap). The check order was measured and deliberately **kept**: reordering saves 2 311 gas per ordinary transfer but costs 9 689 on every transfer to an exempt address, and exempt addresses are the custodial ones that receive most.
 - **`IBalanceOf`** in `src/rules/interfaces/` — a one-function balance query, so the rule depends on exactly the token surface it calls, matching `ITotalSupply`.
 
@@ -207,6 +211,8 @@ screening, F-1; `transferFrom` delegation, F-2).
   - **`RuleIdentityRegistry`** emitted both check flags at construction but not `IdentityRegistryUpdated` for the registry address the rule is parameterised by. It now does, **only when a registry is actually assigned**: a zero argument leaves the default untouched, and an `IdentityRegistryUpdated(0)` there would be indistinguishable from a deliberate `clearIdentityRegistry()`. This matches `RuleSanctionsListBase`, which already emitted only when an oracle was supplied.
   - No ABI change; the rule for the whole library is now "every value actually assigned is announced".
 
+- **Style-guide pass over the new code.** `_authorizeMaxBalanceManager` moved below the internal setters in `RuleMaxBalanceBase`, so the `view`-last ordering matches `ChainlinkPoRFeedManager` and every other rule; `BalanceOfMock` gained NatSpec on its storage and replaced its string revert with a `BalanceOfMock_Reverting()` custom error. Behaviour-preserving: one member block relocated with its NatSpec, one comment added, one revert reason swapped for an equivalent error nothing asserts on.
+
 ### Changed — dependencies
 
 - **Solidity toolchain updated to `0.8.36`** (from `0.8.34`), in both `foundry.toml` and `hardhat.config.js`. Builds clean and all three suites pass unchanged: 763 Foundry tests, 31 on the ERC-3643 profile, and the Hardhat smoke test.
@@ -271,6 +277,9 @@ screening, F-1; `transferFrom` delegation, F-2).
 - Decimal-scaling suite covering token decimals 0 / 6 / 18 against feed decimals 0 / 8 / 18 / 36, the truncation behaviour at `tokenDecimals == 0`, and a fuzz cross-checking `_scaleReserve` against `answer * 10**tokenDecimals / 10**feedDecimals` computed with full-precision `mulDiv`.
 
 - New `test/RuleConditionalTransferLight/Ownable/ConditionalTransferOwnable2StepBindingAuthorization.t.sol` (7 tests) — owner-only authorization on both `Ownable2Step` conditional-transfer variants, which had **no access-control coverage at all**: the only test naming `RuleConditionalTransferLightMultiTokenOwnable2Step` was an ERC-165 support check. Three concrete overrides were unexercised (`_authorizeComplianceBindingChange` on the single-token variant, `_onlyComplianceManager` and `_authorizeTransferApproval` on the multi-token one); both contracts are now at 100% lines, statements and functions. Note which entrypoint reaches which hook: `RuleConditionalTransferLightBase` overrides `bindToken` with its own `onlyComplianceManager`, so on the single-token rule the only route to `_authorizeComplianceBindingChange` is the inherited `unbindToken`.
+- New `test/RuleMaxBalance/Ownable/RuleMaxBalanceOwnable2Step.t.sol` (10 tests) and two gap-filling unit tests, bringing `RuleMaxBalanceBase` to **100% statements and 100% branches** and both deployment variants to 100% across the board. The two gaps were a token with code whose `balanceOf` reverts (the `catch` in `_setBalanceToken`, unreachable from the mock's default state) and the second operand of `supportsInterface`, which a query for `IERC165` short-circuits past — it needs `IRULE_INTERFACE_ID`, which only `RuleTransferValidation` answers. The single remaining uncovered line is the abstract `_authorizeMaxBalanceManager` declaration, which no test can execute because only the override runs.
+- New `test/RuleConditionalTransferLight/Ownable/ConditionalTransferOwnable2StepBindingAuthorization.t.sol` (7 tests) — owner-only authorization on both `Ownable2Step` conditional-transfer variants, which had **no access-control coverage at all**. Note which entrypoint reaches which hook: `RuleConditionalTransferLightBase` overrides `bindToken` with its own `onlyComplianceManager`, so on the single-token rule the only route to `_authorizeComplianceBindingChange` is the inherited `unbindToken`.
+- `test/Version.t.sol` extended to the two new deployable contracts, keeping it exhaustive per the project convention.
 - New `test/Events/BatchEventEffect.t.sol` (9 tests) for the batch-event counters, pinning the case the input array could never express — a batch that is partly or wholly a no-op — for both the shared `RuleAddressSet` machinery and `RuleERC2980`'s separate copy of the same loops, plus a fuzz case asserting `added + skipped == input.length`.
 - **Three assertions in `test/RuleWhitelist/RuleWhitelistRemove.t.sol` were not assertions.** They contained bare `emit IAddressList.AddAddresses(...)` statements with no preceding `vm.expectEmit`, so they emitted an event from the test contract and checked nothing; the arity change surfaced them. They now use `vm.expectEmit`, and the most useful of them checks a 3-address removal where only 2 were present — `(removed = 2, skipped = 1)`.
 - New `script/DeployCMTATWithBlacklistSanctionsListAndMaxTotalSupply.s.sol` — a CMTAT behind a RuleEngine enforcing three rules: `RuleBlacklist`, `RuleSanctionsList` and `RuleMaxTotalSupply`. Documents the two constraints this combination introduces that the two-rule script does not: `RuleMaxTotalSupply` validates its token at construction, so it must be deployed **after** the token; and one instance protects one token, so it must not be shared across RuleEngines.
