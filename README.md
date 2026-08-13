@@ -74,6 +74,7 @@ access-control policy, in either an `AccessControl` or an `Ownable2Step` flavour
 | `RuleERC2980` | ERC-2980 whitelist plus frozenlist | 60–65 |
 | `RuleIdentityRegistry` | Consults an ERC-3643 identity registry | 55–57 |
 | `RuleMaxTotalSupply` | Caps total supply on mint | 50, 51 |
+| `RuleMaxBalance` | Caps how many tokens one address may hold | 82, 83 |
 | `RuleChainlinkPoR` | Caps minting at Chainlink Proof of Reserve reserves | 75–79 |
 | `RuleConditionalTransferLight` | Requires operator approval per transfer | 46 |
 | `RuleMintAllowance` | Per-minter mint quota | 70 |

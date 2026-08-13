@@ -322,6 +322,8 @@ Here is the list of codes used by the different rules
 |                              | CODE_RESERVES_FEED_UNAVAILABLE       | 79    |
 |                              | Reserved slot                        | 80    |
 | RuleReceiverWhitelist        | CODE_ADDRESS_RECEIVER_NOT_WHITELISTED | 81   |
+| RuleMaxBalance               | CODE_MAX_BALANCE_EXCEEDED             | 82   |
+|                              | CODE_BALANCE_UNAVAILABLE              | 83   |
 |                              | Reserved slot                        | 82-84 |
 
 Note: 
@@ -597,6 +599,7 @@ Detailed technical documentation for each rule is available in [`doc/technical/`
 | RuleBlacklist | [RuleBlacklist.md](./technical/RuleBlacklist.md) |
 | RuleSanctionsList | [RuleSanctionsList.md](./technical/RuleSanctionsList.md) |
 | RuleMaxTotalSupply | [RuleMaxTotalSupply.md](./technical/RuleMaxTotalSupply.md) |
+| RuleMaxBalance | [RuleMaxBalance.md](./technical/RuleMaxBalance.md) |
 | RuleChainlinkPoR | [RuleChainlinkPoR.md](./technical/RuleChainlinkPoR.md) |
 | IdentityRegistryWhitelist | [IdentityRegistryWhitelist.md](./technical/IdentityRegistryWhitelist.md) |
 | RuleIdentityRegistry | [RuleIdentityRegistry.md](./technical/RuleIdentityRegistry.md) |

@@ -67,6 +67,7 @@ Rules that implement a standardized interface must match that standard's semanti
 | `RuleWhitelistWrapper` / `Ownable2Step` | Aggregate multiple whitelist rules (OR logic) |
 | `RuleBlacklist` / `RuleBlacklistOwnable2Step` | Block transfers involving blacklisted addresses |
 | `RuleSanctionsList` | Block sanctioned addresses via Chainalysis oracle |
+| `RuleMaxBalance` / `RuleMaxBalanceOwnable2Step` | Cap how many tokens **one address** may hold, with an operator-managed exemption list. Screens the receiver only; burns exempt; mints capped. Codes 82, 83. **Bypassable by splitting across wallets** — pair with a rule admitting one address per investor (`RuleWhitelist` / `RuleReceiverWhitelist` / `RuleIdentityRegistry`) and an onboarding policy of one address per entity. `maxBalance = 0` forbids holding, it does NOT disable the rule |
 | `RuleMaxTotalSupply` | Cap minting so total supply never exceeds a maximum |
 | `RuleChainlinkPoR` / `RuleChainlinkPoROwnable2Step` | Cap minting at the reserves reported by a Chainlink Proof of Reserve feed (`AggregatorV3Interface`). The limit equals the reported reserves exactly — no margin parameter (deliberately dropped from Chainlink's `SecureMintPolicy`); compose with `RuleMaxTotalSupply` for a static cap. Mints only; transfers and burns always pass, so a stale or broken feed never traps holders. The read path is guarded (`code.length` check + `try/catch` + saturating arithmetic) so the ERC-1404 views never revert |
 | `RuleIdentityRegistry` | Check ERC-3643 identity registry for participant verification |
@@ -137,6 +138,7 @@ sees stay context-free. Hardhat compiles only `src/` (Foundry's `src`), so it ne
 | RuleMintAllowance | 70 |
 | RuleChainlinkPoR | 75 (reserves exceeded), 76 (feed stale), 77 (answer returned but unusable), 78 (total supply unavailable), 79 (feed unreadable) |
 | RuleReceiverWhitelist | 81 |
+| RuleMaxBalance | 82, 83 (balance unavailable) |
 
 ## Conventions
 - Each rule has an `InvariantStorage` abstract contract holding its constants, custom errors, and events.
