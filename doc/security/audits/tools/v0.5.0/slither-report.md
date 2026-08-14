@@ -6,8 +6,8 @@ slither . --checklist --filter-paths "node_modules,lib,test,forge-std,mocks" \
 ```
 
 Tool: **Slither 0.11.5** · Scope: production contracts only (**mocks excluded**, dependencies excluded via the
-`lib` filter) · 206 contracts, 101 detectors, 44 results
-Compiler: solc `0.8.36` · Run date: 2026-08-13 (supersedes the earlier `v0.5.0` runs of 2026-08-11 and 2026-08-13)
+`lib` filter) · 208 contracts, 101 detectors, 44 results
+Compiler: solc `0.8.36` · Run date: 2026-08-13, after the cap-manager split (supersedes the earlier `v0.5.0` runs)
 
 **Result: 2 High · 11 Medium · 17 Low · 14 Informational. Nothing to fix** — every finding is a false positive,
 a by-design pattern, or cosmetic. Verified line-by-line in the
@@ -17,7 +17,7 @@ a by-design pattern, or cosmetic. Verified line-by-line in the
 |---|---|---|---|---|
 | `arbitrary-send-erc20` | **High** | 2 | — | **False positive** — `approveAndTransferIfAllowed` is reachable only via `onlyTransferApprover`, needs a recorded approval for the exact tuple, and still needs the holder's own ERC-20 allowance |
 | `uninitialized-local` | Medium | 2 | — | **False positive** — declared before a `try` and assigned inside it; the matching `catch` reverts or returns |
-| `unused-return` | Medium | 9 | **+1** | **False positive** — six batch helpers forward the library's `(added, skipped)` tuple to the caller; three are deliberate probes whose only purpose is to detect a revert |
+| `unused-return` | Medium | 9 | — | **False positive** — six batch helpers forward the library's `(added, skipped)` tuple to the caller; three are deliberate probes whose only purpose is to detect a revert |
 | `calls-loop` | Low | 16 | — | By design — the wrapper child-rule scan and batch list operations, with measured gas guidance |
 | `timestamp` | Low | 1 | — | By design — the Proof-of-Reserve staleness comparison is the feature |
 | `assembly` | Informational | 2 | — | By design — `_transferHash` and `_walletKey`, both pinned by tests |
@@ -98,15 +98,15 @@ src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L47-L53
 
 
  - [ ] ID-8
-[RuleERC2980Internal._addFrozenlistAddresses(address[])](src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L96-L102) ignores return value by [_frozenlist.addBatch(addressesToAdd,_requireNotZeroAddress)](src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L101)
+[BalanceCapManager._setBalanceToken(address)](src/rules/validation/abstract/core/BalanceCapManager.sol#L191-L204) ignores return value by [IBalanceOf(newBalanceToken).balanceOf(address(this))](src/rules/validation/abstract/core/BalanceCapManager.sol#L196-L201)
 
-src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L96-L102
+src/rules/validation/abstract/core/BalanceCapManager.sol#L191-L204
 
 
  - [ ] ID-9
-[RuleMaxBalanceBase._setBalanceToken(address)](src/rules/validation/abstract/base/RuleMaxBalanceBase.sol#L285-L298) ignores return value by [IBalanceOf(newBalanceToken).balanceOf(address(this))](src/rules/validation/abstract/base/RuleMaxBalanceBase.sol#L290-L295)
+[RuleERC2980Internal._addFrozenlistAddresses(address[])](src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L96-L102) ignores return value by [_frozenlist.addBatch(addressesToAdd,_requireNotZeroAddress)](src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L101)
 
-src/rules/validation/abstract/base/RuleMaxBalanceBase.sol#L285-L298
+src/rules/validation/abstract/RuleERC2980/RuleERC2980Internal.sol#L96-L102
 
 
  - [ ] ID-10

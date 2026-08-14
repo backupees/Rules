@@ -7,10 +7,10 @@ slither . --checklist --filter-paths "node_modules,lib,test,forge-std,mocks" \
 
 Tool: **Slither 0.11.5** · Compiler: solc `0.8.36` · Run date: **2026-08-13**
 Scope: production contracts only. Mocks excluded via the `mocks` filter, vendored dependencies via `lib`.
-206 contracts, 101 detectors, **44 results**.
+208 contracts, 101 detectors, **44 results**.
 
-This run supersedes the two earlier `v0.5.0` runs: 2026-08-11 at solc 0.8.34, and an earlier 2026-08-13 run
-made before `RuleMaxBalance` and the `ChainlinkPoRFeedManager` split landed.
+This run supersedes the earlier `v0.5.0` runs and was made after the cap-manager split
+(`TotalSupplyCapManager`, `BalanceCapManager`).
 
 **Executive triage: nothing to fix.** No finding is exploitable. The two High-severity results are false
 positives on a permissioned path. One finding is new since the previous run, and it is the same false-positive
@@ -64,23 +64,18 @@ value is the point; there is no balance to act on at configuration time. This mi
 
 ## Delta from the previous run
 
-| | Previous (2026-08-13, pre-`RuleMaxBalance`) | This run |
+| | Previous (pre cap-manager split) | This run |
 |---|---|---|
-| Contracts | 199 | **206** |
-| Compiler | solc 0.8.34 | **solc 0.8.36** |
-| Results | 43 | **44** |
-| Severity | 2 High · 10 Med · 17 Low · 14 Info | 2 High · **11** Med · 17 Low · 14 Info |
+| Contracts | 206 | **208** |
+| Results | 44 | **44** |
+| Severity | 2 High · 11 Med · 17 Low · 14 Info | identical |
 
-Seven contracts were added — `RuleMaxBalance` with its base, invariant storage and `Ownable2Step` variant,
-plus `IBalanceOf`, `BalanceOfMock` and `ChainlinkPoRFeedManager` — and they produced exactly **one** new
-finding, the probe above. Every other detector reports the same instance count as before, which is the check
-that rules out a scope regression: a filter or compile-target change would have moved several categories at
-once.
+**Every detector reports the same instance count, one for one.** The split of `RuleMaxTotalSupplyBase` and
+`RuleMaxBalanceBase` into `TotalSupplyCapManager` and `BalanceCapManager` moved code between files without
+changing it, so `unused-return`, `uninitialized-local`, `timestamp` and the rest report exactly what they did
+before, now attributed to the new contracts where relevant. Two contracts were added and produced **no** new
+finding.
 
-**The dependency and compiler bumps produced no new findings.** solc `0.8.34` → `0.8.36`, OpenZeppelin
-`v5.6.1` → `v5.7.0`, RuleEngine `v3.0.0-rc4` → `v3.0.0-rc5` and CMTAT `v3.3.0-rc1` → `v3.3.0-rc3` all landed
-between the two runs, and no detector count moved because of them.
-
-**The `ChainlinkPoRFeedManager` split produced none either.** Extracting feed management out of
-`RuleChainlinkPoRBase` moved code between files without changing it; `uninitialized-local`, `timestamp` and the
-`latestRoundData()` `unused-return` all report the same instances, now attributed to the new contract.
+That is the expected signature of a pure code move, and it is the check worth doing: a refactor that claimed to
+be behaviour-preserving but shifted a detector count would deserve a second look. Storage layout and ABI were
+separately verified identical for all four affected deployable contracts.

@@ -30,7 +30,7 @@ excluded via the `lib` filter. Run **2026-08-13** at solc `0.8.36`, superseding 
 | Tool | High | Medium | Low | Info | Relevant to fix? |
 |---|---|---|---|---|---|
 | Slither 0.11.5 | 2 | 11 | 17 | 14 | **No** — all false-positive, by-design or cosmetic; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
-| Aderyn 0.6.5 | 0 | 0 | 9 categories (332 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
+| Aderyn 0.6.5 | 0 | 0 | 9 categories (336 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
 
 **Nothing to fix in `v0.5.0`.** Every delta from v0.4.0 traces to the three contracts added in this release
 (`RuleChainlinkPoR`, `RuleReceiverWhitelist`, `IdentityRegistryWhitelist`) and each was verified against the
@@ -38,7 +38,7 @@ source before dismissal. The two new Slither categories are `uninitialized-local
 `try` whose `catch` reverts or returns) and `timestamp` (the Proof-of-Reserve staleness comparison, which is the
 feature itself).
 
-**Latest re-run (2026-08-13, solc `0.8.36`): Slither 44, Aderyn 332 instances.** The seven contracts added for
+**Latest re-run (2026-08-13, solc `0.8.36`, after the cap-manager split): Slither 44, Aderyn 336 instances.** The split of `RuleMaxTotalSupplyBase` / `RuleMaxBalanceBase` into `TotalSupplyCapManager` / `BalanceCapManager` moved **no** detector: Slither reports the same 44 results one for one, and Aderyn's only change is one pragma and one PUSH0 instance per new file. Storage layout and ABI were separately verified identical for all four affected deployable contracts. The seven contracts added for
 `RuleMaxBalance` and the `ChainlinkPoRFeedManager` split produced exactly **one** new Slither finding — a
 `balanceOf` configuration probe whose discarded return value is the point — and **no** new Aderyn category. The
 dependency and compiler bumps (solc `0.8.36`, OpenZeppelin `v5.7.0`, RuleEngine `v3.0.0-rc5`, CMTAT
