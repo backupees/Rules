@@ -49,7 +49,7 @@ Custom changelog tag: `Dependencies`, `Documentation`, `Testing`
 
 _Nothing yet._
 
-## v0.5.0 - 2026-08-13
+## v0.5.0 - 
 
 Commit: _see `doc/security/audits/tools/v0.5.0/CLAUDE_ANALYSIS.md` for the per-finding commit map._
 
