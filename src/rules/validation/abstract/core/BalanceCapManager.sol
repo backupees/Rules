@@ -10,9 +10,9 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
  * @notice Per-address holding cap: the observed token, the cap, the exemption list, and how much a
  * given address may still receive.
  *
- * @dev
- * Declares **no constructor**
- * {_capExceeded} and {_remainingCapacity} answer in booleans and token units.
+ * @dev Declares **no constructor**, so an upgradeable variant can set the same state from an
+ * initializer. {_capExceeded} and {_remainingCapacity} answer in booleans and token units, leaving
+ * the restriction codes to the rule.
  *
  * @dev `maxBalance = 0` forbids holding entirely; it does not disable the cap.
  *
