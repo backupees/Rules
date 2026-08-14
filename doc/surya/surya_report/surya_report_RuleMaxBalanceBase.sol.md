@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleMaxBalanceBase.sol | 4d9fdf01c4e28f0d9b58d2005b88269d91ebd3f6 |
+| ./rules/validation/abstract/base/RuleMaxBalanceBase.sol | 62f929cdc9564258f602ff2a298f31a304d1c53f |
 
 
 ### Contracts Description Table
@@ -15,27 +15,13 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleMaxBalanceBase** | Implementation | RuleTransferValidation, RuleAddressSetInternal, RuleMaxBalanceInvariantStorage |||
+| **RuleMaxBalanceBase** | Implementation | RuleTransferValidation, BalanceCapManager |||
 | └ | <Constructor> | Public ❗️ | 🛑  |NO❗️ |
 | └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
-| └ | setMaxBalance | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | setBalanceToken | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | addExemptAddress | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | removeExemptAddress | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | addExemptAddresses | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | removeExemptAddresses | Public ❗️ | 🛑  | onlyMaxBalanceManager |
-| └ | isExemptAddress | Public ❗️ |   |NO❗️ |
-| └ | exemptAddressCount | Public ❗️ |   |NO❗️ |
 | └ | remainingCapacity | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
-| └ | _addExemptAddress | Internal 🔒 | 🛑  | |
-| └ | _removeExemptAddress | Internal 🔒 | 🛑  | |
-| └ | _setMaxBalance | Internal 🔒 | 🛑  | |
-| └ | _setBalanceToken | Internal 🔒 | 🛑  | |
-| └ | _authorizeMaxBalanceManager | Internal 🔒 |   | |
-| └ | _balanceOf | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |

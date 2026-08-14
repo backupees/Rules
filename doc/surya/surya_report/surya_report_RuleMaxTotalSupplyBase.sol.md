@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleMaxTotalSupplyBase.sol | a1523757df3daa412db98c73f26cd87ae5acdf41 |
+| ./rules/validation/abstract/base/RuleMaxTotalSupplyBase.sol | 645be19fe00a1ab23bdd92491942d97cb31fa383 |
 
 
 ### Contracts Description Table
@@ -15,19 +15,12 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleMaxTotalSupplyBase** | Implementation | RuleTransferValidation, TokenSupplyReader, RuleMaxTotalSupplyInvariantStorage |||
+| **RuleMaxTotalSupplyBase** | Implementation | RuleTransferValidation, TotalSupplyCapManager |||
 | └ | <Constructor> | Public ❗️ | 🛑  |NO❗️ |
 | └ | canReturnTransferRestrictionCode | External ❗️ |   |NO❗️ |
-| └ | setMaxTotalSupply | Public ❗️ | 🛑  | onlyMaxTotalSupplyManager |
-| └ | setTokenContract | Public ❗️ | 🛑  | onlyMaxTotalSupplyManager |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
-| └ | _authorizeMaxTotalSupplyManager | Internal 🔒 |   | |
-| └ | _setMaxTotalSupply | Internal 🔒 | 🛑  | |
-| └ | _setTokenContract | Internal 🔒 | 🛑  | |
-| └ | _validateTokenContract | Internal 🔒 |   | |
-| └ | _supplyToken | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |
