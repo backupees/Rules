@@ -93,7 +93,7 @@ Rules that implement a standardized interface must match that standard's semanti
 - `RuleEngine` v3.0.0-rc5 — `IRule`, `RulesManagementModule`
 - `forge-std` — Foundry test utilities
 
-Remappings are in `remappings.txt`; aliases used in source: `OZ/`, `CMTAT/`, `RuleEngine/`.
+Remappings are in `remappings.txt`; aliases used in source: `@openzeppelin/`, `CMTAT/`, `RuleEngine/`.
 
 ## Toolchain
 ```bash
