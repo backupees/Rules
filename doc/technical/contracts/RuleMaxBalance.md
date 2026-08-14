@@ -33,6 +33,25 @@ covered by the same check, since a mint raises the receiver's balance exactly as
 > with a whitelist active. If that test ever fails, the bypass has been closed by other means and this warning
 > should be revisited.
 
+## Contract layout
+
+The rule is split in two, so cap management does not drag the rest of the rule along with it.
+
+| Contract | Holds | Depends on |
+| --- | --- | --- |
+| [`BalanceCapManager`](../../../src/rules/validation/abstract/core/BalanceCapManager.sol) | The observed token, the cap, the exemption list, their setters and the revert-free `balanceOf` read | `RuleAddressSetInternal`, the invariant storage. **No constructor, no ERC-1404** |
+| [`RuleMaxBalanceBase`](../../../src/rules/validation/abstract/base/RuleMaxBalanceBase.sol) | The constructor, the ERC-1404 / ERC-3643 surface and the logic mapping a breached cap to a restriction code | `RuleTransferValidation`, `BalanceCapManager` |
+
+The manager declaring no constructor is the point: it exposes the `_set*` internals and leaves *when* they run
+to the inheritor. `RuleMaxBalanceBase` calls them from its constructor; an upgradeable variant would call the
+same ones from an initializer, with no change to the manager. Nothing in the manager references a
+restriction-code interface either — it answers in booleans and token units — so a contract that only wants a
+revert-free view of remaining headroom can inherit it without implementing an ERC-1404 surface it does not
+need.
+
+Storage layout and the deployed ABI are **unchanged** by the split, verified per-slot from the compiled
+artifacts for both `RuleMaxBalance` and `RuleMaxBalanceOwnable2Step`.
+
 ## Schema
 
 ### Graph

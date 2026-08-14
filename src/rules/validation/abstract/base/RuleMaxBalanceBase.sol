@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {RuleMaxBalanceInvariantStorage} from "../invariant/RuleMaxBalanceInvariantStorage.sol";
 import {IERC1404, IERC1404Extend} from "CMTAT/interfaces/tokenization/draft-IERC1404.sol";
-import {IBalanceOf} from "../../../interfaces/IBalanceOf.sol";
 import {IERC3643IComplianceContract} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
-import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.sol";
+import {BalanceCapManager} from "../core/BalanceCapManager.sol";
 
 /**
  * @title RuleMaxBalanceBase
  * @notice Caps how many tokens a single address may hold. One cap applies to every holder; the
  * operator may exempt specific addresses from it.
+ *
+ * @dev This contract is the **rule half**: the constructor, the ERC-1404 / ERC-3643 surface
+ * (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the
+ * restriction logic that turns a breached cap into a restriction code. The cap itself -- the
+ * observed token, the ceiling, the exemption list, the setters and the revert-free balance read --
+ * lives in {BalanceCapManager}, which carries no constructor and no ERC-1404 dependency so it can be
+ * reused or initialized differently.
  *
  * @dev The rule screens the **receiver**: a transfer is rejected when
  * `balanceOf(to) + value > maxBalance`. That covers mints as well, since a mint raises the
@@ -38,36 +43,21 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
  * from the engine.
  *
  * @dev IMPORTANT: the read path (`detectTransferRestriction*` / `canTransfer*`) must never revert,
- * so `balanceOf` is wrapped in `try/catch` and a failure yields {CODE_BALANCE_UNAVAILABLE} rather
- * than a revert. That relies on `balanceToken` still having code, which the setter enforces at
- * configuration time and EIP-6780 (Cancun) makes permanent -- a `try` to a codeless address reverts
- * *uncatchably*. This library targets Cancun or later (see `foundry.toml`). The token is trusted to
- * report an *accurate* balance, but it is NOT trusted to stay callable: that is guarded.
- *
- * @dev The exemption list reuses {RuleAddressSetInternal}, the same `EnumerableSet` machinery as
- * `RuleWhitelist`, so the storage, the zero-address guard and the batch semantics are shared code
- * rather than a second implementation. Only the internal layer is inherited, so this rule publishes
- * one write API with exemption-specific names and events instead of two overlapping ones.
+ * so a balance that cannot be read yields {CODE_BALANCE_UNAVAILABLE} rather than a revert. That is
+ * fail-closed: without a balance the cap cannot be verified, so the transfer is blocked rather than
+ * assumed safe. Burns and exempt receivers are resolved before any balance is read, so they keep
+ * working while the token is unreadable.
  */
-abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetInternal, RuleMaxBalanceInvariantStorage {
-    /**
-     * @notice The token whose balances are observed.
-     * @dev Trusted to report an accurate balance; not trusted to stay callable.
-     */
-    IBalanceOf public balanceToken;
-    /**
-     * @notice Maximum number of tokens a single non-exempt address may hold.
-     */
-    uint256 public maxBalance;
-
+abstract contract RuleMaxBalanceBase is RuleTransferValidation, BalanceCapManager {
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Initializes the rule with the observed token and the per-holder cap.
-     * @dev Routes through the same internals the public setters use, so the initial configuration is
-     * announced by {MaxBalanceTokenUpdated} and {MaxBalanceUpdated} exactly like every later change.
+     * @dev Routes through {BalanceCapManager}'s internals, which are constructor-agnostic, so the
+     * initial configuration is announced by {MaxBalanceTokenUpdated} and {MaxBalanceUpdated} exactly
+     * like every later change. An upgradeable variant would call the same two from an initializer.
      * @param balanceToken_ Token whose `balanceOf` is checked; must be a contract.
      * @param maxBalance_ Maximum balance per non-exempt address. `0` forbids holding entirely.
      */
@@ -94,87 +84,11 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Updates the maximum balance allowed per non-exempt address.
-     * @dev Lowering the cap does **not** claw back balances that already exceed it. Existing holders
-     * keep their tokens and may still send them away; they simply cannot receive more until they are
-     * back under the cap.
-     * @param newMaxBalance The new cap. `0` forbids holding entirely; it does not disable the rule.
-     */
-    function setMaxBalance(uint256 newMaxBalance) public virtual onlyMaxBalanceManager {
-        _setMaxBalance(newMaxBalance);
-    }
-
-    /**
-     * @notice Updates the token whose balances are observed.
-     * @param newBalanceToken The new token contract; must be a contract exposing `balanceOf`.
-     */
-    function setBalanceToken(address newBalanceToken) public virtual onlyMaxBalanceManager {
-        _setBalanceToken(newBalanceToken);
-    }
-
-    /**
-     * @notice Exempts an address from the cap.
-     * @dev Reverts if the address is already exempt, matching the single-item convention used
-     * elsewhere in the library. `address(0)` is rejected: it is the mint/burn sentinel, never a
-     * holder, and the rule already handles it explicitly.
-     * @param targetAddress The address to exempt.
-     */
-    function addExemptAddress(address targetAddress) public virtual onlyMaxBalanceManager {
-        _addExemptAddress(targetAddress);
-    }
-
-    /**
-     * @notice Removes an address's exemption.
-     * @dev Reverts if the address is not exempt. The address keeps whatever it already holds; it
-     * simply cannot receive more once over the cap.
-     * @param targetAddress The address to bring back under the cap.
-     */
-    function removeExemptAddress(address targetAddress) public virtual onlyMaxBalanceManager {
-        _removeExemptAddress(targetAddress);
-    }
-
-    /**
-     * @notice Exempts several addresses in one call.
-     * @dev Duplicates are skipped and counted rather than reverting; `address(0)` rejects the whole
-     * batch. Both follow the library-wide batch convention.
-     * @param targetAddresses The addresses to exempt.
-     */
-    function addExemptAddresses(address[] calldata targetAddresses) public virtual onlyMaxBalanceManager {
-        (uint256 added, uint256 skipped) = _addAddresses(targetAddresses);
-        emit ExemptAddressesAdded(targetAddresses, added, skipped);
-    }
-
-    /**
-     * @notice Removes the exemption from several addresses in one call.
-     * @dev Addresses that are not exempt are skipped and counted rather than reverting.
-     * @param targetAddresses The addresses to bring back under the cap.
-     */
-    function removeExemptAddresses(address[] calldata targetAddresses) public virtual onlyMaxBalanceManager {
-        (uint256 removed, uint256 skipped) = _removeAddresses(targetAddresses);
-        emit ExemptAddressesRemoved(targetAddresses, removed, skipped);
-    }
-
-    /**
-     * @notice Returns whether an address is exempt from the cap.
-     * @param targetAddress The address to test.
-     * @return True when the address may hold any amount.
-     */
-    function isExemptAddress(address targetAddress) public view virtual returns (bool) {
-        return _isAddressListed(targetAddress);
-    }
-
-    /**
-     * @notice Returns how many addresses are exempt.
-     * @return The number of exempt addresses.
-     */
-    function exemptAddressCount() public view virtual returns (uint256) {
-        return _listedAddressCount();
-    }
-
-    /**
      * @notice Returns the balance `to` may still receive before reaching the cap.
      * @dev Mirrors what {_detectTransferRestriction} computes, so an integrator can size a transfer
-     * without simulating it. Never reverts.
+     * without simulating it. Never reverts. This is the ERC-1404-flavoured wrapper over
+     * {BalanceCapManager._remainingCapacity}: the manager answers in booleans, the rule maps that to
+     * a restriction code.
      * @param to The prospective receiver.
      * @return restrictionCode `0` when the headroom is meaningful, otherwise the code a transfer
      * would return.
@@ -182,18 +96,11 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
      * or the burn sentinel; meaningless when `restrictionCode` is non-zero.
      */
     function remainingCapacity(address to) public view virtual returns (uint8 restrictionCode, uint256 headroom) {
-        if (to == address(0) || _isAddressListed(to)) {
-            return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), type(uint256).max);
-        }
-        (bool available, uint256 balance) = _balanceOf(to);
-        if (!available) {
+        (bool balanceAvailable, uint256 headroom_) = _remainingCapacity(to);
+        if (!balanceAvailable) {
             return (CODE_BALANCE_UNAVAILABLE, 0);
         }
-        uint256 cap = maxBalance;
-        if (balance >= cap) {
-            return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), 0);
-        }
-        return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), cap - balance);
+        return (uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK), headroom_);
     }
 
     /**
@@ -228,97 +135,8 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
     }
 
     /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyMaxBalanceManager() {
-        _authorizeMaxBalanceManager();
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Exempts an address: guards, writes and announces, in one place.
-     * @dev Owns the guards as well as the event, so every write path gets both. A subclass that
-     *      wanted to pre-exempt a treasury address from its constructor can call this instead of
-     *      restating the two `require`s, which is what the scalar setters already do via
-     *      {_setMaxBalance} and {_setBalanceToken}.
-     *
-     *      `_addAddress` does not guard the sentinel; the caller must, exactly as the whitelist
-     *      rules and `IdentityRegistryWhitelist` do. The batch path is guarded separately, by the
-     *      function pointer `_addAddresses` passes to `AddressSetBatchLib`. Invariant I-12.
-     * @param targetAddress The address to exempt.
-     */
-    function _addExemptAddress(address targetAddress) internal virtual {
-        require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        require(_addAddress(targetAddress), RuleAddressSet_AddressAlreadyListed());
-        emit ExemptAddressAdded(targetAddress);
-    }
-
-    /**
-     * @notice Removes an exemption: guards, writes and announces, in one place.
-     * @param targetAddress The address to bring back under the cap.
-     */
-    function _removeExemptAddress(address targetAddress) internal virtual {
-        require(_removeAddress(targetAddress), RuleAddressSet_AddressNotFound());
-        emit ExemptAddressRemoved(targetAddress);
-    }
-
-    /**
-     * @notice Stores the cap and emits {MaxBalanceUpdated}.
-     * @param newMaxBalance The new cap.
-     */
-    function _setMaxBalance(uint256 newMaxBalance) internal virtual {
-        maxBalance = newMaxBalance;
-        emit MaxBalanceUpdated(newMaxBalance);
-    }
-
-    /**
-     * @notice Stores the observed token and emits {MaxBalanceTokenUpdated}.
-     * @dev Probes `balanceOf` at configuration time so a token that cannot serve the check fails
-     * loudly at setup instead of silently blocking every transfer with {CODE_BALANCE_UNAVAILABLE}.
-     * @param newBalanceToken The new token contract.
-     */
-    function _setBalanceToken(address newBalanceToken) internal virtual {
-        require(newBalanceToken != address(0), RuleMaxBalance_TokenAddressZeroNotAllowed());
-        // Explicit, rather than relying on the uncatchable extcodesize revert the probe below happens
-        // to produce for a codeless address: that is compiler behaviour, not a check.
-        require(newBalanceToken.code.length != 0, RuleMaxBalance_TokenIsNotAContract(newBalanceToken));
-        try IBalanceOf(newBalanceToken).balanceOf(address(this)) returns (uint256) {
-        // callable
-        }
-        catch {
-            revert RuleMaxBalance_TokenBalanceUnavailable(newBalanceToken);
-        }
-        balanceToken = IBalanceOf(newBalanceToken);
-        emit MaxBalanceTokenUpdated(newBalanceToken);
-    }
-
-    /**
-     * @notice Authorization hook invoked before any configuration or exemption change.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     */
-    function _authorizeMaxBalanceManager() internal view virtual;
-
-    /**
-     * @notice Reads an address's balance without ever reverting.
-     * @dev Wrapped in `try/catch` so the ERC-1404 / ERC-3643 read path stays revert-free if the token
-     * breaks after configuration -- a proxy upgraded to something that reverts, or a pausable
-     * implementation that reverts while paused.
-     * @param account The address to query.
-     * @return available True when the balance could be read.
-     * @return balance The balance; meaningless when `available` is false.
-     */
-    function _balanceOf(address account) internal view virtual returns (bool available, uint256 balance) {
-        try balanceToken.balanceOf(account) returns (uint256 balance_) {
-            return (true, balance_);
-        } catch {
-            return (false, 0);
-        }
-    }
 
     /**
      * @inheritdoc RuleTransferValidation
@@ -335,22 +153,11 @@ abstract contract RuleMaxBalanceBase is RuleTransferValidation, RuleAddressSetIn
         override
         returns (uint8)
     {
-        // Burns cannot breach a maximum, and address(0) is the sentinel rather than a holder.
-        if (to == address(0)) {
-            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
-        }
-        // Exempt receivers may hold any amount.
-        if (_isAddressListed(to)) {
-            return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
-        }
-        (bool available, uint256 balance) = _balanceOf(to);
-        if (!available) {
+        (bool balanceAvailable, bool exceeded) = _capExceeded(to, value);
+        if (!balanceAvailable) {
             return CODE_BALANCE_UNAVAILABLE;
         }
-        // Overflow-safe: `balance + value` could exceed uint256 on a MUST-NOT-revert view, so
-        // compare against the remaining headroom instead.
-        uint256 cap = maxBalance;
-        if (balance > cap || value > cap - balance) {
+        if (exceeded) {
             return CODE_MAX_BALANCE_EXCEEDED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);

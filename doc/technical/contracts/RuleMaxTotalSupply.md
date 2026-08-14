@@ -4,6 +4,25 @@
 
 This rule restricts minting so that the token's total supply never exceeds a configured maximum. Only mint operations (`from == address(0)`) are checked. Regular transfers between holders and burns are not affected.
 
+## Contract layout
+
+The rule is split in two, so cap management does not drag the rest of the rule along with it.
+
+| Contract | Holds | Depends on |
+| --- | --- | --- |
+| [`TotalSupplyCapManager`](../../../src/rules/validation/abstract/core/TotalSupplyCapManager.sol) | The observed token, the cap, their setters and the revert-free `totalSupply()` read | `TokenSupplyReader`, the invariant storage. **No constructor, no ERC-1404** |
+| [`RuleMaxTotalSupplyBase`](../../../src/rules/validation/abstract/base/RuleMaxTotalSupplyBase.sol) | The constructor, the ERC-1404 / ERC-3643 surface and the logic mapping a breached cap to a restriction code | `RuleTransferValidation`, `TotalSupplyCapManager` |
+
+The manager declaring no constructor is the point: it exposes the `_set*` internals and leaves *when* they run
+to the inheritor. `RuleMaxTotalSupplyBase` calls them from its constructor; an upgradeable variant would call the
+same ones from an initializer, with no change to the manager. Nothing in the manager references a
+restriction-code interface either — it answers in booleans and token units — so a contract that only wants a
+revert-free view of remaining headroom can inherit it without implementing an ERC-1404 surface it does not
+need.
+
+Storage layout and the deployed ABI are **unchanged** by the split, verified per-slot from the compiled
+artifacts for both `RuleMaxTotalSupply` and `RuleMaxTotalSupplyOwnable2Step`.
+
 ## Configuration
 
 ### Constructor parameters
