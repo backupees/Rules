@@ -7,38 +7,22 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
 
 /**
  * @title BalanceCapManager
- * @notice Configuration of a per-address holding cap: which token to observe, what the cap is, which
- * addresses are exempt from it, and how much a given address may still receive.
+ * @notice Per-address holding cap: the observed token, the cap, the exemption list, and how much a
+ * given address may still receive.
  *
- * @dev Split out of `RuleMaxBalanceBase` so cap management is independent of two things it does not
- * need, matching {ChainlinkPoRFeedManager} and {TotalSupplyCapManager}:
+ * @dev Declares **no constructor** and does not depend on **ERC-1404**, so the inheriting rule
+ * decides when configuration happens (constructor or initializer) and owns the restriction-code
+ * mapping; {_capExceeded} and {_remainingCapacity} answer in booleans and token units.
  *
- * - **The constructor.** This contract declares none. It exposes the `_set*` internals plus the
- *   role-gated public setters, so an inheriting contract chooses when configuration happens: from a
- *   constructor (as `RuleMaxBalanceBase` does), from an initializer in an upgradeable deployment, or
- *   not at all until a setter is called.
- * - **ERC-1404.** Nothing here implements or depends on the restriction-code surface.
- *   {_capExceeded} answers in booleans and {_remainingCapacity} in token units; mapping an outcome to
- *   a restriction code, the code-to-message table and the `detectTransferRestriction*` /
- *   `transferred` entrypoints stay in the rule.
+ * @dev `maxBalance = 0` forbids holding entirely; it does not disable the cap.
  *
- * The result is a reusable holding-cap component: a contract that merely wants a revert-free view of
- * how much an address may still receive can inherit this without acquiring an ERC-1404 surface it
- * would have to implement.
+ * @dev {_balanceOf} must never revert, because the rule calls it from MUST-NOT-revert views, so it is
+ * `try/catch`-wrapped. That is only safe because the setter requires the token to have code and
+ * EIP-6780 makes it permanent: a `try` to a codeless address reverts *uncatchably*. Assumes a
+ * Cancun-or-later chain.
  *
- * @dev `maxBalance` has **no magic value**. `0` means non-exempt addresses may not hold any tokens;
- * it does not disable the cap.
- *
- * @dev IMPORTANT: {_balanceOf} must never revert, because the rule calls it from views that MUST NOT
- * revert. It is wrapped in `try/catch`, and a failure is reported as `available == false` for the
- * caller to map to its own restriction code. That relies on `balanceToken` still having code, which
- * the setter enforces at configuration time and EIP-6780 (Cancun) makes permanent -- a `try` to a
- * codeless address reverts *uncatchably*. This library targets Cancun or later (see `foundry.toml`).
- *
- * @dev The exemption list reuses {RuleAddressSetInternal}, the same `EnumerableSet` machinery as
- * `RuleWhitelist`, so the storage, the zero-address guard and the batch semantics are shared code
- * rather than a second implementation. Only the internal layer is inherited, so this contract
- * publishes one write API with exemption-specific names and events instead of two overlapping ones.
+ * @dev The exemption list reuses {RuleAddressSetInternal}, so the set storage, the zero-address guard
+ * and the batch semantics are shared code rather than a second implementation.
  */
 abstract contract BalanceCapManager is RuleAddressSetInternal, RuleMaxBalanceInvariantStorage {
     /**
