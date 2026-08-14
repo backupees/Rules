@@ -441,20 +441,12 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
     /**
      * @notice Computes the storage key identifying a (token, from, to, value) transfer.
-     * @dev Same project-specific encoding as the single-token rule, with `token` prepended:
-     * **128 bytes, four words, each address LEFT-aligned and right-padded with 12 zero bytes.**
+     * @dev Same project-specific encoding as the single-token rule with `token` prepended: **128
+     * bytes, four words, each address LEFT-aligned and right-padded with 12 zero bytes.**
      *
-     * ```
-     * word 0 : token (20 bytes) || 0x00 x 12
-     * word 1 : from  (20 bytes) || 0x00 x 12
-     * word 2 : to    (20 bytes) || 0x00 x 12
-     * word 3 : value (32 bytes, big-endian)
-     * ```
-     *
-     * WARNING: NEITHER `abi.encodePacked` NOR `abi.encode`; see
-     * {RuleConditionalTransferLightApprovalBase._transferHash} for why the distinction matters and
-     * for the off-chain formulations that reproduce it. Use {approvedCount} unless you specifically
-     * need the storage slot.
+     * WARNING: NEITHER `abi.encodePacked` NOR `abi.encode`. See
+     * {RuleConditionalTransferLightApprovalBase._transferHash} for why that matters and for the
+     * off-chain formulations that reproduce it. Use {approvedCount} unless you need the storage slot.
      * @param token The token the transfer applies to.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.

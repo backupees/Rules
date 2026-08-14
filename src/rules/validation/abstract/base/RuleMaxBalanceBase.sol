@@ -9,44 +9,22 @@ import {BalanceCapManager} from "../core/BalanceCapManager.sol";
 
 /**
  * @title RuleMaxBalanceBase
- * @notice Caps how many tokens a single address may hold. One cap applies to every holder; the
- * operator may exempt specific addresses from it.
+ * @notice Caps how many tokens a single address may hold, with an operator-managed exemption list.
+ * @dev The rule half: constructor, ERC-1404 / ERC-3643 surface, and the mapping from a breached cap
+ * to a restriction code; the cap itself lives in {BalanceCapManager}. Screens the **receiver** --
+ * rejected when `balanceOf(to) + value > maxBalance`, mints included. Burns and the sender are not.
  *
- * @dev This contract is the **rule half**: the constructor, the ERC-1404 / ERC-3643 surface
- * (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the
- * restriction logic that turns a breached cap into a restriction code. The cap itself -- the
- * observed token, the ceiling, the exemption list, the setters and the revert-free balance read --
- * lives in {BalanceCapManager}, which carries no constructor and no ERC-1404 dependency so it can be
- * reused or initialized differently.
+ * WARNING: **the cap counts tokens per address, so splitting a position across wallets defeats it.**
+ * Pair it with a rule tying addresses to identities (`RuleWhitelist`, `RuleReceiverWhitelist`,
+ * `RuleIdentityRegistry`) *and* admit one address per investor.
  *
- * @dev The rule screens the **receiver**: a transfer is rejected when
- * `balanceOf(to) + value > maxBalance`. That covers mints as well, since a mint raises the
- * receiver's balance the same way a transfer does. Burns (`to == address(0)`) are exempt, and the
- * sender is never screened -- reducing a balance can never breach a maximum.
+ * @dev **Assumes the token calls this BEFORE moving the value**, so `balanceOf(to)` still excludes
+ * `value`. CMTAT does; a token notifying afterwards would halve the effective cap. Pinned by
+ * `testMintExactlyToTheCapProvesPreUpdateAccounting`.
  *
- * WARNING: **this rule is only as strong as the one-entity-one-wallet property of the token.** It
- * counts tokens per *address*, which is the only thing a compliance contract can observe. A holder
- * who wants more than `maxBalance` can simply spread the position across several addresses. Deploy
- * it together with a rule that ties addresses to identities -- `RuleWhitelist`,
- * `RuleReceiverWhitelist` or `RuleIdentityRegistry` -- and admit one address per investor. Used
- * alone on a permissionless token it is a speed bump, not a limit.
- *
- * @dev **The check assumes the token calls this BEFORE it moves the value.** It compares
- * `balanceOf(to) + value` against the cap, which is only correct while `balanceOf(to)` still
- * excludes `value`. CMTAT satisfies this: `_checkTransferred(...)` runs before
- * `ERC20Upgradeable._transfer(...)`. A token that notified its compliance contract *after* updating
- * balances would double-count, halving the effective cap and rejecting a transfer that exactly
- * reaches it. Pinned by `testMintExactlyToTheCapProvesPreUpdateAccounting`.
- *
- * @dev `maxBalance` has **no magic value**. `0` means non-exempt addresses may not hold any tokens;
- * it does not disable the rule. To lift the cap, set it to `type(uint256).max` or remove the rule
- * from the engine.
- *
- * @dev IMPORTANT: the read path (`detectTransferRestriction*` / `canTransfer*`) must never revert,
- * so a balance that cannot be read yields {CODE_BALANCE_UNAVAILABLE} rather than a revert. That is
- * fail-closed: without a balance the cap cannot be verified, so the transfer is blocked rather than
- * assumed safe. Burns and exempt receivers are resolved before any balance is read, so they keep
- * working while the token is unreadable.
+ * @dev `maxBalance = 0` forbids holding entirely; it does not disable the rule. The read path must
+ * never revert: an unreadable balance yields {CODE_BALANCE_UNAVAILABLE}
+ * (fail-closed). Burns and exempt receivers resolve before any balance is read.
  */
 abstract contract RuleMaxBalanceBase is RuleTransferValidation, BalanceCapManager {
     /*//////////////////////////////////////////////////////////////

@@ -10,9 +10,9 @@ import {RuleAddressSetInternal} from "../RuleAddressSet/RuleAddressSetInternal.s
  * @notice Per-address holding cap: the observed token, the cap, the exemption list, and how much a
  * given address may still receive.
  *
- * @dev Declares **no constructor** and does not depend on **ERC-1404**, so the inheriting rule
- * decides when configuration happens (constructor or initializer) and owns the restriction-code
- * mapping; {_capExceeded} and {_remainingCapacity} answer in booleans and token units.
+ * @dev
+ * Declares **no constructor**
+ * {_capExceeded} and {_remainingCapacity} answer in booleans and token units.
  *
  * @dev `maxBalance = 0` forbids holding entirely; it does not disable the cap.
  *

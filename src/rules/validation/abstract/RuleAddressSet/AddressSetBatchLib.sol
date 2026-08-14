@@ -5,31 +5,19 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 /**
  * @title AddressSetBatchLib
- * @notice The batch add/remove mechanics shared by every address-list rule in this library.
- * @dev Extracted because the same two loops were written three times: once in
- * {RuleAddressSetInternal} and twice in `RuleERC2980Internal`, for its whitelist and its frozenlist.
- * The copies had already drifted -- only the `RuleAddressSetInternal` one was covered by a test for
- * the zero-address rejection (`CLAUDE_ANALYSIS.md` D-1, F-5).
+ * @notice The batch add/remove loops shared by every address-list rule in this library.
+ * @dev Extracted because the same two loops were written three times and had already drifted: only
+ * the {RuleAddressSetInternal} copy was covered by a zero-address test (`CLAUDE_ANALYSIS.md` D-1).
+ * Only the loops live here; single-address `add` / `remove` / `contains` / `length` stay as one-line
+ * delegations to {EnumerableSet}, where a library would add indirection without removing duplication.
  *
- * Only the two *loops* live here. `add` / `remove` / `contains` / `length` on a single address stay
- * in the inheriting contracts as one-line delegations to {EnumerableSet}: routing those through a
- * library would add a layer of indirection without removing any real duplication.
- *
- * ## Why the zero-address guard is a function parameter
- * Each rule reverts with its OWN custom error (`RuleAddressSet_ZeroAddressNotAllowed`,
- * `RuleERC2980_ZeroAddressNotAllowed`), matching the codebase-wide "one error namespace per rule"
- * convention. A shared library cannot name those errors, and the alternatives are worse:
- *
- * - Reverting with a single shared error would change the revert data callers and tests already
- *   depend on, and break the per-rule error convention.
- * - Returning a "a zero was found" flag for the caller to check would make the guard optional in
- *   practice: a caller that forgot the check would silently list `address(0)`, which is the exact
- *   outcome the guard exists to prevent.
- *
- * Passing the guard as an `internal pure` function pointer keeps it MANDATORY -- it is a required
- * parameter, so the call does not compile without one -- while each rule keeps its own error. The
- * pointer is resolved at compile time and the library is `internal`, so this is a jump inside the
- * calling contract, not a `DELEGATECALL`.
+ * @dev **The zero-address guard is a function-pointer parameter** so each rule keeps its own error
+ * (`RuleAddressSet_ZeroAddressNotAllowed` vs `RuleERC2980_ZeroAddressNotAllowed`), per the
+ * one-error-namespace-per-rule convention. Being a required parameter makes it MANDATORY: the call
+ * does not compile without one. Returning a "zero found" flag instead would make the guard optional
+ * in practice, and a caller that forgot it would list `address(0)` -- exactly what it prevents. The
+ * pointer resolves at compile time and the library is `internal`, so this is a jump, not a
+ * `DELEGATECALL`.
  */
 library AddressSetBatchLib {
     using EnumerableSet for EnumerableSet.AddressSet;

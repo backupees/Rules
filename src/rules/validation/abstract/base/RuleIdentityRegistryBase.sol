@@ -11,22 +11,14 @@ import {IIdentityRegistryVerified} from "../../../interfaces/IIdentityRegistry.s
 /**
  * @title RuleIdentityRegistryBase
  * @notice Checks the ERC-3643 Identity Registry for transfer participants when configured.
- * @dev **ERC-3643 conformant by default.** The specification mandates that ONLY THE RECEIVER be
- *      identity-verified:
+ * @dev **ERC-3643 conformant by default: only the RECEIVER is verified.** The spec states the
+ *      receiver must be whitelisted and verified, that `transferFrom` works the same way, that
+ *      `mint` and `forcedTransfer` require only the receiver, and that `burn` bypasses eligibility.
  *
- *        - "The receiver MUST be whitelisted on the Identity Registry and verified"  (§ Transfer)
- *        - "`transferFrom` works the same way"                                       (§ Transfer)
- *        - "`mint` and `forcedTransfer` only require the receiver to be whitelisted
- *           and verified on the Identity Registry"                                   (§ Transfer)
- *        - "The `burn` function bypasses all checks on eligibility"                  (§ Transfer)
- *
- *      The sender, the spender and the minter are NOT required to be verified. Checking the sender
- *      in particular would TRAP DE-LISTED HOLDERS: ERC-3643 screens only the receiver precisely so
- *      that an investor whose identity lapses (expired claim, revoked identity) can still exit their
- *      position by sending to a verified counterparty.
- *
- *      Stricter screening remains available, but as an EXPLICIT OPT-IN ({checkSender},
- *      {checkSpender}) rather than an undocumented default.
+ *      The sender, spender and minter are NOT required to be verified. Checking the sender would
+ *      TRAP DE-LISTED HOLDERS: the spec screens only the receiver precisely so an investor whose
+ *      identity lapses can still exit to a verified counterparty. Stricter screening is available as
+ *      an explicit opt-in ({checkSender}, {checkSpender}), not an undocumented default.
  */
 abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegistryInvariantStorage {
     /**

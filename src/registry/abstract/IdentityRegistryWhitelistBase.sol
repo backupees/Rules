@@ -9,46 +9,21 @@ import {IIdentityRegistryERC3643} from "../interfaces/IIdentityRegistryERC3643.s
 /**
  * @title IdentityRegistryWhitelistBase
  * @notice A whitelist that presents itself to an ERC-3643 token as an identity registry.
- * @dev This contract is plugged into a token with `token.setIdentityRegistry(address(this))`. It is
- * **not** a compliance rule: it does not implement `IRule` and must not be added to a `RuleEngine`.
+ * @dev Installed with `token.setIdentityRegistry(address(this))`. **Not** a compliance rule: no
+ * `IRule` surface, and it must never be added to a `RuleEngine`.
  *
- * `registerIdentity` whitelists a wallet, `deleteIdentity` removes it, and `isVerified` answers the
- * whitelist question the token asks on every inbound transfer.
+ * @dev **No identity data is stored** -- no ONCHAINID, no country, no claims. `registerIdentity`'s
+ * `_identity` and `_country` are accepted so the ERC-3643 signature matches, then discarded, and
+ * {investorCountry} always returns 0. Verification means one thing here: is this wallet listed.
+ * `Token.sol` reads `investorCountry` only in `recoveryAddress`, to pass it straight back, so the
+ * token is unaffected; a *custom* compliance module reading it would see every investor as country 0.
  *
- * ## It is only a whitelist
- * There is no ERC-734 surface here. An earlier revision implemented `keyHasPurpose` so the registry
- * could be passed as `_investorOnchainID` to `recoveryAddress`; it was removed because it bought
- * nothing. `Token.recoveryAddress` calls `keyHasPurpose` on the address the **agent supplies**,
- * without cross-checking it against the registry, so an agent who wants to skip that gate simply
- * passes a different contract. It was convenience for an honest agent, not a control -- and it cost
- * a reverse index plus two behavioural divergences from the reference registry. Supply a real
- * ONCHAINID (or any ERC-734 contract) as `_investorOnchainID` instead.
+ * @dev **No ERC-734 surface.** `keyHasPurpose` was implemented once and removed: `recoveryAddress`
+ * calls it on the address the agent supplies, never cross-checking it against the registry, so it
+ * gated nothing while costing a reverse index. Supply a real ONCHAINID as `_investorOnchainID`.
  *
- * ## Where the whitelist comes from
- * The address set is not re-implemented here: this contract inherits {RuleAddressSetInternal}, the
- * same `EnumerableSet` machinery `RuleWhitelist` and `RuleBlacklist` are built on, so the storage
- * layout and the zero-address guard are shared code rather than a second implementation. No
- * separate whitelist contract is deployed -- the registry *is* the list.
- *
- * Only the `internal` layer is inherited, so the registry exposes exactly one write API -- the
- * ERC-3643 one -- rather than two overlapping ones. The public `RuleAddressSet` surface would add
- * `addAddress` / `removeAddress` alongside {registerIdentity} / {deleteIdentity}, with two sets of
- * roles and events describing the same state change.
- *
- * ## No identity state is kept
- * This contract stores **no identity data at all** -- no ONCHAINID, no country, no claims. Its only
- * state is the inherited address set. `registerIdentity`'s `_identity` and `_country` arguments are
- * accepted so the ERC-3643 signature matches, then discarded; {investorCountry} always returns 0.
- * Verification here means one thing: is this wallet on the whitelist. Everything else in the
- * interface is a wrapper over that single question.
- *
- * Returning a constant country is safe for the token itself. `Token.sol` reads `investorCountry` in
- * exactly one place -- `recoveryAddress`, line 308 -- and only to pass it straight back into
- * `registerIdentity`, which discards it here. It never branches on the value and exposes no getter.
- * The exposure is a *custom* compliance module that calls `investorCountry`: it would see every
- * investor as country 0. No shipped ERC-3643 compliance does (the one consumer,
- * `compliance/legacy/BasicCompliance._getCountry`, has no caller in the reference tree, and the
- * modular framework has no country module). See the technical doc for the full audit.
+ * @dev The address set is inherited from {RuleAddressSetInternal}, so the registry *is* the list.
+ * Only the internal layer, so there is one write API (the ERC-3643 one), not two overlapping ones.
  */
 abstract contract IdentityRegistryWhitelistBase is
     RuleAddressSetInternal,

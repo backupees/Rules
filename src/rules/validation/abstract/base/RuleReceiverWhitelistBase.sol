@@ -12,38 +12,22 @@ import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 
 /**
  * @title RuleReceiverWhitelistBase
- * @notice A whitelist that screens **only the receiver**, reproducing ERC-3643's eligibility rule
- * as a compliance rule.
+ * @notice A whitelist that screens **only the receiver**, reproducing ERC-3643's eligibility rule.
  *
- * @dev ERC-3643 mandates exactly one identity check — *"The receiver MUST be whitelisted on the
- * Identity Registry and verified"* — and states that `transferFrom` "works the same way", that
- * `mint` "only require[s] the receiver", and that `burn` "bypasses all checks on eligibility".
- * This rule implements that literally:
+ * @dev ERC-3643 mandates one identity check -- the receiver -- and states that `transferFrom` works
+ * the same way, `mint` requires only the receiver, and `burn` bypasses eligibility. Implemented
+ * literally: `to` is screened on transfer, `transferFrom` and mint; the spender and sender never
+ * are; burn is always allowed.
  *
- * | Operation | Screened |
- * |---|---|
- * | `transfer(from, to)`            | `to` only |
- * | `transferFrom(spender, from, to)` | `to` only -- the spender is **never** checked |
- * | mint (`from == address(0)`)     | `to`, like any other receiver |
- * | burn (`to == address(0)`)       | nothing -- always allowed |
+ * @dev **Do not add a sender check.** It would trap de-listed holders, whose position would be
+ * stranded. The spec screens only the receiver precisely so a lapsed investor can still exit. Use
+ * {RuleWhitelist} if screening both parties is the policy you want.
  *
- * ## Why the sender is not screened
- * Screening the sender would **trap de-listed holders**: an investor whose eligibility lapses could
- * neither receive nor send, leaving their position stranded. ERC-3643 checks only the receiver
- * precisely so a lapsed investor can still exit to an eligible counterparty. Do not add a sender
- * check here -- use {RuleWhitelist}, which screens both parties, if that is the policy you want.
+ * @dev Burn is exempt rather than checked because `address(0)` can never be listed, so without the
+ * exemption every burn would be rejected. That matches the spec, it is not a convenience.
  *
- * ## Why burn is exempt rather than checked
- * On a burn the receiver is `address(0)`, which can never be listed (the address set rejects it, so
- * `isAddressListed(address(0))` is always `false`). Without an explicit exemption every burn would
- * be rejected. ERC-3643 says burn bypasses eligibility, so the exemption is the conformant
- * behaviour, not a convenience.
- *
- * ## Mint has no opt-out flag
- * Unlike {RuleWhitelist}, there is no `allowMint`. ERC-3643 gates minting on receiver eligibility
- * alone, so a mint to a listed address is allowed and a mint to an unlisted one is not. To cap or
- * close issuance, compose with `RuleMaxTotalSupply` or `RuleChainlinkPoR` rather than reaching for
- * a flag here.
+ * @dev There is no `allowMint` flag, unlike {RuleWhitelist}: ERC-3643 gates minting on receiver
+ * eligibility alone. Compose with `RuleMaxTotalSupply` or `RuleChainlinkPoR` to cap issuance.
  */
 abstract contract RuleReceiverWhitelistBase is RuleAddressSet, RuleNFTAdapter, RuleReceiverWhitelistInvariantStorage {
     /*//////////////////////////////////////////////////////////////

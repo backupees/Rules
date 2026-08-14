@@ -184,27 +184,17 @@ abstract contract RuleConditionalTransferLightBase is
 
     /**
      * @notice Authorizes a RuleEngine to call this rule's transfer execution hooks.
-     * @dev Independent of {bindToken}: the engine is authorized to call `transferred`, but is never
-     *      treated as the ERC-20 token. Bind the token with {bindToken} and the engine here, and
-     *      {approveAndTransferIfAllowed} works under the RuleEngine topology.
-     *      Reverts if a RuleEngine is already bound; call {unbindRuleEngine} first to migrate.
+     * @dev Independent of {bindToken}: the engine may call `transferred` but is never treated as the
+     *      ERC-20 token. Bind both and {approveAndTransferIfAllowed} works under the engine topology.
+     *      Reverts if an engine is already bound; call {unbindRuleEngine} first to migrate.
      *
-     * @dev WARNING: **Bind ONLY an engine that serves this one token.**
-     *      This rule's approvals are keyed `(from, to, value)` — they carry **no token dimension**.
-     *      A `RuleEngine` is multi-tenant by design (`_boundTokens` is a set), and it relays every
-     *      one of its tokens into the same `transferred(from, to, value)` hook, so the rule cannot
-     *      tell which token moved. If the bound engine serves several tokens, an approval recorded
-     *      for one of them is consumable by ANY of them:
-     *
-     *          approveTransfer(alice, bob, 100)      // intended for token A
-     *          <alice sends 100 of token B>          // -> engine -> transferred(alice, bob, 100)
-     *                                                // the token-A approval is consumed
-     *
-     *      This is inherent to the single-token rule and is why {RuleConditionalTransferLightMultiToken}
-     *      exists. Binding an engine does not change it — it only makes the topology usable, so the
-     *      constraint must be respected by the operator. If the engine is (or may become)
-     *      multi-tenant, do not use this rule.
-     *
+     * @dev WARNING: **bind ONLY an engine that serves this one token.** Approvals here are keyed
+     *      `(from, to, value)` with **no token dimension**, while a `RuleEngine` is multi-tenant by
+     *      design and relays every one of its tokens into the same hook. If the engine serves several
+     *      tokens, an approval recorded for one is consumable by ANY of them -- approve 100 for token
+     *      A, and a 100 transfer of token B consumes it. That is inherent to the single-token rule and
+     *      is why {RuleConditionalTransferLightMultiToken} exists; binding an engine does not change
+     *      it. If the engine is or may become multi-tenant, do not use this rule.
      * @param ruleEngine_ The RuleEngine allowed to call `transferred`. It MUST serve only the token
      *                    bound via {bindToken}.
      */

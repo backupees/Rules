@@ -143,32 +143,18 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
 
     /**
      * @notice Computes the storage key identifying a (from, to, value) transfer.
-     * @dev The preimage is a project-specific encoding: **96 bytes, three words, each address
-     * LEFT-aligned and right-padded with 12 zero bytes.**
-     *
-     * ```
-     * word 0 : from  (20 bytes) || 0x00 x 12
-     * word 1 : to    (20 bytes) || 0x00 x 12
-     * word 2 : value (32 bytes, big-endian)
-     * ```
-     *
-     * WARNING: this is NEITHER `abi.encodePacked` NOR `abi.encode`. `abi.encodePacked(from, to,
-     * value)` is 72 bytes with no padding; `abi.encode(from, to, value)` is 96 bytes with the
-     * addresses RIGHT-aligned. Reimplementing the key off-chain as either produces a different hash,
-     * and because the result is a mapping key the mistake is silent: the lookup simply returns 0,
-     * which is indistinguishable from "no approval exists".
-     *
-     * To recompute the key off-chain, either of these reproduces it exactly:
+     * @dev The preimage is project-specific: **96 bytes, three words, each address LEFT-aligned and
+     * right-padded with 12 zero bytes** (`from || to || value`).
+     * WARNING: this is NEITHER `abi.encodePacked` (72 bytes, no padding) NOR `abi.encode` (96 bytes,
+     * addresses RIGHT-aligned). Reimplementing it off-chain as either yields a different hash, and
+     * because the result is a mapping key the mistake is **silent** -- the lookup returns 0, which is
+     * indistinguishable from "no approval exists". Either of these reproduces it:
      * ```solidity
      * keccak256(abi.encodePacked(from, bytes12(0), to, bytes12(0), value))
      * keccak256(abi.encode(bytes32(bytes20(from)), bytes32(bytes20(to)), value))
      * ```
-     * Pinned by `testDocumentedPreimageMatchesTheStorageKey` in
-     * `test/RuleConditionalTransferLight/TransferHashPreimage.t.sol`.
-     *
-     * You rarely need this: {approvedCount} already resolves (from, to, value) to the count, and the
-     * approval events carry the same fields. It matters only when deriving the storage slot directly
-     * -- `eth_getStorageAt`, a state proof, or an indexer reading storage rather than events.
+     * Pinned by `testDocumentedPreimageMatchesTheStorageKey`. Use {approvedCount} unless you need
+     * the storage slot directly.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.
      * @param value The amount of the transfer.

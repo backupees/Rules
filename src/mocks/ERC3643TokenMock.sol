@@ -54,28 +54,22 @@ interface IERC3643ComplianceForToken {
 }
 
 /**
- * @title ERC3643TokenMock — a minimal ERC-3643 token reproducing the identity-registry call
+ * @title ERC3643TokenMock -- a minimal ERC-3643 token reproducing the identity-registry call
  * sequences of the reference implementation.
  * @notice The registry-facing logic of `transfer`, `transferFrom`, `forcedTransfer`, `mint`, `burn`
- * and `recoveryAddress` is transcribed from ERC-3643's `Token.sol` (vendored at `lib/ERC-3643/`),
- * including the order of calls and the revert strings, so a registry that satisfies this mock
- * satisfies the real token.
+ * and `recoveryAddress` is transcribed from ERC-3643's vendored `Token.sol`, call order and revert
+ * strings included, so a registry that satisfies this mock satisfies the real token.
  *
- * @dev Why a mock rather than the real `Token.sol`: the reference implementation imports
- * the ONCHAINID Solidity package (not vendored) and targets OpenZeppelin v4 upgradeable contracts, while
- * this repository vendors OZ v5 -- `Token.sol` does not compile in this build. The mock keeps the
- * registry interaction faithful and drops everything orthogonal to it: the compliance module,
- * pausing, and partial-freeze accounting. Balances and the agent role are real so the transfers
- * actually move value.
+ * @dev The real `Token.sol` does not compile here: it imports the un-vendored ONCHAINID package and
+ * targets OZ v4 upgradeable, while this repo vendors OZ v5. The mock keeps the registry interaction
+ * faithful and drops the compliance module, pausing and partial-freeze accounting.
  *
- * WARNING: test scaffolding only. Not a compliant ERC-3643 token and not for production use.
+ * WARNING: test scaffolding only. Not a compliant ERC-3643 token, not for production.
  *
- * NOTE: the linter suppressions below are deliberate. This file's value is that it mirrors
- * `Token.sol` closely enough to review side by side, so it keeps the reference parameter names and
- * the plain `keccak256(abi.encode(...))` key derivation. That last point is load-bearing:
- * {IdentityRegistryWhitelistBase} derives the same key in assembly, and the integration tests only
- * prove the two agree because this side computes it the ordinary way. Rewriting it here would make
- * the cross-check circular.
+ * NOTE: the linter suppressions are deliberate -- keeping the reference parameter names and the
+ * plain `keccak256(abi.encode(...))` key derivation is the point. {IdentityRegistryWhitelistBase}
+ * derives the same key in assembly, and the tests only prove the two agree because this side
+ * computes it the ordinary way. Rewriting it would make the cross-check circular.
  */
 contract ERC3643TokenMock {
     /**

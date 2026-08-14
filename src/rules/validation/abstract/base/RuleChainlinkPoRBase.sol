@@ -10,32 +10,19 @@ import {ChainlinkPoRFeedManager} from "../core/ChainlinkPoRFeedManager.sol";
 
 /**
  * @title RuleChainlinkPoRBase
- * @notice Restricts minting so that the token's total supply never exceeds the reserves reported
- * by a Chainlink Proof of Reserve (PoR) data feed.
- * @dev Before every mint the rule reads `latestRoundData()` from the configured
- * `AggregatorV3Interface`, scales the answer from the feed's decimals to the token's decimals, and
- * rejects the operation when `totalSupply + value` would exceed it. The backed supply equals the
- * reported reserves exactly; there is no margin or buffer.
+ * @notice Caps minting at the reserves reported by a Chainlink Proof of Reserve feed. The limit
+ * equals the reported reserves exactly -- no margin or buffer.
+ * @dev Only mints are gated: transfers do not change total supply and burns only reduce it.
  *
- * Only mints (`from == address(0)`) are gated: plain transfers do not change the total supply and
- * burns only reduce it.
+ * @dev The rule half: constructor, ERC-1404 / ERC-3643 surface, and the mapping from a backed supply
+ * to a restriction code. The feed itself -- which feed, which token, staleness, scaling and the
+ * revert-free read -- lives in {ChainlinkPoRFeedManager}.
  *
- * @dev This contract is the **rule half**: the constructor, the ERC-1404 / ERC-3643 surface
- * (`canReturnTransferRestrictionCode`, `messageForTransferRestriction`, `transferred`) and the
- * restriction logic that turns a backed supply into a restriction code. Everything about the feed
- * itself -- which feed, which token, staleness, decimal scaling, and the revert-free read -- lives
- * in {ChainlinkPoRFeedManager}, which carries no constructor and no ERC-1404 dependency so it can be
- * reused or initialized differently. See that contract for the feed-reading guarantees, including
- * why `decimals()` is read live rather than cached.
- *
- * IMPORTANT: the read path (`detectTransferRestriction*` / `canTransfer*`) must never revert. A feed
- * that has no code, whose `decimals()` or `latestRoundData()` reverts, that reports more than
- * {MAX_FEED_DECIMALS} decimals, returns a negative answer or reports an incomplete round yields
- * {CODE_RESERVES_ANSWER_INVALID} or {CODE_RESERVES_FEED_UNAVAILABLE}; a feed older than
- * `maxStalenessSeconds` yields {CODE_RESERVES_FEED_STALE}; a `tokenContract` whose `totalSupply()`
- * reverts or that has lost its code yields {CODE_TOTAL_SUPPLY_UNAVAILABLE}. All are fail-closed:
- * mints are blocked. `tokenContract` is trusted to report an *accurate* supply, but it is NOT
- * trusted to stay callable -- that is guarded.
+ * @dev The read path must never revert, and every failure is fail-closed (the mint is blocked): an
+ * unreadable or over-precision feed yields {CODE_RESERVES_FEED_UNAVAILABLE}, a negative or
+ * incomplete answer {CODE_RESERVES_ANSWER_INVALID}, an old one {CODE_RESERVES_FEED_STALE}, and an
+ * unreadable `totalSupply()` {CODE_TOTAL_SUPPLY_UNAVAILABLE}. The token is trusted to report an
+ * accurate supply, but not to stay callable -- that is guarded.
  */
 abstract contract RuleChainlinkPoRBase is RuleTransferValidation, ChainlinkPoRFeedManager {
     /*//////////////////////////////////////////////////////////////

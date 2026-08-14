@@ -5,39 +5,22 @@ import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
 
 /**
  * @title TokenSupplyReader
- * @notice Shared mechanics for the rules that cap minting against a supply figure read from a token
- * they do not control: {RuleMaxTotalSupplyBase} and {RuleChainlinkPoRBase}.
- * @dev The two rules answer different questions -- a static ceiling versus a Chainlink Proof of
- * Reserve figure -- but they share one concern exactly: *read `totalSupply()` from a foreign contract
- * on a path that MUST NOT revert*. That concern was implemented twice, byte for byte, along with the
- * reasoning behind it (`CLAUDE_ANALYSIS.md` D-2).
+ * @notice Revert-free `totalSupply()` read shared by {RuleMaxTotalSupplyBase} and
+ * {RuleChainlinkPoRBase}, which both cap minting against a foreign token's supply.
  *
- * ## Why the token is a hook rather than state here
- * This contract declares **no storage**. Each rule keeps its own `tokenContract` variable and
- * implements {_supplyToken}. Declaring the variable here instead would work, but it would reorder
- * every inheriting rule's storage slots for no benefit -- `RuleChainlinkPoR` would see
- * `tokenContract` move ahead of `reservesFeed`. A stateless base is free of that risk.
+ * @dev Declares **no storage**: each rule keeps its own token variable and implements
+ * {_supplyToken}. Holding it here would reorder every inheriting rule's slots for no benefit.
  *
- * ## Why validation is NOT shared
- * Both rules validate a candidate token the same way -- non-zero, has code, `totalSupply()` callable
- * -- but each reverts with its own named error (`RuleMaxTotalSupply_TokenIsNotAContract` vs
- * `RuleChainlinkPoR_TokenIsNotAContract`, and so on), per the codebase's one-error-namespace-per-rule
- * convention. Only the non-trivial part, the `try/catch` probe, is shared here as
- * {_probeTotalSupplyCallable}; each rule composes it with its own `require`s so the three distinct
- * configuration failures keep three distinct, named errors. Collapsing them into a single boolean
- * would trade a real diagnostic for a couple of saved lines.
+ * @dev Only the `try/catch` probe is shared, not the validation. Each rule composes
+ * {_probeTotalSupplyCallable} with its own `require`s so its three configuration failures keep three
+ * distinct, named errors, per the one-error-namespace-per-rule convention.
  *
- * ## Deployment precondition (both rules)
- * {_currentSupply} is `try/catch`-wrapped but performs **no code-length check**: a `try` call to a
- * codeless address reverts *uncatchably*, so the guard would be useless there anyway. (The mechanism is the
- * ABI decoder, not `EXTCODESIZE` — solc >= 0.8.10 skips the existence check when return data is expected, the
- * CALL to a codeless account succeeds with 0 bytes, and decoding fails in THIS frame after the call returned,
- * where `catch` cannot reach it.) Safety comes
- * from configuration instead -- each rule's setter rejects a candidate without code, and EIP-6780
- * (Cancun) makes that permanent, since `SELFDESTRUCT` can only clear an account created in the same
- * transaction. **This reasoning assumes a Cancun-or-later chain**, which `foundry.toml` targets.
- * On an older chain a validated token could still become codeless and the ERC-1404 views would
- * revert instead of returning a restriction code.
+ * @dev **Deployment precondition.** {_currentSupply} performs no code-length check, because a `try`
+ * to a codeless address reverts *uncatchably* -- the ABI decoder fails in this frame after the call
+ * returns 0 bytes, out of `catch`'s reach (not `EXTCODESIZE`, which solc >= 0.8.10 skips when return
+ * data is expected). Safety comes from configuration: each setter rejects a codeless candidate and
+ * EIP-6780 makes that permanent. **Assumes a Cancun-or-later chain**; on an older one a validated
+ * token could still become codeless and the ERC-1404 views would revert.
  */
 abstract contract TokenSupplyReader {
     /**

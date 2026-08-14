@@ -10,38 +10,21 @@ import {TokenSupplyReader} from "./TokenSupplyReader.sol";
 
 /**
  * @title ChainlinkPoRFeedManager
- * @notice Configuration and reading of a Chainlink Proof of Reserve (PoR) data feed: which feed to
- * consult, which token it backs, how stale an answer may be, and how to turn a raw feed answer into
- * a backed supply in token units.
+ * @notice Configuration and reading of a Chainlink Proof of Reserve feed: which feed, which token it
+ * backs, how stale an answer may be, and how to scale it into token units.
  *
- * @dev Split out of `RuleChainlinkPoRBase` so feed management is independent of two things it does
- * not need:
+ * @dev Declares **no constructor** and does not depend on **ERC-1404**, so the inheriting rule
+ * decides when configuration happens (constructor or initializer) and owns the code-to-message
+ * mapping; {_maxBackedSupply} returns a plain `uint8` describing why an answer is unusable.
  *
- * - **The constructor.** This contract declares none. It exposes only `_set*` internals plus the
- *   role-gated public setters, so an inheriting contract chooses when and how configuration happens:
- *   from a constructor (as `RuleChainlinkPoRBase` does), from an initializer in an upgradeable
- *   deployment, or not at all until a setter is called.
- * - **ERC-1404.** Nothing here implements or depends on the restriction-code surface. The one
- *   restriction code it returns, on {_maxBackedSupply}, is a plain `uint8` describing why the feed
- *   answer is unusable; the mapping of codes to messages and the `detectTransferRestriction*` /
- *   `transferred` entrypoints stay in the rule.
+ * @dev The feed's `decimals()` is read **live on every check, never cached**. Caching saves one call
+ * but lets a feed that changes decimals mis-scale reserves by `10 ** delta` with no on-chain signal
+ * -- in the overstating direction that silently authorises unbacked minting.
  *
- * The result is a reusable feed-reading component: a different rule, or a non-rule contract that
- * merely wants a revert-free view of reserve-backed supply, can inherit this without acquiring an
- * ERC-1404 surface it would have to implement.
- *
- * @dev The feed's `decimals()` is read **live on every check**, never cached. Caching would be one
- * external call cheaper, but a feed whose decimals change after configuration would then be
- * mis-scaled by a factor of `10 ** delta` with no on-chain signal -- in the direction that
- * overstates reserves, that silently authorises unbacked minting. Correctness wins over the call.
- *
- * @dev IMPORTANT: {_maxBackedSupply} must never revert, because the rule calls it from views that
- * MUST NOT revert. Every feed interaction is therefore wrapped in `try/catch`. This relies on
- * `reservesFeed` and `tokenContract` still having code, which the setters enforce at configuration
- * time and EIP-6780 (Cancun) makes permanent -- SELFDESTRUCT can only clear an account created in
- * the same transaction, so a validated contract cannot become codeless afterwards. A `try` to a
- * codeless address reverts *uncatchably*, so on a chain WITHOUT EIP-6780 that guarantee does not
- * hold; this library targets Cancun or later (see `foundry.toml`).
+ * @dev {_maxBackedSupply} must never revert, because the rule calls it from MUST-NOT-revert views,
+ * so every feed interaction is `try/catch`-wrapped. That is only safe because the setters require
+ * both the feed and the token to have code and EIP-6780 makes it permanent: a `try` to a codeless
+ * address reverts *uncatchably*. Assumes a Cancun-or-later chain.
  */
 abstract contract ChainlinkPoRFeedManager is TokenSupplyReader, RuleChainlinkPoRInvariantStorage {
     /**

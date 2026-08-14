@@ -7,28 +7,16 @@ import {TokenSupplyReader} from "./TokenSupplyReader.sol";
 
 /**
  * @title TotalSupplyCapManager
- * @notice Configuration of a static total-supply ceiling: which token to observe, what the cap is,
- * and whether a prospective mint fits under it.
+ * @notice A static total-supply ceiling: which token to observe, what the cap is, and whether a
+ * prospective mint fits under it.
  *
- * @dev Split out of `RuleMaxTotalSupplyBase` so cap management is independent of two things it does
- * not need, matching {ChainlinkPoRFeedManager}:
- *
- * - **The constructor.** This contract declares none. It exposes the `_set*` internals plus the
- *   role-gated public setters, so an inheriting contract chooses when configuration happens: from a
- *   constructor (as `RuleMaxTotalSupplyBase` does), from an initializer in an upgradeable
- *   deployment, or not at all until a setter is called.
- * - **ERC-1404.** Nothing here implements or depends on the restriction-code surface. {_capExceeded}
- *   answers in booleans; mapping an outcome to a restriction code, the code-to-message table and the
- *   `detectTransferRestriction*` / `transferred` entrypoints stay in the rule.
- *
- * The result is a reusable supply-ceiling component: a contract that merely wants a revert-free view
- * of remaining issuance headroom can inherit this without acquiring an ERC-1404 surface it would
- * have to implement.
+ * @dev Declares **no constructor** and does not depend on **ERC-1404**, so the inheriting rule
+ * decides when configuration happens (constructor or initializer) and owns the restriction-code
+ * mapping; {_capExceeded} answers in booleans.
  *
  * @dev The revert-free `totalSupply()` read and the configuration probe come from
- * {TokenSupplyReader}, which this contract supplies with {_supplyToken}. The deployment precondition
- * documented there applies unchanged: a validated token cannot lose its code on a Cancun-or-later
- * chain, which is what makes the guarded read safe.
+ * {TokenSupplyReader} via {_supplyToken}; the deployment precondition documented there applies
+ * unchanged.
  */
 abstract contract TotalSupplyCapManager is TokenSupplyReader, RuleMaxTotalSupplyInvariantStorage {
     /**
