@@ -10,24 +10,14 @@ import {RuleERC2980Base} from "../abstract/base/RuleERC2980Base.sol";
 /**
  * @title RuleERC2980
  * @notice ERC-2980 Swiss Compliant transfer rule combining a whitelist and a frozenlist.
- * @dev
- * - Whitelist: only whitelisted addresses may receive tokens.
- *   Senders do not need to be whitelisted.
- * - Frozenlist: frozen addresses are blocked from both sending and receiving.
- *   Frozenlist check takes priority over the whitelist check.
+ * @dev Whitelist: only whitelisted addresses may **receive**; senders need not be listed.
+ * Frozenlist: frozen addresses may neither send nor receive, and it takes priority over the
+ * whitelist. Codes 60 (sender frozen), 61 (recipient frozen), 62 (spender frozen), 63 (recipient not
+ * whitelisted).
  *
- * Access control uses {AccessControlModuleStandalone}:
- * - `WHITELIST_ADD_ROLE`    — may add addresses to the whitelist.
- * - `WHITELIST_REMOVE_ROLE` — may remove addresses from the whitelist.
- * - `FROZENLIST_ADD_ROLE`   — may add addresses to the frozenlist.
- * - `FROZENLIST_REMOVE_ROLE`— may remove addresses from the frozenlist.
- * - `DEFAULT_ADMIN_ROLE`    — implicitly holds all roles.
- *
- * Restriction codes:
- * - 60: sender is frozen
- * - 61: recipient is frozen
- * - 62: spender is frozen
- * - 63: recipient is not whitelisted
+ * @dev Access control via {AccessControlModuleStandalone}: `WHITELIST_ADD_ROLE`,
+ * `WHITELIST_REMOVE_ROLE`, `FROZENLIST_ADD_ROLE`, `FROZENLIST_REMOVE_ROLE`, with
+ * `DEFAULT_ADMIN_ROLE` implicitly holding all of them.
  */
 contract RuleERC2980 is RuleERC2980Base, AccessControlModuleStandalone {
     /*//////////////////////////////////////////////////////////////

@@ -7,17 +7,52 @@ import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
 import {DeployCMTATWithBlacklist} from "script/DeployCMTATWithBlacklist.s.sol";
 
 contract DeployCMTATWithBlacklistTest is Test {
-    function testDeployCMTATWithBlacklist() public {
-        DeployCMTATWithBlacklist script = new DeployCMTATWithBlacklist();
-        (CMTATStandardStandalone token, RuleBlacklist rule) = _deploy(script);
+    address constant ADMIN = address(1);
+    address constant INVESTOR = address(2);
 
+    DeployCMTATWithBlacklist script;
+    CMTATStandardStandalone token;
+    RuleBlacklist rule;
+
+    function setUp() public {
+        script = new DeployCMTATWithBlacklist();
+        // The script contract is the acting deployer: a direct deploy() call is not a broadcast, so
+        // it makes the wiring calls itself.
+        (token, rule) = script.deploy(ADMIN, address(script), address(0));
+    }
+
+    function testBindsTheRuleToTheToken() public view {
         assertEq(address(token.ruleEngine()), address(rule));
     }
 
-    function _deploy(DeployCMTATWithBlacklist script)
-        internal
-        returns (CMTATStandardStandalone token, RuleBlacklist rule)
-    {
-        (token, rule) = script.deploy(address(1), address(0));
+    /// The hand-over is the security-critical step and used to be untested (CLAUDE_ANALYSIS_SCRIPT.md S-10).
+    function testHandsAdminRoleToAdmin() public view {
+        assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), ADMIN));
+    }
+
+    function testDeployerRetainsNoAdminRole() public view {
+        assertFalse(token.hasRole(token.DEFAULT_ADMIN_ROLE(), address(script)));
+    }
+
+    function testRuleAdminIsAdmin() public view {
+        assertTrue(rule.hasRole(rule.DEFAULT_ADMIN_ROLE(), ADMIN));
+    }
+
+    /// A blacklist leaves mint open, so the token is issuable straight out of the script.
+    function testTokenCanBeMinted() public {
+        vm.prank(ADMIN);
+        token.mint(INVESTOR, 100);
+        assertEq(token.balanceOf(INVESTOR), 100);
+    }
+
+    function testBlacklistedAddressIsBlocked() public {
+        vm.prank(ADMIN);
+        token.mint(INVESTOR, 100);
+        vm.prank(ADMIN);
+        rule.addAddress(INVESTOR);
+
+        vm.prank(INVESTOR);
+        vm.expectRevert();
+        token.transfer(ADMIN, 1);
     }
 }

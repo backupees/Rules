@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleSpenderWhitelistBase.sol | 6a5f291ea67c01dc192a26ca6e51e0034aca9621 |
+| ./rules/validation/abstract/base/RuleSpenderWhitelistBase.sol | f98bec5c483d2dc831f4b751f4a4d72a48cddf84 |
 
 
 ### Contracts Description Table
@@ -21,6 +21,7 @@
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |

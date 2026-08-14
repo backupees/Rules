@@ -20,8 +20,9 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         address[] memory whitelist = new address[](2);
         whitelist[0] = ADDRESS1;
         whitelist[1] = ADDRESS2;
+        vm.expectEmit(true, true, true, true);
+        emit IAddressList.AddAddresses(whitelist, 2, 0); // both new
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.AddAddresses(whitelist);
         (resCallBool,) = address(ruleWhitelist).call(abi.encodeWithSignature("addAddresses(address[])", whitelist));
         // Assert
         resUint256 = ruleWhitelist.listedAddressCount();
@@ -43,8 +44,9 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         assertEq(resBool, true);
 
         // Act
-        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        vm.expectEmit(true, true, true, true);
         emit IAddressList.RemoveAddress(ADDRESS1);
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
         ruleWhitelist.removeAddress(ADDRESS1);
 
         // Assert
@@ -69,8 +71,9 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         assertEq(resBool, true);
 
         // Act
+        vm.expectEmit(true, true, true, true);
+        emit IAddressList.RemoveAddresses(whitelist, 2, 0); // both present
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.RemoveAddresses(whitelist);
         (resCallBool,) = address(ruleWhitelist).call(abi.encodeWithSignature("removeAddresses(address[])", whitelist));
         // Assert
         assertEq(resCallBool, true);
@@ -89,8 +92,8 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         vm.expectRevert(RuleAddressSet_AddressNotFound.selector);
 
         // Act
+        // No event is expected: the call reverts, so nothing is emitted.
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.RemoveAddress(ADDRESS1);
         ruleWhitelist.removeAddress(ADDRESS1);
 
         // Assert
@@ -110,8 +113,10 @@ contract RuleWhitelistRemoveTest is Test, HelperContract {
         whitelistRemove[2] = ADDRESS3;
 
         // Act
+        // The point of carrying the effect in the event: 3 submitted, only 2 were present.
+        vm.expectEmit(true, true, true, true);
+        emit IAddressList.RemoveAddresses(whitelistRemove, 2, 1);
         vm.prank(WHITELIST_OPERATOR_ADDRESS);
-        emit IAddressList.RemoveAddresses(whitelistRemove);
         (resCallBool,) =
             address(ruleWhitelist).call(abi.encodeWithSignature("removeAddresses(address[])", whitelistRemove));
         // Assert

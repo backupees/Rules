@@ -1,31 +1,55 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {Script} from "forge-std/Script.sol";
-import {ICMTATConstructor, CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
-import {IERC1643CMTAT} from "CMTAT/interfaces/tokenization/draft-IERC1643CMTAT.sol";
+import {CMTATStandardStandalone} from "CMTAT/deployment/CMTATStandardStandalone.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleEngine} from "RuleEngine/deployment/RuleEngine.sol";
 import {RuleBlacklist} from "src/rules/validation/deployment/RuleBlacklist.sol";
 import {RuleSanctionsList} from "src/rules/validation/deployment/RuleSanctionsList.sol";
 import {ISanctionsList} from "src/rules/interfaces/ISanctionsList.sol";
+import {CMTATDeploymentBase} from "./base/CMTATDeploymentBase.sol";
 
 /**
  * @title DeployCMTATWithBlacklistAndSanctionsList
- * @notice Deploys a CMTAT token with a RuleEngine enforcing two validation rules:
- *         a blacklist (RuleBlacklist) and a sanctions screening (RuleSanctionsList).
+ * @notice Deploys a CMTAT token behind a RuleEngine enforcing two validation rules: a blacklist and
+ *         sanctions screening.
  *
  *         Deployment order:
- *         1. CMTATStandardStandalone   — token contract (deployer as temporary admin)
- *         2. RuleBlacklist     — blocks blacklisted senders / recipients
- *         3. RuleSanctionsList — blocks sanctioned addresses via Chainalysis oracle
- *         4. RuleEngine        — aggregates both rules; token bound at construction
- *         5. Wire RuleEngine → CMTAT via setRuleEngine
- *         6. Hand over all admin roles to `admin`
+ *         1. `CMTATStandardStandalone` — the token, with `deployer` as temporary admin
+ *         2. `RuleBlacklist`           — blocks blacklisted sender / recipient / spender
+ *         3. `RuleSanctionsList`       — blocks sanctioned addresses via a Chainalysis-style oracle
+ *         4. `RuleEngine`              — aggregates both; the token is bound at construction
+ *         5. `token.setRuleEngine(...)`
+ *         6. Hand every admin role to `admin`, renounce the deployer's
+ *
+ * @dev **Topology A (RuleEngine).** Rules are reached through the engine, so inside a rule
+ *      `msg.sender` is the RuleEngine rather than the token. See `CLAUDE.md`, "The two integration
+ *      topologies", before adding an operation rule here.
+ *
+ * @dev Rule order affects only *which* restriction code a rejected transfer reports (the engine
+ *      returns the first non-zero code), not whether it is rejected.
  */
-contract DeployCMTATWithBlacklistAndSanctionsList is Script {
-    function deploy(address admin, address forwarder, ISanctionsList sanctionsOracle)
+contract DeployCMTATWithBlacklistAndSanctionsList is CMTATDeploymentBase {
+    /**
+     * @notice Deploys and wires the whole set.
+     * @dev `deployer` is explicit rather than read as `address(this)`: under `forge script` the
+     *      broadcaster makes these calls, and Foundry rejects `address(this)` inside a broadcast, so
+     *      the previous version reverted before deploying anything (CLAUDE_ANALYSIS_SCRIPT.md S-1).
+     * @param admin Address that ends up holding every admin role.
+     * @param deployer Address that executes the calls and holds the temporary admin roles:
+     *        `msg.sender` under `forge script`, the script contract's address under test.
+     * @param forwarder ERC-2771 trusted forwarder; `address(0)` disables meta-transactions.
+     * @param sanctionsOracle Sanctions oracle. `address(0)` leaves screening disabled until
+     *        `RuleSanctionsList.setSanctionListOracle` is called. **An unset oracle fails OPEN** —
+     *        the rule is registered, the engine reports no error, and every transfer passes it.
+     * @return token The deployed CMTAT.
+     * @return ruleEngine The engine holding both rules.
+     * @return ruleBlacklist The blacklist rule.
+     * @return ruleSanctionsList The sanctions rule.
+     */
+    function deploy(address admin, address deployer, address forwarder, ISanctionsList sanctionsOracle)
         public
+        virtual
         returns (
             CMTATStandardStandalone token,
             RuleEngine ruleEngine,
@@ -33,47 +57,47 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
             RuleSanctionsList ruleSanctionsList
         )
     {
-        ICMTATConstructor.ERC20Attributes memory erc20Attributes =
-            ICMTATConstructor.ERC20Attributes("CMTA Token", "CMTAT", 0);
-        ICMTATConstructor.ExtraInformationAttributes memory extraInformationAttributes =
-            ICMTATConstructor.ExtraInformationAttributes(
-                "CMTAT_ISIN",
-                IERC1643CMTAT.DocumentInfo(
-                    "Terms", "https://cmta.ch", 0x9ff867f6592aa9d6d039e7aad6bd71f1659720cbc4dd9eae1554f6eab490098b
-                ),
-                "CMTAT_info"
-            );
-        ICMTATConstructor.Engine memory engines = ICMTATConstructor.Engine(IRuleEngine(address(0)));
+        // 1. The token, with the deployer as temporary admin so the wiring below is permitted.
+        token = new CMTATStandardStandalone(
+            forwarder, deployer, _erc20Attributes(), _extraInformationAttributes(), _emptyEngine()
+        );
 
-        // Deploy CMTAT with the deployer as temporary admin so we can configure it.
-        token = new CMTATStandardStandalone(forwarder, address(this), erc20Attributes, extraInformationAttributes, engines);
+        // 2-3. Address-screening rules; each is owned by the intended admin from the start.
+        ruleBlacklist = new RuleBlacklist(admin, forwarder);
+        ruleSanctionsList = new RuleSanctionsList(admin, forwarder, sanctionsOracle);
 
-        // Deploy rules; each rule is owned directly by the intended admin.
-        ruleBlacklist = new RuleBlacklist(admin, address(0));
-        ruleSanctionsList = new RuleSanctionsList(admin, address(0), sanctionsOracle);
-
-        // Deploy RuleEngine with the deployer as temporary admin so we can add rules.
-        // The token is bound at construction so it is authorised to call transferred().
-        ruleEngine = new RuleEngine(address(this), forwarder, address(token));
-
-        // Register both rules in evaluation order: blacklist first, sanctions second.
+        // 4. The engine, deployer-owned for now so rules can be added. Binding the token at
+        //    construction is what authorises it to call `transferred()` on the engine.
+        ruleEngine = new RuleEngine(deployer, forwarder, address(token));
         ruleEngine.addRule(ruleBlacklist);
         ruleEngine.addRule(ruleSanctionsList);
 
-        // Connect the RuleEngine to the token.
+        // 5. Connect the engine to the token.
         token.setRuleEngine(IRuleEngine(address(ruleEngine)));
 
-        // Transfer admin rights to the intended admin and remove the deployer.
-        if (admin != address(this)) {
-            ruleEngine.grantRole(bytes32(0), admin);
-            ruleEngine.renounceRole(bytes32(0), address(this));
-            token.grantRole(bytes32(0), admin);
-            token.renounceRole(bytes32(0), address(this));
+        // 6. Hand over, and drop the deployer's rights so the deployment key is not a standing risk.
+        if (admin != deployer) {
+            ruleEngine.grantRole(ruleEngine.DEFAULT_ADMIN_ROLE(), admin);
+            ruleEngine.renounceRole(ruleEngine.DEFAULT_ADMIN_ROLE(), deployer);
+            token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
+            token.renounceRole(token.DEFAULT_ADMIN_ROLE(), deployer);
         }
+
+        _logDeployment("CMTAT token      ", address(token));
+        _logDeployment("RuleEngine       ", address(ruleEngine));
+        _logDeployment("RuleBlacklist    ", address(ruleBlacklist));
+        _logDeployment("RuleSanctionsList", address(ruleSanctionsList));
     }
 
+    /**
+     * @notice Broadcast entrypoint.
+     * @dev The oracle is left unset because its address is chain-specific (Chainalysis publishes one
+     *      per network). **Until it is set, sanctions screening passes everything** — call
+     *      `setSanctionListOracle` before the token goes live, or set `SANCTIONS_ORACLE`.
+     */
     function run()
         external
+        virtual
         returns (
             CMTATStandardStandalone token,
             RuleEngine ruleEngine,
@@ -82,10 +106,8 @@ contract DeployCMTATWithBlacklistAndSanctionsList is Script {
         )
     {
         vm.startBroadcast();
-        // Pass address(0) for sanctionsOracle to deploy without an oracle configured.
-        // The oracle can be set post-deployment via RuleSanctionsList.setSanctionListOracle().
         (token, ruleEngine, ruleBlacklist, ruleSanctionsList) =
-            deploy(msg.sender, address(0), ISanctionsList(address(0)));
+            deploy(msg.sender, msg.sender, _forwarder(), ISanctionsList(vm.envOr("SANCTIONS_ORACLE", address(0))));
         vm.stopBroadcast();
     }
 }

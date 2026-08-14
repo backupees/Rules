@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleERC2980Ownable2Step.sol | 059ea6668baf03d1ac9f3c7f3c85e2b09c01306f |
+| ./rules/validation/deployment/RuleERC2980Ownable2Step.sol | 2293c553f36889c26a08a61e5bc7f62e92334be6 |
 
 
 ### Contracts Description Table
@@ -17,11 +17,12 @@
 ||||||
 | **RuleERC2980Ownable2Step** | Implementation | RuleERC2980Base, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleERC2980Base Ownable |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _authorizeMintBurnManager | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeWhitelistAdd | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeWhitelistRemove | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeFrozenlistAdd | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeFrozenlistRemove | Internal 🔒 |   | onlyOwner |
-| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

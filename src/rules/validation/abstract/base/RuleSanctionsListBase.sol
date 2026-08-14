@@ -134,8 +134,14 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
 
     /**
      * @notice Detects whether a direct transfer is restricted by the sanctions oracle.
-     * @param from The sender address.
-     * @param to The recipient address.
+     * @dev The zero address is the ERC-20 mint/burn sentinel, not a participant, so it is never sent
+     *      to the oracle: on a mint `from` is skipped, on a burn `to` is skipped. Asking a
+     *      third-party contract whether `address(0)` is sanctioned would delegate this rule's
+     *      mint/burn behaviour to that contract's handling of a degenerate input -- an oracle
+     *      answering `true` would block ALL issuance and ALL redemption, trapping holders. Every
+     *      other rule in this library screens only the real participants for the same reason.
+     * @param from The sender address; the zero address denotes a mint and is not screened.
+     * @param to The recipient address; the zero address denotes a burn and is not screened.
      * @return The restriction code, or TRANSFER_OK when no party is sanctioned.
      */
     function _detectTransferRestriction(
@@ -145,13 +151,17 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
-        if (address(sanctionsList) != address(0)) {
-            if (sanctionsList.isSanctioned(from)) {
+        // Read the oracle address once. Safe to cache across the calls below: this function is
+        // `view`, so those are STATICCALLs and cannot write `sanctionsList`.
+        ISanctionsList oracle = sanctionsList;
+        if (address(oracle) != address(0)) {
+            if (from != address(0) && oracle.isSanctioned(from)) {
                 return CODE_ADDRESS_FROM_IS_SANCTIONED;
-            } else if (sanctionsList.isSanctioned(to)) {
+            } else if (to != address(0) && oracle.isSanctioned(to)) {
                 return CODE_ADDRESS_TO_IS_SANCTIONED;
             }
         }
@@ -173,13 +183,15 @@ abstract contract RuleSanctionsListBase is MetaTxModuleStandalone, RuleNFTAdapte
         override
         returns (uint8)
     {
-        if (address(sanctionsList) != address(0)) {
-            if (sanctionsList.isSanctioned(spender)) {
-                return CODE_ADDRESS_SPENDER_IS_SANCTIONED;
-            }
-            return _detectTransferRestriction(from, to, value);
+        ISanctionsList oracle = sanctionsList;
+        // The oracle guard scopes ONLY the spender check; the delegation below is unconditional, as
+        // in every sibling rule. Nesting the delegation inside the guard -- as this function used to
+        // -- silently drops any check in {_detectTransferRestriction} that does not depend on the
+        // oracle, including one added by a subclass overriding that hook.
+        if (address(oracle) != address(0) && oracle.isSanctioned(spender)) {
+            return CODE_ADDRESS_SPENDER_IS_SANCTIONED;
         }
-        return uint8(REJECTED_CODE_BASE.TRANSFER_OK);
+        return _detectTransferRestriction(from, to, value);
     }
 
     /**

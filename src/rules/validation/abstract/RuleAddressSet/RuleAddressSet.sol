@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {MetaTxModuleStandalone, ERC2771Context} from "../../../../modules/MetaTxModuleStandalone.sol";
 import {RuleAddressSetInternal} from "./RuleAddressSetInternal.sol";
 import {RuleAddressSetInvariantStorage} from "./invariantStorage/RuleAddressSetInvariantStorage.sol";
+import {RuleAddressSetRolesStorage} from "./invariantStorage/RuleAddressSetRolesStorage.sol";
 /* ==== Interfaces === */
 import {IIdentityRegistryContains} from "../../../interfaces/IIdentityRegistry.sol";
 import {IAddressList} from "../../../interfaces/IAddressList.sol";
@@ -20,6 +21,7 @@ import {IAddressList} from "../../../interfaces/IAddressList.sol";
 abstract contract RuleAddressSet is
     MetaTxModuleStandalone,
     RuleAddressSetInvariantStorage,
+    RuleAddressSetRolesStorage,
     RuleAddressSetInternal,
     IAddressList
 {
@@ -54,13 +56,16 @@ abstract contract RuleAddressSet is
     /**
      * @notice Adds multiple addresses to the set.
      * @dev
-     * - Does not revert if an address is already listed.
+     * - Does not revert if an address is already listed; duplicates are skipped.
+     * - REVERTS on `address(0)`, rejecting the WHOLE batch. The mint/burn sentinel is never a list
+     *   member, and skipping it would make the {AddAddresses} event -- which echoes the input array
+     *   -- name it as one. Filter the input before submitting a large batch.
      * - Accessible only by accounts with the `ADDRESS_LIST_ADD_ROLE`.
      * @param targetAddresses Array of addresses to be added.
      */
-    function addAddresses(address[] calldata targetAddresses) public onlyAddressListAdd {
-        _addAddresses(targetAddresses);
-        emit AddAddresses(targetAddresses);
+    function addAddresses(address[] calldata targetAddresses) public virtual onlyAddressListAdd {
+        (uint256 added, uint256 skipped) = _addAddresses(targetAddresses);
+        emit AddAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -70,9 +75,9 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_REMOVE_ROLE`.
      * @param targetAddresses Array of addresses to remove.
      */
-    function removeAddresses(address[] calldata targetAddresses) public onlyAddressListRemove {
-        _removeAddresses(targetAddresses);
-        emit RemoveAddresses(targetAddresses);
+    function removeAddresses(address[] calldata targetAddresses) public virtual onlyAddressListRemove {
+        (uint256 removed, uint256 skipped) = _removeAddresses(targetAddresses);
+        emit RemoveAddresses(targetAddresses, removed, skipped);
     }
 
     /**
@@ -82,10 +87,9 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_ADD_ROLE`.
      * @param targetAddress The address to be added.
      */
-    function addAddress(address targetAddress) public onlyAddressListAdd {
+    function addAddress(address targetAddress) public virtual onlyAddressListAdd {
         require(targetAddress != address(0), RuleAddressSet_ZeroAddressNotAllowed());
-        require(!_isAddressListed(targetAddress), RuleAddressSet_AddressAlreadyListed());
-        _addAddress(targetAddress);
+        require(_addAddress(targetAddress), RuleAddressSet_AddressAlreadyListed());
         emit AddAddress(targetAddress);
     }
 
@@ -96,9 +100,8 @@ abstract contract RuleAddressSet is
      * - Accessible only by accounts with the `ADDRESS_LIST_REMOVE_ROLE`.
      * @param targetAddress The address to be removed.
      */
-    function removeAddress(address targetAddress) public onlyAddressListRemove {
-        require(_isAddressListed(targetAddress), RuleAddressSet_AddressNotFound());
-        _removeAddress(targetAddress);
+    function removeAddress(address targetAddress) public virtual onlyAddressListRemove {
+        require(_removeAddress(targetAddress), RuleAddressSet_AddressNotFound());
         emit RemoveAddress(targetAddress);
     }
 

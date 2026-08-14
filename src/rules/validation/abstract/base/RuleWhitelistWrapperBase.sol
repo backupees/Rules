@@ -37,35 +37,13 @@ abstract contract RuleWhitelistWrapperBase is
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         MetaTxModuleStandalone(forwarderIrrevocable)
     {
-        checkSpender = checkSpender_;
+        _setCheckSpender(checkSpender_);
         _setAllowMintBurn(allowMintBurn, allowMintBurn);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyCheckSpenderManager() {
-        _authorizeCheckSpenderManager();
-        _;
     }
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Sets whether the rule should enforce spender-based checks.
-     * @dev
-     *  - Restricted to holders of the manager role.
-     *  - Updates the internal `checkSpender` flag.
-     *  - Emits a {CheckSpenderUpdated} event.
-     * @param value The new state of the `checkSpender` flag.
-     */
-    function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
-        _setCheckSpender(value);
-        emit CheckSpenderUpdated(value);
-    }
 
     /**
      * @inheritdoc RuleTransferValidation
@@ -76,36 +54,19 @@ abstract contract RuleWhitelistWrapperBase is
 
     /**
      * @notice Returns true if the address is listed in at least one child whitelist rule.
-     * @dev Delegates to the same child-rule scan used by transfer restriction checks.
+     * @dev Delegates to {_isListedInAnyChild}, the same single-address resolution the mint and burn
+     *      branches of {_detectTransferRestriction} use, so the ERC-3643 eligibility view and the
+     *      transfer check can never disagree about an address.
      * @param targetAddress The address to check across all child whitelist rules.
      * @return True if the address is listed in at least one child rule.
      */
     function isVerified(address targetAddress) public view virtual override(IIdentityRegistryVerified) returns (bool) {
-        address[] memory targets = new address[](1);
-        targets[0] = targetAddress;
-        bool[] memory result = _detectTransferRestrictionForTargets(targets);
-        return result[0];
+        return _isListedInAnyChild(targetAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Internal helper to update the `checkSpender` flag.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-    }
-
-    /**
-     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
-     *      Declaring it `view` makes that a compiler-enforced invariant rather than a convention.
-     */
-    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Go through all the whitelist rules to know if a restriction exists on the transfer
@@ -264,26 +225,25 @@ abstract contract RuleWhitelistWrapperBase is
         returns (bool[] memory)
     {
         uint256 rulesLength = rulesCount();
-        bool[] memory result = new bool[](targetAddress.length);
+        uint256 targetsLength = targetAddress.length;
+        bool[] memory result = new bool[](targetsLength);
+        // Number of targets not yet found in any child. Decremented the first time a target is
+        // resolved, so the early exit below is an O(1) test rather than a full rescan of `result`
+        // on every child rule. The observable result is identical.
+        uint256 unresolved = targetsLength;
         for (uint256 i = 0; i < rulesLength; ++i) {
             // Call the whitelist rules
             // Gas cost grows with the number of rules. Keep the wrapper list bounded.
             bool[] memory isListed = IAddressList(rule(i)).areAddressesListed(targetAddress);
-            for (uint256 j = 0; j < targetAddress.length; ++j) {
-                if (isListed[j]) {
+            for (uint256 j = 0; j < targetsLength; ++j) {
+                if (isListed[j] && !result[j]) {
                     result[j] = true;
+                    --unresolved;
                 }
             }
 
             // Break early if all listed
-            bool allListed = true;
-            for (uint256 k = 0; k < result.length; ++k) {
-                if (!result[k]) {
-                    allListed = false;
-                    break;
-                }
-            }
-            if (allListed) {
+            if (unresolved == 0) {
                 break;
             }
         }

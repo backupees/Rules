@@ -32,23 +32,13 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
     constructor(address forwarderIrrevocable, bool checkSpender_, bool allowMintBurn)
         RuleAddressSet(forwarderIrrevocable)
     {
-        checkSpender = checkSpender_;
+        _setCheckSpender(checkSpender_);
         _setAllowMintBurn(allowMintBurn, allowMintBurn);
     }
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Enables or disables spender verification on delegated transfers.
-     * @dev Restricted to the check-spender manager; emits {CheckSpenderUpdated}.
-     * @param value The new state of the `checkSpender` flag.
-     */
-    function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
-        _setCheckSpender(value);
-        emit CheckSpenderUpdated(value);
-    }
 
     /**
      * @inheritdoc IIdentityRegistryVerified
@@ -77,28 +67,9 @@ abstract contract RuleWhitelistBase is RuleAddressSet, RuleWhitelistShared, IIde
                             ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    modifier onlyCheckSpenderManager() {
-        _authorizeCheckSpenderManager();
-        _;
-    }
-
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Internal helper to update the `checkSpender` flag.
-     * @param value New flag value.
-     */
-    function _setCheckSpender(bool value) internal virtual {
-        checkSpender = value;
-    }
-
-    /**
-     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
-     * @dev Implemented by concrete subclasses with the desired access-control policy.
-     */
-    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @notice Detects whether a direct transfer is restricted by the whitelist.

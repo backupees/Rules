@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./mocks/IERC3643ComplianceFull.sol | 544dbc778c45d888ee9cdb28f507df53fe055edf |
+| ./mocks/IERC3643ComplianceFull.sol | 341ca7a53aeacd897ee359d5e80c1ec7f1fcf6fa |
 
 
 ### Contracts Description Table
@@ -16,14 +16,14 @@
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
 | **IERC3643ComplianceFull** | Interface |  |||
-| └ | canTransfer | External ❗️ |   |NO❗️ |
 | └ | transferred | External ❗️ | 🛑  |NO❗️ |
 | └ | bindToken | External ❗️ | 🛑  |NO❗️ |
 | └ | unbindToken | External ❗️ | 🛑  |NO❗️ |
-| └ | isTokenBound | External ❗️ |   |NO❗️ |
-| └ | getTokenBound | External ❗️ |   |NO❗️ |
 | └ | created | External ❗️ | 🛑  |NO❗️ |
 | └ | destroyed | External ❗️ | 🛑  |NO❗️ |
+| └ | canTransfer | External ❗️ |   |NO❗️ |
+| └ | isTokenBound | External ❗️ |   |NO❗️ |
+| └ | getTokenBound | External ❗️ |   |NO❗️ |
 
 
 ### Legend

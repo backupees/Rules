@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleSanctionsListBase.sol | c2e3984467b78f44467fceaeb9773a6dbd98ba83 |
+| ./rules/validation/abstract/base/RuleSanctionsListBase.sol | f3cf16d7239ca40019b9790c503224470f440a63 |
 
 
 ### Contracts Description Table
@@ -23,12 +23,12 @@
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | messageForTransferRestriction | Public ❗️ |   |NO❗️ |
+| └ | _setSanctionListOracle | Internal 🔒 | 🛑  | |
 | └ | _authorizeSanctionListManager | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |
 | └ | _transferredFrom | Internal 🔒 |   | |
-| └ | _setSanctionListOracle | Internal 🔒 | 🛑  | |
 
 
 ### Legend

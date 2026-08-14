@@ -48,6 +48,11 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
         _;
     }
 
+    modifier onlyCheckSpenderManager() {
+        _authorizeCheckSpenderManager();
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -97,6 +102,15 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Enables or disables spender verification on delegated transfers.
+     * @dev Restricted to the check-spender manager; emits {CheckSpenderUpdated}.
+     * @param value The new state of the `checkSpender` flag.
+     */
+    function setCheckSpender(bool value) public virtual onlyCheckSpenderManager {
+        _setCheckSpender(value);
+    }
 
     /**
      * @notice Enables or disables minting through this rule.
@@ -151,6 +165,19 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Internal helper to update the {checkSpender} flag and emit {CheckSpenderUpdated}.
+     * @dev The event lives here rather than at the call site so the constructors of the inheriting
+     *      rules announce the initial value too, matching {_setAllowMintBurn}. Without it an indexer
+     *      could reconstruct `allowMint` and `allowBurn` from genesis but had to special-case
+     *      `checkSpender` (`CLAUDE_ANALYSIS.md` C-2).
+     * @param value New flag value.
+     */
+    function _setCheckSpender(bool value) internal virtual {
+        checkSpender = value;
+        emit CheckSpenderUpdated(value);
+    }
+
+    /**
      * @notice Sets both mint/burn flags at once (deployment helper).
      * @param allowMint_ Whether minting is permitted.
      * @param allowBurn_ Whether burning is permitted.
@@ -183,6 +210,13 @@ abstract contract RuleWhitelistShared is RuleNFTAdapter, RuleWhitelistInvariantS
      * @notice Authorizes the caller to toggle `allowMint` / `allowBurn`; reverts otherwise.
      */
     function _authorizeMintBurnManager() internal view virtual;
+
+    /**
+     * @notice Authorizes the caller as check-spender manager; reverts otherwise.
+     * @dev Implemented by concrete subclasses with the desired access-control policy.
+     *      `view` by convention: an access-control hook checks and reverts, it never mutates state.
+     */
+    function _authorizeCheckSpenderManager() internal view virtual;
 
     /**
      * @inheritdoc RuleNFTAdapter

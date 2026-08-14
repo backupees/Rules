@@ -10,12 +10,12 @@ if [ -z "$1" ]; then
     echo ""
     echo "Example:"
     echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0"
-    echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0 README.md README_UPDATE.md"
+    echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0 ../README.md README_UPDATE.md"
     exit 1
 fi
 
 GITHUB_LINK="${1%/}"  # Remove trailing slash if present
-INPUT_FILE="${2:-../../README.md}"
+INPUT_FILE="${2:-../README.md}"   # doc/README.md, the full reference (the root README is a short summary)
 OUTPUT_FILE="${3:-README_UPDATE.md}"
 
 if [ ! -f "$INPUT_FILE" ]; then

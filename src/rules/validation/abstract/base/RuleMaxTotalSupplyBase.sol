@@ -1,40 +1,33 @@
 // SPDX-License-Identifier: MPL-2.0
 pragma solidity ^0.8.20;
 
-import {RuleMaxTotalSupplyInvariantStorage} from "../invariant/RuleMaxTotalSupplyInvariantStorage.sol";
 import {IERC1404, IERC1404Extend} from "CMTAT/interfaces/tokenization/draft-IERC1404.sol";
-import {ITotalSupply} from "../../../interfaces/ITotalSupply.sol";
 import {IERC3643IComplianceContract} from "CMTAT/interfaces/tokenization/IERC3643Partial.sol";
 import {IRuleEngine} from "CMTAT/interfaces/engine/IRuleEngine.sol";
 import {RuleTransferValidation} from "../core/RuleTransferValidation.sol";
+import {TotalSupplyCapManager} from "../core/TotalSupplyCapManager.sol";
 
 /**
  * @title RuleMaxTotalSupplyBase
  * @notice Restricts minting so that total supply never exceeds a maximum value.
  */
-abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotalSupplyInvariantStorage {
-    /**
-     * @dev tokenContract is trusted to return a correct totalSupply.
-     */
-    ITotalSupply public tokenContract;
-    /**
-     * @notice Maximum total supply; minting that would exceed this value is rejected.
-     */
-    uint256 public maxTotalSupply;
-
+abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, TotalSupplyCapManager {
     /*//////////////////////////////////////////////////////////////
                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Initializes the rule with the token to observe and the supply cap.
+     * @dev Routes through the same internal setters the public API uses, so the initial
+     * configuration is announced by {TokenContractUpdated} and {MaxTotalSupplyUpdated} exactly like
+     * every later change. A cap that is set once at deployment and never touched would otherwise
+     * have no on-chain event trail at all.
      * @param tokenContract_ Address of the token whose `totalSupply` is checked; must not be the zero address.
      * @param maxTotalSupply_ Maximum total supply allowed.
      */
     constructor(address tokenContract_, uint256 maxTotalSupply_) {
-        require(tokenContract_ != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
-        tokenContract = ITotalSupply(tokenContract_);
-        maxTotalSupply = maxTotalSupply_;
+        _setTokenContract(tokenContract_);
+        _setMaxTotalSupply(maxTotalSupply_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -47,31 +40,12 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
      * @return True if `restrictionCode` is the max-total-supply-exceeded code.
      */
     function canReturnTransferRestrictionCode(uint8 restrictionCode) external pure override returns (bool) {
-        return restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED;
+        return restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED || restrictionCode == CODE_SUPPLY_ORACLE_UNAVAILABLE;
     }
 
     /*//////////////////////////////////////////////////////////////
                         PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Updates the maximum total supply.
-     * @param newMaxTotalSupply New maximum total supply value.
-     */
-    function setMaxTotalSupply(uint256 newMaxTotalSupply) public onlyMaxTotalSupplyManager {
-        maxTotalSupply = newMaxTotalSupply;
-        emit MaxTotalSupplyUpdated(newMaxTotalSupply);
-    }
-
-    /**
-     * @notice Updates the token contract whose total supply is checked.
-     * @param newTokenContract New token contract address; must not be the zero address.
-     */
-    function setTokenContract(address newTokenContract) public onlyMaxTotalSupplyManager {
-        require(newTokenContract != address(0), RuleMaxTotalSupply_TokenAddressZeroNotAllowed());
-        tokenContract = ITotalSupply(newTokenContract);
-        emit TokenContractUpdated(newTokenContract);
-    }
 
     /**
      * @inheritdoc IERC3643IComplianceContract
@@ -98,23 +72,11 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     {
         if (restrictionCode == CODE_MAX_TOTAL_SUPPLY_EXCEEDED) {
             return TEXT_MAX_TOTAL_SUPPLY_EXCEEDED;
+        } else if (restrictionCode == CODE_SUPPLY_ORACLE_UNAVAILABLE) {
+            return TEXT_SUPPLY_ORACLE_UNAVAILABLE;
         }
         return TEXT_CODE_NOT_FOUND;
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            ACCESS CONTROL
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyMaxTotalSupplyManager() {
-        _authorizeMaxTotalSupplyManager();
-        _;
-    }
-
-    /**
-     * @notice Authorization hook invoked before updating the max total supply or token contract.
-     */
-    function _authorizeMaxTotalSupplyManager() internal view virtual;
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
@@ -131,14 +93,16 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
         if (from == address(0)) {
-            uint256 currentSupply = tokenContract.totalSupply();
-            // Overflow-safe: `currentSupply + value` could exceed uint256 and this is a
-            // MUST-NOT-revert ERC-1404/ERC-3643 view, so compare against the remaining headroom.
-            if (currentSupply > maxTotalSupply || value > maxTotalSupply - currentSupply) {
+            (bool supplyAvailable, bool exceeded) = _capExceeded(value);
+            if (!supplyAvailable) {
+                return CODE_SUPPLY_ORACLE_UNAVAILABLE;
+            }
+            if (exceeded) {
                 return CODE_MAX_TOTAL_SUPPLY_EXCEEDED;
             }
         }
@@ -151,6 +115,7 @@ abstract contract RuleMaxTotalSupplyBase is RuleTransferValidation, RuleMaxTotal
     function _detectTransferRestrictionFrom(address, address from, address to, uint256 value)
         internal
         view
+        virtual
         override
         returns (uint8)
     {

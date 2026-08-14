@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/base/RuleERC2980Base.sol | 8cffbdad2d3c9179d43521bd57610ee8f3a47178 |
+| ./rules/validation/abstract/base/RuleERC2980Base.sol | 8f278a7b80cdc7c6829bb93d0f99b4a4b05cdedf |
 
 
 ### Contracts Description Table
@@ -15,12 +15,8 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **RuleERC2980Base** | Implementation | MetaTxModuleStandalone, RuleERC2980Internal, RuleERC2980InvariantStorage, RuleNFTAdapter, IERC2980, IIdentityRegistryVerified |||
+| **RuleERC2980Base** | Implementation | MetaTxModuleStandalone, RuleERC2980InvariantStorage, RuleERC2980Internal, RuleNFTAdapter, IERC2980, IIdentityRegistryVerified |||
 | └ | <Constructor> | Public ❗️ | 🛑  | MetaTxModuleStandalone |
-| └ | _authorizeWhitelistAdd | Internal 🔒 |   | |
-| └ | _authorizeWhitelistRemove | Internal 🔒 |   | |
-| └ | _authorizeFrozenlistAdd | Internal 🔒 |   | |
-| └ | _authorizeFrozenlistRemove | Internal 🔒 |   | |
 | └ | addWhitelistAddresses | Public ❗️ | 🛑  | onlyWhitelistAdd |
 | └ | removeWhitelistAddresses | Public ❗️ | 🛑  | onlyWhitelistRemove |
 | └ | addWhitelistAddress | Public ❗️ | 🛑  | onlyWhitelistAdd |
@@ -29,6 +25,8 @@
 | └ | removeFrozenlistAddresses | Public ❗️ | 🛑  | onlyFrozenlistRemove |
 | └ | addFrozenlistAddress | Public ❗️ | 🛑  | onlyFrozenlistAdd |
 | └ | removeFrozenlistAddress | Public ❗️ | 🛑  | onlyFrozenlistRemove |
+| └ | setAllowMint | Public ❗️ | 🛑  | onlyMintBurnManager |
+| └ | setAllowBurn | Public ❗️ | 🛑  | onlyMintBurnManager |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | transferred | Public ❗️ |   |NO❗️ |
 | └ | canReturnTransferRestrictionCode | Public ❗️ |   |NO❗️ |
@@ -43,6 +41,11 @@
 | └ | isFrozen | Public ❗️ |   |NO❗️ |
 | └ | frozenlist | Public ❗️ |   |NO❗️ |
 | └ | areFrozen | Public ❗️ |   |NO❗️ |
+| └ | _authorizeMintBurnManager | Internal 🔒 |   | |
+| └ | _authorizeWhitelistAdd | Internal 🔒 |   | |
+| └ | _authorizeWhitelistRemove | Internal 🔒 |   | |
+| └ | _authorizeFrozenlistAdd | Internal 🔒 |   | |
+| └ | _authorizeFrozenlistRemove | Internal 🔒 |   | |
 | └ | _detectTransferRestriction | Internal 🔒 |   | |
 | └ | _detectTransferRestrictionFrom | Internal 🔒 |   | |
 | └ | _transferred | Internal 🔒 |   | |

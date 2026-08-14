@@ -11,12 +11,25 @@ abstract contract RuleMaxTotalSupplyInvariantStorage is RuleSharedInvariantStora
      * @notice Restriction message returned when the max total supply would be exceeded.
      */
     string constant TEXT_MAX_TOTAL_SUPPLY_EXCEEDED = "Max total supply exceeded";
+    /**
+     * @notice Restriction message returned when the token's total supply cannot be read.
+     * @dev Named differently from `RuleChainlinkPoR`'s equivalent on purpose: `HelperContract`
+     * inherits both invariant-storage contracts, and identical identifiers would clash.
+     */
+    string constant TEXT_SUPPLY_ORACLE_UNAVAILABLE = "Token total supply is unavailable";
 
     // It is very important that each rule uses an unique code
     /**
      * @notice Restriction code returned when the max total supply would be exceeded.
      */
     uint8 public constant CODE_MAX_TOTAL_SUPPLY_EXCEEDED = 50;
+    /**
+     * @notice Restriction code returned when `tokenContract.totalSupply()` reverts or the token has
+     * lost its code, so the current supply cannot be established.
+     * @dev Fail-closed: without a supply figure the cap cannot be verified, so the mint is blocked
+     * rather than assumed safe.
+     */
+    uint8 public constant CODE_SUPPLY_ORACLE_UNAVAILABLE = 51;
 
     /**
      * @notice Emitted when the maximum total supply is updated.
@@ -34,4 +47,6 @@ abstract contract RuleMaxTotalSupplyInvariantStorage is RuleSharedInvariantStora
         address rule, address spender, address from, address to, uint256 value, uint8 code
     );
     error RuleMaxTotalSupply_TokenAddressZeroNotAllowed();
+    error RuleMaxTotalSupply_TokenIsNotAContract(address token);
+    error RuleMaxTotalSupply_TokenTotalSupplyUnavailable(address token);
 }

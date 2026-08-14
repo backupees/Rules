@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 /* ==== OpenZeppelin === */
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {AddressSetBatchLib} from "../RuleAddressSet/AddressSetBatchLib.sol";
 import {RuleERC2980InvariantStorage} from "./invariantStorage/RuleERC2980InvariantStorage.sol";
 
 /**
@@ -16,6 +17,7 @@ import {RuleERC2980InvariantStorage} from "./invariantStorage/RuleERC2980Invaria
  */
 abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using AddressSetBatchLib for EnumerableSet.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
                              STATE VARIABLES
@@ -37,24 +39,17 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
 
     /**
      * @notice Adds multiple addresses to the whitelist, skipping any already present.
+     * @dev REVERTS on `address(0)`, rejecting the whole batch; see the inline comment below.
      * @param addressesToAdd Addresses to add to the whitelist.
      * @return added Number of addresses newly added.
      * @return skipped Number of addresses that were already whitelisted.
      */
     function _addWhitelistAddresses(address[] calldata addressesToAdd)
         internal
+        virtual
         returns (uint256 added, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
-            // skipped, so the emitted batch event can never report it as a list member.
-            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
-            if (_whitelist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _whitelist.addBatch(addressesToAdd, _requireNotZeroAddress);
     }
 
     /**
@@ -65,31 +60,26 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _removeWhitelistAddresses(address[] calldata addressesToRemove)
         internal
+        virtual
         returns (uint256 removed, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            if (_whitelist.remove(addressesToRemove[i])) {
-                removed += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _whitelist.removeBatch(addressesToRemove);
     }
 
     /**
      * @notice Adds a single address to the whitelist.
      * @param targetAddress Address to add to the whitelist.
      */
-    function _addWhitelistAddress(address targetAddress) internal virtual {
-        _whitelist.add(targetAddress);
+    function _addWhitelistAddress(address targetAddress) internal virtual returns (bool) {
+        return _whitelist.add(targetAddress);
     }
 
     /**
      * @notice Removes a single address from the whitelist.
      * @param targetAddress Address to remove from the whitelist.
      */
-    function _removeWhitelistAddress(address targetAddress) internal virtual {
-        _whitelist.remove(targetAddress);
+    function _removeWhitelistAddress(address targetAddress) internal virtual returns (bool) {
+        return _whitelist.remove(targetAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -98,24 +88,17 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
 
     /**
      * @notice Adds multiple addresses to the frozenlist, skipping any already present.
+     * @dev REVERTS on `address(0)`, rejecting the whole batch; see the inline comment below.
      * @param addressesToAdd Addresses to add to the frozenlist.
      * @return added Number of addresses newly added.
      * @return skipped Number of addresses that were already frozen.
      */
     function _addFrozenlistAddresses(address[] calldata addressesToAdd)
         internal
+        virtual
         returns (uint256 added, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
-            // The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
-            // skipped, so the emitted batch event can never report it as a list member.
-            require(addressesToAdd[i] != address(0), RuleERC2980_ZeroAddressNotAllowed());
-            if (_frozenlist.add(addressesToAdd[i])) {
-                added += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _frozenlist.addBatch(addressesToAdd, _requireNotZeroAddress);
     }
 
     /**
@@ -126,31 +109,38 @@ abstract contract RuleERC2980Internal is RuleERC2980InvariantStorage {
      */
     function _removeFrozenlistAddresses(address[] calldata addressesToRemove)
         internal
+        virtual
         returns (uint256 removed, uint256 skipped)
     {
-        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            if (_frozenlist.remove(addressesToRemove[i])) {
-                removed += 1;
-            } else {
-                skipped += 1;
-            }
-        }
+        return _frozenlist.removeBatch(addressesToRemove);
     }
 
     /**
      * @notice Adds a single address to the frozenlist.
      * @param targetAddress Address to add to the frozenlist.
      */
-    function _addFrozenlistAddress(address targetAddress) internal virtual {
-        _frozenlist.add(targetAddress);
+    function _addFrozenlistAddress(address targetAddress) internal virtual returns (bool) {
+        return _frozenlist.add(targetAddress);
     }
 
     /**
      * @notice Removes a single address from the frozenlist.
      * @param targetAddress Address to remove from the frozenlist.
      */
-    function _removeFrozenlistAddress(address targetAddress) internal virtual {
-        _frozenlist.remove(targetAddress);
+    function _removeFrozenlistAddress(address targetAddress) internal virtual returns (bool) {
+        return _frozenlist.remove(targetAddress);
+    }
+
+    /**
+     * @notice Per-entry guard for both batch adders; reverts on the zero address.
+     * @dev The zero address is the mint/burn sentinel, never a participant. REJECTED rather than
+     * skipped, so the emitted batch event can never report it as a list member. Passed to
+     * {AddressSetBatchLib.addBatch} as a function pointer so the shared loop rejects the sentinel
+     * with THIS rule's error rather than a generic one.
+     * @param targetAddress The candidate address.
+     */
+    function _requireNotZeroAddress(address targetAddress) internal pure {
+        require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/deployment/RuleBlacklistOwnable2Step.sol | d1d803fa9f1f3db0a21ef8cde1b9a96e910cd728 |
+| ./rules/validation/deployment/RuleBlacklistOwnable2Step.sol | 0dae4103b3e753c271e605b161674841e0811192 |
 
 
 ### Contracts Description Table
@@ -17,9 +17,9 @@
 ||||||
 | **RuleBlacklistOwnable2Step** | Implementation | RuleBlacklistBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | RuleBlacklistBase Ownable |
+| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _authorizeAddressListAdd | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeAddressListRemove | Internal 🔒 |   | onlyOwner |
-| └ | supportsInterface | Public ❗️ |   |NO❗️ |
 | └ | _msgSender | Internal 🔒 |   | |
 | └ | _msgData | Internal 🔒 |   | |
 | └ | _contextSuffixLength | Internal 🔒 |   | |

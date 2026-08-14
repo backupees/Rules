@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./modules/Ownable2StepERC165Module.sol | 50ac2979efcf101b8db4fbc27720e9e92fedd47a |
+| ./modules/Ownable2StepERC165Module.sol | 321912f22c23d00d708920cc10e637c2b23086ed |
 
 
 ### Contracts Description Table

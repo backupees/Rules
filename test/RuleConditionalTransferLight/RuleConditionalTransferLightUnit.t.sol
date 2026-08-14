@@ -42,6 +42,28 @@ contract RuleConditionalTransferLightUnit is Test, HelperContract {
         assertEq(rule.approvedCount(ADDRESS1, ADDRESS2, 10), 1);
     }
 
+    /**
+     * @notice The approval count carried by {TransferApproved} must be the post-increment value.
+     * @dev `approveTransfer` keeps the new count in a local rather than reading the slot back after
+     *      storing it. The two are equivalent by construction, but nothing else in the suite asserts
+     *      the event payload, so this pins it: a second approval of the same transfer must report 2,
+     *      not 1 (pre-increment) and not 0 (uninitialised local).
+     */
+    function testApproveTransfer_EmitsPostIncrementCount() public {
+        vm.expectEmit(true, true, false, true);
+        emit TransferApproved(ADDRESS1, ADDRESS2, 10, 1);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.approveTransfer(ADDRESS1, ADDRESS2, 10);
+
+        vm.expectEmit(true, true, false, true);
+        emit TransferApproved(ADDRESS1, ADDRESS2, 10, 2);
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        rule.approveTransfer(ADDRESS1, ADDRESS2, 10);
+
+        // The event and the getter must agree.
+        assertEq(rule.approvedCount(ADDRESS1, ADDRESS2, 10), 2);
+    }
+
     function testCancelTransferApproval_OnlyOperator() public {
         vm.prank(DEFAULT_ADMIN_ADDRESS);
         rule.approveTransfer(ADDRESS1, ADDRESS2, 10);

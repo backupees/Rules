@@ -8,13 +8,13 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
 - `hardhat.config.js`
 
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
+  - Solidity [v0.8.36](https://docs.soliditylang.org/en/v0.8.36/)
   - EVM version: Prague (Pectra upgrade)
   - Optimizer: true, 200 runs
 
 - `foundry.toml`
 
-  - Solidity [v0.8.34](https://docs.soliditylang.org/en/v0.8.34/)
+  - Solidity [v0.8.36](https://docs.soliditylang.org/en/v0.8.36/)
   - EVM version: Prague (Pectra upgrade)
   - Optimizer: true, 200 runs
 
@@ -24,13 +24,13 @@ Here are the settings for [Hardhat](https://hardhat.org) and [Foundry](https://g
 
   - Forge std [v1.12.0](https://github.com/foundry-rs/forge-std/releases/tag/v1.12.0)
 
-  - OpenZeppelin Contracts (submodule) [v5.6.1](https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v5.6.1)
+  - OpenZeppelin Contracts (submodule) [v5.7.0](https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v5.7.0)
 
-  - OpenZeppelin Contracts Upgradeable (submodule) [v5.6.1](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/releases/tag/v5.6.1)
+  - OpenZeppelin Contracts Upgradeable (submodule) [v5.7.0](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/releases/tag/v5.7.0)
 
-  - CMTAT [v3.3.0-rc1](https://github.com/CMTA/CMTAT/releases/tag/v3.3.0-rc1)
+  - CMTAT [v3.3.0-rc3](https://github.com/CMTA/CMTAT/releases/tag/v3.3.0-rc3)
 
-  - RuleEngine [v3.0.0-rc4](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc4)
+  - RuleEngine [v3.0.0-rc5](https://github.com/CMTA/RuleEngine/releases/tag/v3.0.0-rc5)
 
 ## Toolchain installation
 

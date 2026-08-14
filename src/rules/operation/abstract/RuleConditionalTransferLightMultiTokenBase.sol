@@ -96,7 +96,11 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      * @param to The recipient of the transfer to approve.
      * @param value The amount of the transfer to approve.
      */
-    function approveTransfer(address token, address from, address to, uint256 value) public onlyTransferApprover {
+    function approveTransfer(address token, address from, address to, uint256 value)
+        public
+        virtual
+        onlyTransferApprover
+    {
         _approveTransfer(token, from, to, value);
     }
 
@@ -109,6 +113,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function cancelTransferApproval(address token, address from, address to, uint256 value)
         public
+        virtual
         onlyTransferApprover
     {
         _cancelTransferApproval(token, from, to, value);
@@ -125,6 +130,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function approveAndTransferIfAllowed(address token, address from, address to, uint256 value)
         public
+        virtual
         onlyTransferApprover
         returns (bool)
     {
@@ -146,6 +152,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      */
     function transferred(address from, address to, uint256 value)
         public
+        virtual
         override(IERC3643IComplianceContract)
         onlyTransferExecutor
     {
@@ -163,6 +170,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
         uint256 value
     )
         public
+        virtual
         override(IRuleEngine)
         onlyTransferExecutor
     {
@@ -177,7 +185,7 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
      * - Deliberately does NOT require the token to be bound, unlike {approveTransfer}: the primary
      *   use is cleaning up approvals that survived an {unbindToken}, at which point the token is by
      *   definition no longer bound. It is also the only way to clear approvals stranded under a key
-     *   that can never be consumed (see `RESULT.md` finding F-4).
+     *   that can never be consumed (see `CLAUDE_AUDIT.md` finding F-4).
      * @param token The token whose approvals are cleared.
      * @param from The sender of the transfer whose approvals are cleared.
      * @param to The recipient of the transfer whose approvals are cleared.
@@ -338,8 +346,9 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
     function _approveTransfer(address token, address from, address to, uint256 value) internal virtual {
         require(isTokenBound(token), RuleConditionalTransferLightMultiToken_InvalidToken());
         bytes32 transferHash = _transferHash(token, from, to, value);
-        approvalCounts[transferHash] += 1;
-        emit TransferApproved(token, from, to, value, approvalCounts[transferHash]);
+        uint256 newCount = approvalCounts[transferHash] + 1;
+        approvalCounts[transferHash] = newCount;
+        emit TransferApproved(token, from, to, value, newCount);
     }
 
     /**
@@ -432,6 +441,12 @@ abstract contract RuleConditionalTransferLightMultiTokenBase is
 
     /**
      * @notice Computes the storage key identifying a (token, from, to, value) transfer.
+     * @dev Same project-specific encoding as the single-token rule with `token` prepended: **128
+     * bytes, four words, each address LEFT-aligned and right-padded with 12 zero bytes.**
+     *
+     * WARNING: NEITHER `abi.encodePacked` NOR `abi.encode`. See
+     * {RuleConditionalTransferLightApprovalBase._transferHash} for why that matters and for the
+     * off-chain formulations that reproduce it. Use {approvedCount} unless you need the storage slot.
      * @param token The token the transfer applies to.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.

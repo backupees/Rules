@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/operation/abstract/RuleConditionalTransferLightApprovalBase.sol | 6aa6f8cfabdb795343debc1b501508f392428404 |
+| ./rules/operation/abstract/RuleConditionalTransferLightApprovalBase.sol | ac5eac80044e31e99f670ecc63ece95fa1f8326f |
 
 
 ### Contracts Description Table
@@ -16,15 +16,16 @@
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
 | **RuleConditionalTransferLightApprovalBase** | Implementation | RuleConditionalTransferLightInvariantStorage |||
-| └ | _authorizeTransferApproval | Internal 🔒 |   | |
-| └ | _authorizeTransferExecution | Internal 🔒 |   | |
 | └ | transferred | External ❗️ | 🛑  | onlyTransferExecutor |
 | └ | approveTransfer | Public ❗️ | 🛑  | onlyTransferApprover |
 | └ | cancelTransferApproval | Public ❗️ | 🛑  | onlyTransferApprover |
+| └ | resetApproval | Public ❗️ | 🛑  | onlyTransferApprover |
 | └ | approvedCount | Public ❗️ |   |NO❗️ |
 | └ | _transferredFromContext | Internal 🔒 | 🛑  | |
 | └ | _transferred | Internal 🔒 | 🛑  | |
 | └ | _transferHash | Internal 🔒 |   | |
+| └ | _authorizeTransferApproval | Internal 🔒 |   | |
+| └ | _authorizeTransferExecution | Internal 🔒 |   | |
 
 
 ### Legend

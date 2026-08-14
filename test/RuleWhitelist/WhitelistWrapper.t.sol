@@ -335,6 +335,36 @@ contract CMTATIntegrationWhitelistWrapper is Test, HelperContract {
         assertFalse(ruleWhitelistWrapper.isVerified(ADDRESS1));
     }
 
+    /**
+     * @notice A target listed in several child rules must be counted as resolved exactly once.
+     * @dev ADDRESS1 sits in two children while ADDRESS2 sits only in the third, so the scan
+     *      necessarily re-encounters ADDRESS1 as already resolved before reaching child 3. This
+     *      pins the `!result[j]` guard in `_detectTransferRestrictionForTargets`: without it the
+     *      second listing of ADDRESS1 would decrement the resolved counter a second time, driving
+     *      it to zero and breaking out of the scan before child 3 is ever consulted -- ADDRESS2
+     *      would then be reported unlisted and a valid transfer rejected.
+     */
+    function testDetectTransferRestrictionOkWhenAddressListedInSeveralChildRules() public {
+        // Arrange: ADDRESS1 in child 1 AND child 2, ADDRESS2 only in child 3.
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        ruleWhitelist.addAddress(ADDRESS1);
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        ruleWhitelist2.addAddress(ADDRESS1);
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        ruleWhitelist3.addAddress(ADDRESS2);
+
+        // Act
+        resUint8 = ruleWhitelistWrapper.detectTransferRestriction(ADDRESS1, ADDRESS2, 20);
+        // Assert
+        assertEq(resUint8, NO_ERROR);
+
+        // The same holds for the spender overload, which resolves three targets instead of two.
+        vm.prank(WHITELIST_OPERATOR_ADDRESS);
+        ruleWhitelist2.addAddress(ADDRESS3);
+        resUint8 = ruleWhitelistWrapper.detectTransferRestrictionFrom(ADDRESS3, ADDRESS1, ADDRESS2, 20);
+        assertEq(resUint8, NO_ERROR);
+    }
+
     function testIsVerifiedWithNoChildRules() public {
         RuleWhitelistWrapper emptyWrapper =
             new RuleWhitelistWrapper(WHITELIST_OPERATOR_ADDRESS, ZERO_ADDRESS, true, true);

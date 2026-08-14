@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/operation/RuleConditionalTransferLightMultiTokenOwnable2Step.sol | 3da3c69fd927f5e21b6881156369ff3c7957af38 |
+| ./rules/operation/RuleConditionalTransferLightMultiTokenOwnable2Step.sol | e4023e744c8042d7fdc8c117a3c920f14d09e33c |
 
 
 ### Contracts Description Table
@@ -18,8 +18,8 @@
 | **RuleConditionalTransferLightMultiTokenOwnable2Step** | Implementation | RuleConditionalTransferLightMultiTokenBase, Ownable2Step, Ownable2StepERC165Module |||
 | └ | <Constructor> | Public ❗️ | 🛑  | Ownable |
 | └ | supportsInterface | Public ❗️ |   |NO❗️ |
+| └ | _onlyComplianceManager | Internal 🔒 |   | onlyOwner |
 | └ | _authorizeTransferApproval | Internal 🔒 |   | onlyOwner |
-| └ | _onlyComplianceManager | Internal 🔒 | 🛑  | onlyOwner |
 
 
 ### Legend

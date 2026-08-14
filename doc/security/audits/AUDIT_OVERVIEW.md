@@ -3,7 +3,7 @@
 > This is a security **overview** (analyses index + triage). It is **not** the vulnerability-reporting policy
 > (that belongs in a root `SECURITY.md`).
 
-**Current package version:** `v0.4.0`
+**Current package version:** `v0.5.0`
 **Scope:** production contracts under `src/` — mocks/tests (`src/mocks`, `test/`) and dependencies (`lib/`) are excluded from static-analysis runs unless a run is explicitly marked *mocks included*.
 
 > ⚠️ This project has **not** undergone a formal third-party security audit. The analyses below are automated
@@ -13,11 +13,52 @@
 
 | Date | Type | Tool / Source | Version | Reports |
 |---|---|---|---|---|
+| 2026-08-12 | AI-assisted review | Claude Code (Anthropic) | v0.5.0 | [**CLAUDE_ANALYSIS.md**](./tools/v0.5.0/CLAUDE_ANALYSIS.md) (code quality, `src/`) · [**CLAUDE_ANALYSIS_SCRIPT.md**](./tools/v0.5.0/CLAUDE_ANALYSIS_SCRIPT.md) (deployment scripts) |
 | 2026-07 | AI-assisted review | Claude (Anthropic) + custom security-audit skills | v0.4.0 | [**CLAUDE_AUDIT.md**](./tools/v0.4.0/claude-audit/CLAUDE_AUDIT.md) |
+| 2026-08-11 | Static analysis | Slither 0.11.5 | v0.5.0 | [report](./tools/v0.5.0/slither-report.md) · [feedback](./tools/v0.5.0/slither-report-feedback.md) |
+| 2026-08-11 | Static analysis | Aderyn 0.6.5 | v0.5.0 | [report](./tools/v0.5.0/aderyn-report.md) · [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
 | 2026-07-14 | Static analysis | Slither 0.11.5 | v0.4.0 | [report](./tools/v0.4.0/slither-report.md) · [feedback](./tools/v0.4.0/slither-report-feedback.md) |
 | 2026-07-14 | Static analysis | Aderyn 0.6.5 | v0.4.0 | [report](./tools/v0.4.0/aderyn-report.md) · [feedback](./tools/v0.4.0/aderyn-report-feedback.md) |
 | 2026-04-16 | Static analysis | Slither / Aderyn | v0.3.0 | [slither](./tools/v0.3.0/slither-report.md) · [aderyn](./tools/v0.3.0/aderyn-report.md) |
 | 2026-03-16 | AI-assisted review | Wake Arena (Ackee) | v0.2.0 | [tools/v0.2.0](./tools/v0.2.0/) |
+
+## Static-analysis results (v0.5.0)
+
+Scope: production contracts only — mocks excluded (`-x mocks` / `mocks` filter) and vendored dependencies
+excluded via the `lib` filter. Run **2026-08-13** at solc `0.8.36`, superseding the earlier `v0.5.0` runs.
+
+| Tool | High | Medium | Low | Info | Relevant to fix? |
+|---|---|---|---|---|---|
+| Slither 0.11.5 | 2 | 11 | 17 | 14 | **No** — all false-positive, by-design or cosmetic; see [feedback](./tools/v0.5.0/slither-report-feedback.md) |
+| Aderyn 0.6.5 | 0 | 0 | 9 categories (336 instances) | 0 | **No** — all Low, by-design / environment / cosmetic; see [feedback](./tools/v0.5.0/aderyn-report-feedback.md) |
+
+**Nothing to fix in `v0.5.0`.** Every delta from v0.4.0 traces to the three contracts added in this release
+(`RuleChainlinkPoR`, `RuleReceiverWhitelist`, `IdentityRegistryWhitelist`) and each was verified against the
+source before dismissal. The two new Slither categories are `uninitialized-local` (variables assigned inside a
+`try` whose `catch` reverts or returns) and `timestamp` (the Proof-of-Reserve staleness comparison, which is the
+feature itself).
+
+**Latest re-run (2026-08-13, solc `0.8.36`, after the cap-manager split): Slither 44, Aderyn 336 instances.** The split of `RuleMaxTotalSupplyBase` / `RuleMaxBalanceBase` into `TotalSupplyCapManager` / `BalanceCapManager` moved **no** detector: Slither reports the same 44 results one for one, and Aderyn's only change is one pragma and one PUSH0 instance per new file. Storage layout and ABI were separately verified identical for all four affected deployable contracts. The seven contracts added for
+`RuleMaxBalance` and the `ChainlinkPoRFeedManager` split produced exactly **one** new Slither finding — a
+`balanceOf` configuration probe whose discarded return value is the point — and **no** new Aderyn category. The
+dependency and compiler bumps (solc `0.8.36`, OpenZeppelin `v5.7.0`, RuleEngine `v3.0.0-rc5`, CMTAT
+`v3.3.0-rc3`) moved no detector at all. An earlier re-run the same day had lowered both counts (Slither 46 → 43,
+Aderyn 333 → 315) while contract count and nSLOC rose. The reduction is earned by the `AddressSetBatchLib` refactor, which replaced duplicated batch
+loops with one shared implementation that consumes the `EnumerableSet` return values instead of discarding them;
+Aderyn's *Loop Contains `require`/`revert`* category disappeared entirely. One informational disposition was
+**corrected** rather than re-confirmed: Slither's `unused-state` on the four `TRANSFERRED_SELECTOR_*` constants
+in `RuleNFTAdapter` was previously dismissed as a false positive, but each constant occurs exactly once in the
+repository — its own declaration. They are genuinely unreferenced. Impact is nil (`internal constant`, so no
+storage and not emitted into bytecode), so the disposition is cosmetic rather than a fix.
+
+Note for readers comparing runs: the Slither command must filter **`lib`**, not `submodules` — this is a Foundry
+project, so a generic filter pulls the whole vendored dependency tree into scope and inflates the count roughly
+four-fold with OpenZeppelin-internal findings.
+
+The substantive issues fixed in this release — the guarded `totalSupply()` reads (codes 51 / 78), the live
+feed-decimals read that prevents a stale-cache over-mint, and the removal of two inert public roles from
+`IdentityRegistryWhitelist` — were found by **manual review, not by either tool**. A clean static-analysis report
+means the tools' pattern sets matched nothing; it is not evidence of correctness.
 
 ## Static-analysis results (v0.4.0)
 

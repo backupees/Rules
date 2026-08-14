@@ -148,6 +148,53 @@ contract RuleERC2980Test is Test, HelperContract {
         assertFalse(ruleERC2980.frozenlist(ZERO_ADDRESS));
     }
 
+    /**
+     * @notice The zero address reverts the WHOLE batch; duplicates are still skipped.
+     * @dev The batch convention is "non-reverting" only for duplicates and missing entries.
+     *      `address(0)` is rejected on every add path, batch included, because {AddWhitelistAddresses}
+     *      echoes the input array -- skipping the sentinel would make the event report it as a list
+     *      member. `RuleERC2980` keeps its own copy of this guard (`RuleERC2980Internal`) rather than
+     *      sharing `RuleAddressSetInternal`, so it needs its own test: the whitelist-rule test does
+     *      not cover this code path.
+     */
+    function testBatchAddRejectsZeroAddressAndAppliesNothing() public {
+        address[] memory withZero = new address[](3);
+        withZero[0] = ADDRESS1;
+        withZero[1] = ZERO_ADDRESS;
+        withZero[2] = ADDRESS3;
+
+        vm.startPrank(DEFAULT_ADMIN_ADDRESS);
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_ZeroAddressNotAllowed.selector);
+        ruleERC2980.addWhitelistAddresses(withZero);
+
+        vm.expectRevert(RuleERC2980InvariantStorage.RuleERC2980_ZeroAddressNotAllowed.selector);
+        ruleERC2980.addFrozenlistAddresses(withZero);
+        vm.stopPrank();
+
+        // Atomic: the valid entries either side of the sentinel are NOT applied.
+        assertFalse(ruleERC2980.whitelist(ADDRESS1), "batch must not partially apply");
+        assertFalse(ruleERC2980.whitelist(ADDRESS3), "batch must not partially apply");
+        assertFalse(ruleERC2980.frozenlist(ADDRESS1));
+        assertFalse(ruleERC2980.frozenlist(ADDRESS3));
+        assertFalse(ruleERC2980.whitelist(ZERO_ADDRESS));
+        assertFalse(ruleERC2980.frozenlist(ZERO_ADDRESS));
+    }
+
+    function testBatchAddStillSkipsDuplicates() public {
+        // The contrast that makes the convention coherent: duplicates are skipped, not rejected.
+        address[] memory withDuplicate = new address[](3);
+        withDuplicate[0] = ADDRESS1;
+        withDuplicate[1] = ADDRESS2; // already whitelisted in setUp
+        withDuplicate[2] = ADDRESS3;
+
+        vm.prank(DEFAULT_ADMIN_ADDRESS);
+        ruleERC2980.addWhitelistAddresses(withDuplicate);
+
+        assertTrue(ruleERC2980.whitelist(ADDRESS1));
+        assertTrue(ruleERC2980.whitelist(ADDRESS2));
+        assertTrue(ruleERC2980.whitelist(ADDRESS3));
+    }
+
     /*//////////////////////////////////////////////////////////////
                       FROZENLIST — SENDER FROZEN
     //////////////////////////////////////////////////////////////*/

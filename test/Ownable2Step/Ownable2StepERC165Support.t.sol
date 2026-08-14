@@ -11,10 +11,12 @@ import {RuleBlacklistOwnable2Step} from "src/rules/validation/deployment/RuleBla
 import {RuleWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleWhitelistOwnable2Step.sol";
 import {RuleWhitelistWrapperOwnable2Step} from "src/rules/validation/deployment/RuleWhitelistWrapperOwnable2Step.sol";
 import {RuleSpenderWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleSpenderWhitelistOwnable2Step.sol";
+import {RuleReceiverWhitelistOwnable2Step} from "src/rules/validation/deployment/RuleReceiverWhitelistOwnable2Step.sol";
 import {RuleERC2980Ownable2Step} from "src/rules/validation/deployment/RuleERC2980Ownable2Step.sol";
 import {RuleSanctionsListOwnable2Step} from "src/rules/validation/deployment/RuleSanctionsListOwnable2Step.sol";
 import {RuleIdentityRegistryOwnable2Step} from "src/rules/validation/deployment/RuleIdentityRegistryOwnable2Step.sol";
 import {RuleMaxTotalSupplyOwnable2Step} from "src/rules/validation/deployment/RuleMaxTotalSupplyOwnable2Step.sol";
+import {TotalSupplyMock} from "src/mocks/TotalSupplyMock.sol";
 import {
     RuleConditionalTransferLightOwnable2Step
 } from "src/rules/operation/RuleConditionalTransferLightOwnable2Step.sol";
@@ -31,12 +33,14 @@ contract Ownable2StepERC165SupportTest is Test {
         RuleWhitelistOwnable2Step whitelist = new RuleWhitelistOwnable2Step(OWNER, address(0), false, false);
         RuleWhitelistWrapperOwnable2Step wrapper = new RuleWhitelistWrapperOwnable2Step(OWNER, address(0), false, true);
         RuleSpenderWhitelistOwnable2Step spenderWhitelist = new RuleSpenderWhitelistOwnable2Step(OWNER, address(0));
+        RuleReceiverWhitelistOwnable2Step receiverWhitelist = new RuleReceiverWhitelistOwnable2Step(OWNER, address(0));
         RuleERC2980Ownable2Step erc2980 = new RuleERC2980Ownable2Step(OWNER, address(0), false);
         RuleSanctionsListOwnable2Step sanctions =
             new RuleSanctionsListOwnable2Step(OWNER, address(0), ISanctionsList(address(0)));
         RuleIdentityRegistryOwnable2Step identity =
             new RuleIdentityRegistryOwnable2Step(OWNER, address(0), false, false);
-        RuleMaxTotalSupplyOwnable2Step maxSupply = new RuleMaxTotalSupplyOwnable2Step(OWNER, address(1), 1);
+        RuleMaxTotalSupplyOwnable2Step maxSupply =
+            new RuleMaxTotalSupplyOwnable2Step(OWNER, address(new TotalSupplyMock()), 1);
         RuleConditionalTransferLightOwnable2Step conditional = new RuleConditionalTransferLightOwnable2Step(OWNER);
         RuleConditionalTransferLightMultiTokenOwnable2Step conditionalMulti =
             new RuleConditionalTransferLightMultiTokenOwnable2Step(OWNER);
@@ -45,6 +49,7 @@ contract Ownable2StepERC165SupportTest is Test {
         _assertOwnable2StepInterfaces(address(whitelist));
         _assertOwnable2StepInterfaces(address(wrapper));
         _assertOwnable2StepInterfaces(address(spenderWhitelist));
+        _assertOwnable2StepInterfaces(address(receiverWhitelist));
         _assertOwnable2StepInterfaces(address(erc2980));
         _assertOwnable2StepInterfaces(address(sanctions));
         _assertOwnable2StepInterfaces(address(identity));

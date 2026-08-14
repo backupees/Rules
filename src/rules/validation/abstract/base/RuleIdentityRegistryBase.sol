@@ -11,22 +11,14 @@ import {IIdentityRegistryVerified} from "../../../interfaces/IIdentityRegistry.s
 /**
  * @title RuleIdentityRegistryBase
  * @notice Checks the ERC-3643 Identity Registry for transfer participants when configured.
- * @dev **ERC-3643 conformant by default.** The specification mandates that ONLY THE RECEIVER be
- *      identity-verified:
+ * @dev **ERC-3643 conformant by default: only the RECEIVER is verified.** The spec states the
+ *      receiver must be whitelisted and verified, that `transferFrom` works the same way, that
+ *      `mint` and `forcedTransfer` require only the receiver, and that `burn` bypasses eligibility.
  *
- *        - "The receiver MUST be whitelisted on the Identity Registry and verified"  (§ Transfer)
- *        - "`transferFrom` works the same way"                                       (§ Transfer)
- *        - "`mint` and `forcedTransfer` only require the receiver to be whitelisted
- *           and verified on the Identity Registry"                                   (§ Transfer)
- *        - "The `burn` function bypasses all checks on eligibility"                  (§ Transfer)
- *
- *      The sender, the spender and the minter are NOT required to be verified. Checking the sender
- *      in particular would TRAP DE-LISTED HOLDERS: ERC-3643 screens only the receiver precisely so
- *      that an investor whose identity lapses (expired claim, revoked identity) can still exit their
- *      position by sending to a verified counterparty.
- *
- *      Stricter screening remains available, but as an EXPLICIT OPT-IN ({checkSender},
- *      {checkSpender}) rather than an undocumented default.
+ *      The sender, spender and minter are NOT required to be verified. Checking the sender would
+ *      TRAP DE-LISTED HOLDERS: the spec screens only the receiver precisely so an investor whose
+ *      identity lapses can still exit to a verified counterparty. Stricter screening is available as
+ *      an explicit opt-in ({checkSender}, {checkSpender}), not an undocumented default.
  */
 abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegistryInvariantStorage {
     /**
@@ -61,8 +53,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
      * @param checkSpender_ When true, also verify the spender on `transferFrom` (STRICTER than ERC-3643).
      */
     constructor(address identityRegistry_, bool checkSender_, bool checkSpender_) {
+        // Every value actually assigned here is announced, so the deployed configuration can be
+        // reconstructed from events alone. The registry is only assigned when non-zero -- a zero
+        // argument leaves the default untouched, so there is nothing to report, matching
+        // {RuleSanctionsListBase}'s constructor.
         if (identityRegistry_ != address(0)) {
             identityRegistry = IIdentityRegistryVerified(identityRegistry_);
+            emit IdentityRegistryUpdated(identityRegistry_);
         }
         checkSender = checkSender_;
         checkSpender = checkSpender_;
@@ -101,7 +98,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
      * @notice Sets the identity registry consulted during transfer checks.
      * @param newRegistry New identity registry address; must not be the zero address.
      */
-    function setIdentityRegistry(address newRegistry) public onlyIdentityRegistryManager {
+    function setIdentityRegistry(address newRegistry) public virtual onlyIdentityRegistryManager {
         require(newRegistry != address(0), RuleIdentityRegistry_RegistryAddressZeroNotAllowed());
         identityRegistry = IIdentityRegistryVerified(newRegistry);
         emit IdentityRegistryUpdated(newRegistry);
@@ -131,7 +128,7 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     /**
      * @notice Clears the identity registry, disabling identity checks (all transfers pass this rule).
      */
-    function clearIdentityRegistry() public onlyIdentityRegistryManager {
+    function clearIdentityRegistry() public virtual onlyIdentityRegistryManager {
         identityRegistry = IIdentityRegistryVerified(address(0));
         emit IdentityRegistryUpdated(address(0));
     }
@@ -191,10 +188,14 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     )
         internal
         view
+        virtual
         override
         returns (uint8)
     {
-        if (address(identityRegistry) == address(0)) {
+        // Read the registry address once. Safe to cache across the calls below: this function is
+        // `view`, so those are STATICCALLs and cannot write `identityRegistry`.
+        IIdentityRegistryVerified registry = identityRegistry;
+        if (address(registry) == address(0)) {
             return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
         }
         // ERC-3643: "The `burn` function bypasses all checks on eligibility."
@@ -203,13 +204,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         }
 
         // OPT-IN, stricter than ERC-3643. Mints carry no sender, so they are exempt.
-        if (checkSender && from != address(0) && !identityRegistry.isVerified(from)) {
+        if (checkSender && from != address(0) && !registry.isVerified(from)) {
             return CODE_ADDRESS_FROM_NOT_VERIFIED;
         }
 
         // MANDATED by ERC-3643: the receiver must be verified. This is the only required check,
         // and it applies identically to `transfer`, `transferFrom` and `mint`.
-        if (!identityRegistry.isVerified(to)) {
+        if (!registry.isVerified(to)) {
             return CODE_ADDRESS_TO_NOT_VERIFIED;
         }
         return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
@@ -226,10 +227,12 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
     function _detectTransferRestrictionFrom(address spender, address from, address to, uint256 value)
         internal
         view
+        virtual
         override
         returns (uint8)
     {
-        if (address(identityRegistry) == address(0)) {
+        IIdentityRegistryVerified registry = identityRegistry;
+        if (address(registry) == address(0)) {
             return uint8(IERC1404Extend.REJECTED_CODE_BASE.TRANSFER_OK);
         }
         // ERC-3643: burn bypasses all eligibility checks.
@@ -238,13 +241,13 @@ abstract contract RuleIdentityRegistryBase is RuleNFTAdapter, RuleIdentityRegist
         }
 
         // OPT-IN, stricter than ERC-3643 ("`transferFrom` works the same way" — receiver only).
-        // Mint (from == 0) and burn (to == 0) are exempt: the minter/burner acts on its own
-        // authority, not as a delegated ERC-20 spender. This is what makes an unverified MINTER
-        // able to mint to a verified recipient, exactly as the specification requires.
-        if (
-            checkSpender && spender != address(0) && from != address(0) && to != address(0)
-                && !identityRegistry.isVerified(spender)
-        ) {
+        // Mint (from == 0) is exempt: the minter acts on its own authority, not as a delegated
+        // ERC-20 spender. This is what makes an unverified MINTER able to mint to a verified
+        // recipient, exactly as the specification requires.
+        // Burn (to == 0) is exempt too, but by the early return above -- do NOT re-test `to` here.
+        // The condition would be dead, and re-stating it reads as though burn were handled at this
+        // point rather than six lines earlier.
+        if (checkSpender && spender != address(0) && from != address(0) && !registry.isVerified(spender)) {
             return CODE_ADDRESS_SPENDER_NOT_VERIFIED;
         }
         return _detectTransferRestriction(from, to, value);

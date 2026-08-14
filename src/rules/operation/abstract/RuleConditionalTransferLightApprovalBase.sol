@@ -51,10 +51,11 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
      * @param to The recipient of the transfer to approve.
      * @param value The amount of the transfer to approve.
      */
-    function approveTransfer(address from, address to, uint256 value) public onlyTransferApprover {
+    function approveTransfer(address from, address to, uint256 value) public virtual onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
-        approvalCounts[transferHash] += 1;
-        emit TransferApproved(from, to, value, approvalCounts[transferHash]);
+        uint256 newCount = approvalCounts[transferHash] + 1;
+        approvalCounts[transferHash] = newCount;
+        emit TransferApproved(from, to, value, newCount);
     }
 
     /**
@@ -63,7 +64,7 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
      * @param to The recipient of the transfer whose approval is cancelled.
      * @param value The amount of the transfer whose approval is cancelled.
      */
-    function cancelTransferApproval(address from, address to, uint256 value) public onlyTransferApprover {
+    function cancelTransferApproval(address from, address to, uint256 value) public virtual onlyTransferApprover {
         bytes32 transferHash = _transferHash(from, to, value);
         uint256 count = approvalCounts[transferHash];
         require(count != 0, TransferApprovalNotFound());
@@ -142,13 +143,27 @@ abstract contract RuleConditionalTransferLightApprovalBase is RuleConditionalTra
 
     /**
      * @notice Computes the storage key identifying a (from, to, value) transfer.
+     * @dev The preimage is project-specific: **96 bytes, three words, each address LEFT-aligned and
+     * right-padded with 12 zero bytes** (`from || to || value`).
+     * WARNING: this is NEITHER `abi.encodePacked` (72 bytes, no padding) NOR `abi.encode` (96 bytes,
+     * addresses RIGHT-aligned). Reimplementing it off-chain as either yields a different hash, and
+     * because the result is a mapping key the mistake is **silent** -- the lookup returns 0, which is
+     * indistinguishable from "no approval exists". Either of these reproduces it:
+     * ```solidity
+     * keccak256(abi.encodePacked(from, bytes12(0), to, bytes12(0), value))
+     * keccak256(abi.encode(bytes32(bytes20(from)), bytes32(bytes20(to)), value))
+     * ```
+     * Pinned by `testDocumentedPreimageMatchesTheStorageKey`. Use {approvedCount} unless you need
+     * the storage slot directly.
      * @param from The sender of the transfer.
      * @param to The recipient of the transfer.
      * @param value The amount of the transfer.
      * @return hash The keccak256 hash uniquely identifying the transfer.
      */
     function _transferHash(address from, address to, uint256 value) internal pure virtual returns (bytes32 hash) {
-        // Linter suggestion (`asm-keccak256`): hash packed values in assembly to avoid abi.encodePacked overhead.
+        // Hand-rolled rather than `abi.encodePacked` on the linter's `asm-keccak256` advice: this is
+        // on the transfer write path, and the assembly is ~109 gas cheaper per call. Injectivity is
+        // verified in `CLAUDE_AUDIT.md` F-12; the exact layout is documented above.
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, shl(96, from))

@@ -49,8 +49,10 @@ contract DeployCMTATWithBlacklistAndSanctionsListTest is
         sanctionOracle = new SanctionListOracle();
 
         DeployCMTATWithBlacklistAndSanctionsList script = new DeployCMTATWithBlacklistAndSanctionsList();
+        // The script contract is the acting deployer here: a direct deploy() call is not a broadcast,
+        // so it makes the wiring calls itself.
         (token, ruleEngine, ruleBlacklist, ruleSanctionsList) =
-            script.deploy(ADMIN, address(0), ISanctionsList(address(sanctionOracle)));
+            script.deploy(ADMIN, address(script), address(0), ISanctionsList(address(sanctionOracle)));
 
         // Mint initial balances before any restrictions are applied.
         vm.prank(ADMIN);

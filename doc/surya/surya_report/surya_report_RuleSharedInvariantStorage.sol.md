@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ./rules/validation/abstract/invariant/RuleSharedInvariantStorage.sol | c64ab28b9789c1339609af1fde0cfd314976645d |
+| ./rules/validation/abstract/invariant/RuleSharedInvariantStorage.sol | 818c19d2ed7d6fd8d3d91ac2157958ae9bc2c48d |
 
 
 ### Contracts Description Table

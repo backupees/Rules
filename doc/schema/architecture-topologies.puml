@@ -1,0 +1,42 @@
+@startuml
+' Source for doc/schema/architecture-topologies.png, embedded in the root README.
+' Render with:  plantuml -tpng doc/schema/architecture-topologies.puml
+title The two integration topologies
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+
+rectangle "**Topology A** — RuleEngine  //(compose several rules)//" as A #F4F8FC {
+  rectangle "CMTAT token" as tokenA
+  rectangle "RuleEngine" as engine
+  rectangle "RuleBlacklist\n<size:10>msg.sender == RuleEngine</size>" as r1
+  rectangle "RuleSanctionsList\n<size:10>msg.sender == RuleEngine</size>" as r2
+  rectangle "RuleMaxTotalSupply\n<size:10>msg.sender == RuleEngine</size>" as r3
+
+  tokenA -down-> engine : transferred(from, to, value)\n//transfer()//
+tokenA -down-> engine : transferred(spender, from, to, value)\n//transferFrom(), mint, burn//
+  engine -down-> r1
+  engine -down-> r2
+  engine -down-> r3
+}
+
+rectangle "**Topology B** — direct binding  //(a single rule)//" as B #F4F8FC {
+  rectangle "CMTAT token " as tokenB
+  rectangle "RuleWhitelist\n<size:10>msg.sender == CMTAT token</size>" as ruleB
+
+  tokenB -down-> ruleB : transferred(from, to, value)\n//transfer()//
+tokenB -down-> ruleB : transferred(spender, from, to, value)\n//transferFrom(), mint, burn//
+}
+
+A -[hidden]down- B
+@enduml

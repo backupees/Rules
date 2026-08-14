@@ -11,7 +11,7 @@ abstract contract VersionModule is IERC3643Version {
     /**
      * @notice The contract version string returned by {version}.
      */
-    string private constant VERSION = "0.4.0";
+    string private constant VERSION = "0.5.0";
 
     /*//////////////////////////////////////////////////////////////
                           PUBLIC FUNCTIONS
@@ -20,7 +20,7 @@ abstract contract VersionModule is IERC3643Version {
     /**
      * @inheritdoc IERC3643Version
      */
-    function version() public view virtual override returns (string memory version_) {
+    function version() public pure virtual override returns (string memory version_) {
         return VERSION;
     }
 }

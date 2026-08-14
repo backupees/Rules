@@ -1,0 +1,56 @@
+@startuml
+' Source for doc/schema/erc3643-identity-directions.png, embedded in the root README.
+' Render with:  plantuml -tpng doc/schema/erc3643-identity-directions.puml
+title Identity verification — which route applies depends on whether the token has an identity slot
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #33475B
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #33475B
+  BackgroundColor #FFFFFF
+  FontColor #1B2733
+}
+
+rectangle "**ERC-3643 token** — it has an identity slot" as B #E8F5E9 {
+  rectangle "ERC-3643 token\n<size:10>Token.setIdentityRegistry(...)</size>" as tB
+  rectangle "IdentityRegistryWhitelist\n<size:10>**is** a registry — answers from a whitelist</size>" as regB #E3F2FD
+
+  tB -down-> regB : isVerified(wallet)?
+}
+
+rectangle "**CMTAT token** — no identity slot exists" as A #FFF3E0 {
+  rectangle "CMTAT token" as tA
+  rectangle "RuleEngine" as eA
+  rectangle "RuleIdentityRegistry\n<size:10>**consults** a registry</size>" as ruleA #FFECB3
+  rectangle "Your ONCHAINID-backed\nERC-3643 registry" as regA
+  rectangle "IdentityRegistryWhitelist\n<size:10>if you have no ONCHAINID</size>" as regC #E3F2FD
+
+  tA -down-> eA : transferred(...)
+  eA -down-> ruleA
+  ruleA -down-> regA : isVerified(wallet)?
+  ruleA -down-> regC : isVerified(wallet)?
+}
+
+note bottom of B
+  Plug the registry **straight into the slot**. The token
+  screens every transfer itself. Do **not** also add
+  ""RuleIdentityRegistry"" to a RuleEngine here — the token
+  already consults the registry, so it would only screen
+  the same wallets twice.
+end note
+
+note bottom of A
+  CMTAT has **no** ""setIdentityRegistry"", so a rule is the only
+  route: the RuleEngine path is not one option among several.
+  Either registry works — the rule holds an
+  ""IIdentityRegistryVerified"" and only calls ""isVerified"".
+  Pinned by CMTATRuleIdentityRegistryComposition.t.sol
+end note
+
+B -[hidden]right- A
+@enduml

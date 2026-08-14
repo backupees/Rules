@@ -9,16 +9,25 @@ import {IIdentityRegistryContains} from "./IIdentityRegistry.sol";
 interface IAddressList is IIdentityRegistryContains {
     /* ============ Events ============ */
     /**
-     * @notice Emitted when multiple addresses are added.
-     * @param targetAddresses The array of added addresses.
+     * @notice Emitted when a batch add completes.
+     * @dev `targetAddresses` is the input array as submitted, NOT the set of addresses that changed
+     * state: a batch skips entries already present. `added` and `skipped` describe the effect, so a
+     * consumer can tell a batch of 100 new members from 100 no-ops without replaying the whole
+     * event history. The two always sum to `targetAddresses.length`.
+     * @param targetAddresses The array submitted by the caller.
+     * @param added Number of addresses newly inserted.
+     * @param skipped Number of addresses already present, left untouched.
      */
-    event AddAddresses(address[] targetAddresses);
+    event AddAddresses(address[] targetAddresses, uint256 added, uint256 skipped);
 
     /**
-     * @notice Emitted when multiple addresses are removed.
-     * @param targetAddresses The array of removed addresses.
+     * @notice Emitted when a batch remove completes.
+     * @dev See {AddAddresses}: `targetAddresses` is the input, `removed` and `skipped` are the effect.
+     * @param targetAddresses The array submitted by the caller.
+     * @param removed Number of addresses actually removed.
+     * @param skipped Number of addresses that were not present.
      */
-    event RemoveAddresses(address[] targetAddresses);
+    event RemoveAddresses(address[] targetAddresses, uint256 removed, uint256 skipped);
 
     /**
      * @notice Emitted when a single address is added.

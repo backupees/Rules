@@ -152,6 +152,7 @@ abstract contract RuleNFTAdapter is RuleTransferValidation, IERC7943NonFungibleC
     )
         public
         view
+        virtual
         override(IERC7943NonFungibleCompliance)
         returns (bool)
     {

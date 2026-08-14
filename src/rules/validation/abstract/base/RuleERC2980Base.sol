@@ -103,12 +103,13 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Adds multiple addresses to the whitelist.
-     * @dev Does not revert if an address is already listed.
+     * @dev Does not revert if an address is already listed; duplicates are skipped. REVERTS on
+     *      `address(0)`, rejecting the whole batch -- see {addWhitelistAddress}.
      * @param targetAddresses Addresses to add to the whitelist.
      */
-    function addWhitelistAddresses(address[] calldata targetAddresses) public onlyWhitelistAdd {
-        _addWhitelistAddresses(targetAddresses);
-        emit AddWhitelistAddresses(targetAddresses);
+    function addWhitelistAddresses(address[] calldata targetAddresses) public virtual onlyWhitelistAdd {
+        (uint256 added, uint256 skipped) = _addWhitelistAddresses(targetAddresses);
+        emit AddWhitelistAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -116,9 +117,9 @@ abstract contract RuleERC2980Base is
      * @dev Does not revert if an address is not listed.
      * @param targetAddresses Addresses to remove from the whitelist.
      */
-    function removeWhitelistAddresses(address[] calldata targetAddresses) public onlyWhitelistRemove {
-        _removeWhitelistAddresses(targetAddresses);
-        emit RemoveWhitelistAddresses(targetAddresses);
+    function removeWhitelistAddresses(address[] calldata targetAddresses) public virtual onlyWhitelistRemove {
+        (uint256 removed, uint256 skipped) = _removeWhitelistAddresses(targetAddresses);
+        emit RemoveWhitelistAddresses(targetAddresses, removed, skipped);
     }
 
     /**
@@ -130,10 +131,9 @@ abstract contract RuleERC2980Base is
      * convention of reverting on invalid single-item operations.
      * @param targetAddress Address to add to the whitelist.
      */
-    function addWhitelistAddress(address targetAddress) public onlyWhitelistAdd {
+    function addWhitelistAddress(address targetAddress) public virtual onlyWhitelistAdd {
         require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
-        require(!_isWhitelisted(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
-        _addWhitelistAddress(targetAddress);
+        require(_addWhitelistAddress(targetAddress), RuleERC2980_AddressAlreadyWhitelisted());
         emit AddWhitelistAddress(targetAddress);
     }
 
@@ -146,9 +146,8 @@ abstract contract RuleERC2980Base is
      * convention of reverting on invalid single-item operations.
      * @param targetAddress Address to remove from the whitelist.
      */
-    function removeWhitelistAddress(address targetAddress) public onlyWhitelistRemove {
-        require(_isWhitelisted(targetAddress), RuleERC2980_AddressNotWhitelisted());
-        _removeWhitelistAddress(targetAddress);
+    function removeWhitelistAddress(address targetAddress) public virtual onlyWhitelistRemove {
+        require(_removeWhitelistAddress(targetAddress), RuleERC2980_AddressNotWhitelisted());
         emit RemoveWhitelistAddress(targetAddress);
     }
 
@@ -158,12 +157,13 @@ abstract contract RuleERC2980Base is
 
     /**
      * @notice Adds multiple addresses to the frozenlist.
-     * @dev Does not revert if an address is already listed.
+     * @dev Does not revert if an address is already listed; duplicates are skipped. REVERTS on
+     *      `address(0)`, rejecting the whole batch -- see {addFrozenlistAddress}.
      * @param targetAddresses Addresses to add to the frozenlist.
      */
-    function addFrozenlistAddresses(address[] calldata targetAddresses) public onlyFrozenlistAdd {
-        _addFrozenlistAddresses(targetAddresses);
-        emit AddFrozenlistAddresses(targetAddresses);
+    function addFrozenlistAddresses(address[] calldata targetAddresses) public virtual onlyFrozenlistAdd {
+        (uint256 added, uint256 skipped) = _addFrozenlistAddresses(targetAddresses);
+        emit AddFrozenlistAddresses(targetAddresses, added, skipped);
     }
 
     /**
@@ -171,9 +171,9 @@ abstract contract RuleERC2980Base is
      * @dev Does not revert if an address is not listed.
      * @param targetAddresses Addresses to remove from the frozenlist.
      */
-    function removeFrozenlistAddresses(address[] calldata targetAddresses) public onlyFrozenlistRemove {
-        _removeFrozenlistAddresses(targetAddresses);
-        emit RemoveFrozenlistAddresses(targetAddresses);
+    function removeFrozenlistAddresses(address[] calldata targetAddresses) public virtual onlyFrozenlistRemove {
+        (uint256 removed, uint256 skipped) = _removeFrozenlistAddresses(targetAddresses);
+        emit RemoveFrozenlistAddresses(targetAddresses, removed, skipped);
     }
 
     /**
@@ -185,10 +185,9 @@ abstract contract RuleERC2980Base is
      * convention of reverting on invalid single-item operations.
      * @param targetAddress Address to add to the frozenlist.
      */
-    function addFrozenlistAddress(address targetAddress) public onlyFrozenlistAdd {
+    function addFrozenlistAddress(address targetAddress) public virtual onlyFrozenlistAdd {
         require(targetAddress != address(0), RuleERC2980_ZeroAddressNotAllowed());
-        require(!_isFrozen(targetAddress), RuleERC2980_AddressAlreadyFrozen());
-        _addFrozenlistAddress(targetAddress);
+        require(_addFrozenlistAddress(targetAddress), RuleERC2980_AddressAlreadyFrozen());
         emit AddFrozenlistAddress(targetAddress);
     }
 
@@ -201,9 +200,8 @@ abstract contract RuleERC2980Base is
      * convention of reverting on invalid single-item operations.
      * @param targetAddress Address to remove from the frozenlist.
      */
-    function removeFrozenlistAddress(address targetAddress) public onlyFrozenlistRemove {
-        require(_isFrozen(targetAddress), RuleERC2980_AddressNotFrozen());
-        _removeFrozenlistAddress(targetAddress);
+    function removeFrozenlistAddress(address targetAddress) public virtual onlyFrozenlistRemove {
+        require(_removeFrozenlistAddress(targetAddress), RuleERC2980_AddressNotFrozen());
         emit RemoveFrozenlistAddress(targetAddress);
     }
 
